@@ -44,7 +44,7 @@ export default defineConfig({
           ],
         },
       ],
-      customCss: [],
+      customCss: ["./src/styles/packages.css"],
     }),
   ],
 });
