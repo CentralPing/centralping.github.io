@@ -8,6 +8,9 @@ export default defineConfig({
     starlight({
       title: "ergo",
       tagline: "Fast Fail REST API toolkit for Node.js",
+      logo: {
+        src: "./src/assets/logo.svg",
+      },
       social: [
         {
           icon: "github",
