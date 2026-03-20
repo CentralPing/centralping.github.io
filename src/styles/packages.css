@@ -1,4 +1,4 @@
-.sl-markdown-content:has(.package-logo) > h1#_top {
+main:has(.package-logo) h1#_top {
   display: none;
 }
 
