@@ -1,0 +1,79 @@
+---
+title: ergo-router
+description: REST-compliant router with strict Fast Fail semantics and declarative pipeline builder.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="v0.1.0" variant="note" />
+<Badge text="Node.js ≥ 22" variant="tip" />
+<Badge text="Pure ESM" variant="caution" />
+
+## Installation
+
+```bash
+npm install ergo-router ergo
+```
+
+`ergo-router` has a peer dependency on `ergo`.
+
+## Overview
+
+ergo-router provides path-based request dispatch built on
+[`find-my-way`](https://github.com/delvedor/find-my-way) with automatic REST
+compliance and a declarative pipeline builder.
+
+### Automatic REST Behavior
+
+| Behavior | Standard | Description |
+| -------- | -------- | ----------- |
+| 405 + Allow | [RFC 9110 §15.5.6](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.6) | Requests to a known path with an unsupported method receive `405` with an `Allow` header listing valid methods |
+| HEAD derivation | [RFC 9110 §9.3.2](https://www.rfc-editor.org/rfc/rfc9110#section-9.3.2) | HEAD requests automatically derive from GET handlers |
+| OPTIONS | [RFC 9110 §9.3.7](https://www.rfc-editor.org/rfc/rfc9110#section-9.3.7) | OPTIONS requests return `Allow` header with supported methods |
+| PATCH required | Custom | Routes with PUT must also register PATCH (or explicitly opt out) |
+
+### Transport Middleware
+
+| Middleware | Description | Standard |
+| ---------- | ----------- | -------- |
+| Security headers | HSTS, CSP, X-Content-Type-Options | [RFC 6797](https://www.rfc-editor.org/rfc/rfc6797) |
+| CORS | Cross-Origin Resource Sharing | [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) |
+| Rate limiting | Global rate limiter with 429 responses | [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585#section-4) |
+| Request ID | X-Request-Id generation and propagation | Convention |
+
+### Pipeline Builder
+
+Declaratively compose ergo middleware for each route:
+
+```js
+import { createRouter } from "ergo-router";
+
+const router = createRouter();
+
+router.post("/users", {
+  negotiate: { accept: ["application/json"], contentType: ["application/json"] },
+  authorize: myAuthMiddleware,
+  validate: { body: userSchema },
+  execute: createUser,
+});
+```
+
+### Graceful Shutdown
+
+```js
+const server = http.createServer(router.handler());
+
+process.on("SIGTERM", () => {
+  router.shutdown().then(() => {
+    server.close();
+  });
+});
+```
+
+In-flight requests are drained before the server closes.
+
+## Links
+
+- [GitHub](https://github.com/CentralPing/ergo-router)
+- [npm](https://www.npmjs.com/package/ergo-router)
+- [Changelog](https://github.com/CentralPing/ergo-router/blob/main/CHANGELOG.md)

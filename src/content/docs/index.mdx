@@ -1,0 +1,63 @@
+---
+title: ergo — Fast Fail REST APIs
+description: A composable middleware toolkit for Node.js that enforces correct REST semantics through structured pipeline stages backed by IETF RFCs.
+template: splash
+hero:
+  tagline: "Error or Go — composable middleware that enforces correct REST semantics through structured pipeline stages backed by IETF RFCs."
+  actions:
+    - text: Why ergo?
+      link: /why-ergo/
+      icon: right-arrow
+      variant: primary
+    - text: Get Started
+      link: /getting-started/
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/CentralPing/ergo
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## The Fast Fail Principle
+
+Every HTTP request passes through four ordered stages. A failure at any stage
+immediately returns a standards-compliant error response — no downstream work
+is wasted.
+
+<CardGrid>
+  <Card title="1. Negotiation" icon="approve-check">
+    Content type, language, and encoding negotiation per RFC 9110 §12.5.
+    Rejects unacceptable requests before any processing begins.
+  </Card>
+  <Card title="2. Authorization" icon="warning">
+    Bearer/Basic authentication per RFC 6750 / RFC 7617. Unauthorized requests
+    are rejected before touching business logic.
+  </Card>
+  <Card title="3. Validation" icon="pencil">
+    JSON Schema body validation, query parameter parsing, and input
+    sanitization. Malformed requests fail before execution.
+  </Card>
+  <Card title="4. Execution" icon="rocket">
+    Only valid, authorized, properly-negotiated requests reach your handler.
+    Responses use RFC 9457 Problem Details for errors.
+  </Card>
+</CardGrid>
+
+## Packages
+
+<CardGrid>
+  <Card title="ergo" icon="seti:javascript">
+    The core middleware toolkit. Composable functions for every HTTP concern —
+    body parsing, CORS, CSRF, compression, caching, rate limiting, and more.
+
+    [`npm install ergo`](https://www.npmjs.com/package/ergo)
+  </Card>
+  <Card title="ergo-router" icon="seti:json">
+    REST-compliant router built on `find-my-way`. Automatic 405+Allow, HEAD,
+    OPTIONS, and PATCH enforcement. Declarative pipeline builder.
+
+    [`npm install ergo-router`](https://www.npmjs.com/package/ergo-router)
+  </Card>
+</CardGrid>

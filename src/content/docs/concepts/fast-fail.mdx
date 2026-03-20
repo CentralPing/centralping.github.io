@@ -1,0 +1,107 @@
+---
+title: Fast Fail Pipeline
+description: How ergo's four-stage pipeline ensures requests fail early with correct HTTP semantics.
+---
+
+## Overview
+
+ergo processes every HTTP request through four ordered stages. Each stage
+either passes the request forward or returns an error response immediately.
+No downstream stage executes after a failure.
+
+```
+                    ┌─────────────┐
+                    │   Request   │
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │ Negotiation │──── 406 / 415
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │Authorization│──── 401 / 403
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │ Validation  │──── 400 / 422
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │  Execution  │──── 2xx / 5xx
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┘
+                    │   Response  │
+                    └─────────────┘
+```
+
+## Stage 1: Negotiation
+
+Content negotiation per
+[RFC 9110 §12.5](https://www.rfc-editor.org/rfc/rfc9110#section-12.5).
+
+- **Accept**: validates the client's preferred media type against what the
+  endpoint can produce. Returns `406 Not Acceptable` on mismatch.
+- **Content-Type**: validates the request body's media type against what the
+  endpoint can consume. Returns `415 Unsupported Media Type` on mismatch.
+- **Accept-Encoding**: negotiates compression (gzip, deflate, br).
+
+This stage runs first because there is no point authenticating or validating
+a request the server cannot meaningfully respond to.
+
+## Stage 2: Authorization
+
+Authentication and authorization per
+[RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) (Bearer) and
+[RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) (Basic).
+
+- Extracts credentials from the `Authorization` header.
+- Returns `401 Unauthorized` with a `WWW-Authenticate` challenge if
+  credentials are missing or invalid.
+- Returns `403 Forbidden` if the authenticated identity lacks permission.
+
+This stage runs before validation to avoid parsing potentially large request
+bodies for unauthorized callers — a meaningful performance and security win.
+
+## Stage 3: Validation
+
+Input validation using JSON Schema (via [AJV](https://ajv.js.org/)).
+
+- **Path parameters**: validated against a JSON Schema.
+- **Query parameters**: parsed and validated, with JSON:API sparse fieldset
+  and filter support.
+- **Request body**: parsed (JSON, multipart, URL-encoded per
+  [RFC 7578](https://www.rfc-editor.org/rfc/rfc7578)) and validated against
+  a schema.
+
+Returns `400 Bad Request` or `422 Unprocessable Content` with validation
+error details in the RFC 9457 Problem Details response.
+
+## Stage 4: Execution
+
+Your business logic. By the time a request reaches this stage, it has been:
+
+1. Confirmed as content-negotiable
+2. Authenticated and authorized
+3. Fully validated
+
+The execution handler receives a context object with parsed parameters,
+authenticated identity, and validated body — ready to use without additional
+checks.
+
+## Error Responses
+
+All error responses across every stage use
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457):
+
+```json
+{
+  "type": "about:blank",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Bearer token is required"
+}
+```
+
+This consistency means API clients can implement a single error-handling path
+regardless of which stage rejected the request.

@@ -1,0 +1,77 @@
+---
+title: Why ergo?
+description: The design philosophy behind ergo and why the Fast Fail approach produces better REST APIs.
+---
+
+## The Name
+
+**ergo** is a play on _"error or go"_ — every middleware either rejects the
+request with a proper error or passes it forward. There is no ambiguity, no
+silent swallowing, no deferred validation. The name also carries its Latin
+meaning: _therefore_ — as in, "the request is valid; _therefore_, proceed."
+
+## The Problem
+
+Most Node.js frameworks treat middleware as a flat chain where anything can
+happen in any order. This leads to common failure modes:
+
+- **Wasted work**: body parsing and database queries execute before discovering
+  the request is unauthorized.
+- **Inconsistent errors**: each handler invents its own error format, making
+  client-side error handling fragile.
+- **Silent failures**: middleware swallows errors or returns ambiguous status
+  codes, making debugging harder.
+- **RFC drift**: teams start with good intentions but gradually diverge from
+  HTTP semantics because the framework doesn't enforce them.
+
+## The Solution: Structured Fast Fail
+
+ergo organizes every request through four ordered stages:
+
+```
+Request → Negotiation → Authorization → Validation → Execution → Response
+              ↓               ↓              ↓
+          406/415          401/403          400/422
+```
+
+Each stage either succeeds (passes the request forward) or fails (returns an
+RFC 9457 Problem Details error response). Failures are _immediate_ — no
+downstream middleware executes.
+
+### Why This Matters
+
+**Fail Fast** is a well-established principle in systems design. The concept
+originates from Jim Shore's influential essay
+["Fail Fast"](https://www.martinfowler.com/ieeeSoftware/failFast.pdf)
+(IEEE Software, 2004), which argues that bugs are easier to find when software
+fails immediately and visibly rather than producing incorrect results silently.
+
+In the HTTP context, this principle maps directly to RFC 9110's status code
+semantics: a `401 Unauthorized` should be returned _before_ attempting to parse
+a request body, and a `406 Not Acceptable` should be returned _before_
+executing business logic. ergo makes this the only possible execution path.
+
+### Standards as Guardrails
+
+ergo doesn't just _support_ RFCs — it enforces them structurally:
+
+| Concern | Standard | ergo Behavior |
+| ------- | -------- | ------------- |
+| Error responses | [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) | All errors are Problem Details JSON |
+| Content negotiation | [RFC 9110 §12.5](https://www.rfc-editor.org/rfc/rfc9110#section-12.5) | Automatic 406 for unacceptable media types |
+| Authentication | [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750), [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) | Bearer/Basic with proper WWW-Authenticate |
+| Caching | [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111) | Cache-Control and conditional request support |
+| CORS | [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) | Preflight and simple request handling |
+| CSRF | [OWASP Guidelines](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) | Double-submit cookie pattern |
+| Rate limiting | [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585#section-4) | 429 Too Many Requests with Retry-After |
+| Security headers | [RFC 6797](https://www.rfc-editor.org/rfc/rfc6797) | HSTS, CSP, and security header defaults |
+
+### Further Reading
+
+- Jim Shore, ["Fail Fast"](https://www.martinfowler.com/ieeeSoftware/failFast.pdf),
+  IEEE Software, Sept/Oct 2004
+- Mark Nottingham,
+  ["Building Protocols with HTTP"](https://www.rfc-editor.org/rfc/rfc9205)
+  (RFC 9205) — best practices for HTTP-based APIs
+- ["HTTP Semantics"](https://www.rfc-editor.org/rfc/rfc9110) (RFC 9110) — the
+  authoritative specification for HTTP methods, status codes, and headers

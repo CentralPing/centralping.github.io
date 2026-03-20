@@ -1,0 +1,83 @@
+---
+title: Getting Started
+description: Install ergo and ergo-router and build your first Fast Fail REST API.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Prerequisites
+
+- **Node.js 22** or later (pure ESM)
+- **npm** (ships with Node.js)
+
+## Installation
+
+<Tabs>
+  <TabItem label="Both packages">
+    ```bash
+    npm install ergo ergo-router
+    ```
+  </TabItem>
+  <TabItem label="ergo only">
+    ```bash
+    npm install ergo
+    ```
+  </TabItem>
+</Tabs>
+
+## Quick Start
+
+Create a server with a single route that demonstrates all four Fast Fail
+stages:
+
+```js
+import http from "node:http";
+import { createRouter } from "ergo-router";
+
+const router = createRouter();
+
+router.get("/users/:id", {
+  negotiate: {
+    accept: ["application/json"],
+  },
+  authorize: ({ req }) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) throw { statusCode: 401 };
+    return { userId: token };
+  },
+  validate: {
+    params: {
+      type: "object",
+      properties: { id: { type: "string", minLength: 1 } },
+      required: ["id"],
+    },
+  },
+  execute: ({ req, params, auth }) => ({
+    id: params.id,
+    name: "Jane Doe",
+    requestedBy: auth.userId,
+  }),
+});
+
+const server = http.createServer(router.handler());
+server.listen(3000, () => console.log("http://localhost:3000"));
+```
+
+### What Happens
+
+| Request | Result |
+| ------- | ------ |
+| `GET /users/42` with `Accept: text/xml` | **406 Not Acceptable** — negotiation fails |
+| `GET /users/42` without `Authorization` | **401 Unauthorized** — authorization fails |
+| `GET /users/42` with valid Bearer token | **200 OK** — all stages pass |
+
+Every error response is a
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) JSON object.
+
+## Next Steps
+
+- [Fast Fail Pipeline](/concepts/fast-fail/) — understand the four stages in
+  depth
+- [Standards Compliance](/concepts/standards/) — full list of implemented RFCs
+- [ergo API](/packages/ergo/) — middleware reference
+- [ergo-router API](/packages/ergo-router/) — router and pipeline builder

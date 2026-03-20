@@ -1,0 +1,48 @@
+---
+title: Standards Compliance
+description: Complete list of IETF RFCs and web standards implemented by ergo and ergo-router.
+---
+
+## Core HTTP
+
+| Standard | Title | ergo Module |
+| -------- | ----- | ----------- |
+| [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) | HTTP Semantics | `http/send`, `http/accepts`, `http/precondition` |
+| [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111) | HTTP Caching | `http/cache-control` |
+| [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) | Problem Details for HTTP APIs | `utils/http-errors`, `http/send` |
+| [RFC 9205](https://www.rfc-editor.org/rfc/rfc9205) | Building Protocols with HTTP | Design philosophy |
+
+## Authentication & Authorization
+
+| Standard | Title | ergo Module |
+| -------- | ----- | ----------- |
+| [RFC 7235](https://www.rfc-editor.org/rfc/rfc7235) | HTTP Authentication | `http/authorization` |
+| [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) | Bearer Token Usage | `http/authorization`, `lib/authorization` |
+| [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) | The 'Basic' HTTP Authentication Scheme | `http/authorization`, `lib/authorization` |
+
+## Content & Body
+
+| Standard | Title | ergo Module |
+| -------- | ----- | ----------- |
+| [RFC 7578](https://www.rfc-editor.org/rfc/rfc7578) | Returning Values from Forms: multipart/form-data | `http/body` |
+| [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240) | Prefer Header for HTTP | `http/prefer`, `lib/prefer` |
+| [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) | Web Linking | `lib/link` |
+
+## Security
+
+| Standard | Title | ergo Module |
+| -------- | ----- | ----------- |
+| [RFC 6797](https://www.rfc-editor.org/rfc/rfc6797) | HTTP Strict Transport Security (HSTS) | `http/security-headers` |
+| [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265) | HTTP State Management (Cookies) | `http/cookie`, `lib/cookie` |
+| [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585#section-4) | 429 Too Many Requests | `http/rate-limit` |
+| [W3C CSP Level 3](https://www.w3.org/TR/CSP3/) | Content Security Policy | `http/security-headers` |
+| [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) | CORS Protocol | `http/cors`, `lib/cors` |
+| [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) | CSRF Prevention | `http/csrf`, `lib/csrf` |
+
+## ergo-router Additions
+
+| Standard | Behavior |
+| -------- | -------- |
+| [RFC 9110 §15.5.6](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.6) | Automatic `405 Method Not Allowed` with `Allow` header |
+| [RFC 9110 §9.3.2](https://www.rfc-editor.org/rfc/rfc9110#section-9.3.2) | Automatic `HEAD` response derivation |
+| [RFC 9110 §9.3.7](https://www.rfc-editor.org/rfc/rfc9110#section-9.3.7) | Automatic `OPTIONS` with `Allow` header |
