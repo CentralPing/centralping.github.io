@@ -39,6 +39,18 @@ description: Complete list of IETF RFCs and web standards implemented by ergo an
 | [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) | CORS Protocol | `http/cors`, `lib/cors` |
 | [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) | CSRF Prevention | `http/csrf`, `lib/csrf` |
 
+## OWASP Guidelines
+
+| Standard | Title | ergo Coverage |
+| -------- | ----- | ------------- |
+| [OWASP API Security Top 10](https://owasp.org/API-Security/) | Top API security risks | Pipeline stage ordering, rate limiting, input bounding, security headers |
+| [OWASP REST Security](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html) | REST API security best practices | Auth enforcement, input validation, error redaction, security headers |
+| [OWASP Input Validation](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html) | Input validation best practices | JSON Schema validation, bounded parsing, null-prototype objects |
+| [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) | CSRF prevention patterns | `http/csrf`, `lib/csrf` |
+
+See the [Security](/concepts/security/) page for a detailed mapping of ergo
+features to OWASP API Security Top 10 risks.
+
 ## ergo-router Additions
 
 | Standard | Behavior |

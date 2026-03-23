@@ -66,6 +66,38 @@ ergo doesn't just _support_ RFCs — it enforces them structurally:
 | Rate limiting | [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585#section-4) | 429 Too Many Requests with Retry-After |
 | Security headers | [RFC 6797](https://www.rfc-editor.org/rfc/rfc6797) | HSTS, CSP, and security header defaults |
 
+### Secure by Default
+
+ergo doesn't treat security as an opt-in feature — it's a consequence of the
+pipeline design and conservative defaults. You would have to deliberately
+override these protections to weaken them:
+
+- **Security headers** ship with restrictive defaults: `Content-Security-Policy:
+  default-src 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options:
+  nosniff`, `X-XSS-Protection: 0` (disables flawed browser XSS filters).
+- **Null-prototype objects** for all user-input-derived data (query params,
+  cookies, Prefer headers) prevent prototype pollution attacks.
+- **Bounded input parsing** limits query string length, key-value pair count,
+  cookie count, request body size, and decompressed body size out of the box.
+- **Decompression bomb protection** enforces a separate limit on inflated body
+  size after decompression, preventing small compressed payloads from expanding
+  to arbitrary sizes in memory.
+- **Header injection prevention** via `sanitizeQuotedString` for all values
+  interpolated into HTTP header quoted-strings (WWW-Authenticate, Link,
+  Set-Cookie).
+- **Timing-safe CSRF verification** uses `crypto.timingSafeEqual()` to prevent
+  timing attacks on token comparison.
+- **Sensitive header redaction** in the structured logger (`authorization`,
+  `cookie`, `proxy-authorization`, `set-cookie`).
+- **5xx error detail redaction** ensures internal error messages are never
+  leaked to API consumers.
+
+These protections satisfy the
+[OWASP REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)
+recommendations and address multiple risks in the
+[OWASP API Security Top 10](https://owasp.org/API-Security/). See the
+[Security](/concepts/security/) concepts page for a detailed mapping.
+
 ### Further Reading
 
 - Jim Shore, ["Fail Fast"](https://www.martinfowler.com/ieeeSoftware/failFast.pdf),
@@ -75,3 +107,7 @@ ergo doesn't just _support_ RFCs — it enforces them structurally:
   (RFC 9205) — best practices for HTTP-based APIs
 - ["HTTP Semantics"](https://www.rfc-editor.org/rfc/rfc9110) (RFC 9110) — the
   authoritative specification for HTTP methods, status codes, and headers
+- [OWASP API Security Top 10](https://owasp.org/API-Security/) — the most
+  critical API security risks
+- [OWASP REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html) —
+  practical REST API security guidance
