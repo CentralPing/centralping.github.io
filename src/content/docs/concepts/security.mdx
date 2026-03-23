@@ -1,0 +1,316 @@
+---
+title: Security
+description: How ergo's pipeline design and conservative defaults address the OWASP API Security Top 10.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+ergo is not a security certification — it is a middleware toolkit whose
+pipeline structure and default configuration address the most common REST API
+security risks. The protections described on this page are built into ergo's
+design. You don't opt _into_ them; you would have to deliberately override
+them to weaken your API's security posture.
+
+<Aside type="note">
+  This page maps ergo's features to the
+  [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/). ergo
+  does not claim formal compliance with any certification framework (SOC 2,
+  PCI-DSS, etc.). It provides the building blocks that make compliance with
+  those frameworks easier.
+</Aside>
+
+## OWASP API Security Top 10
+
+### API1: Broken Object Level Authorization
+
+**Risk:** APIs expose endpoints that handle object identifiers, creating a
+wide attack surface for object-level access control.
+
+**ergo mitigation:** The `authorization()` middleware runs in Stage 2 — before
+body parsing and before execution. Every request is authenticated and identity
+information is available in the accumulator before any business logic runs.
+Pluggable strategies support Bearer, Basic, and custom schemes.
+
+```js
+router.get("/accounts/:id", {
+  auth: {
+    strategies: [
+      {
+        type: "Bearer",
+        authorizer: async (attributes, token) => {
+          const user = await verifyToken(token);
+          return user
+            ? { authorized: true, info: user }
+            : { authorized: false };
+        },
+      },
+    ],
+  },
+  execute: (req, res, acc) => {
+    if (acc.auth.id !== acc.route.params.id) {
+      return { response: { statusCode: 403, detail: "Access denied" } };
+    }
+    return { response: { body: getAccount(acc.route.params.id) } };
+  },
+});
+```
+
+The pipeline guarantees that `acc.auth` is always populated before `execute`
+runs. There is no code path where business logic executes without
+authorization having completed first.
+
+### API2: Broken Authentication
+
+**Risk:** Weak or improperly implemented authentication mechanisms allow
+attackers to assume other users' identities.
+
+**ergo mitigation:**
+
+- `authorization()` implements RFC 6750 (Bearer) and RFC 7617 (Basic) with
+  correct `WWW-Authenticate` challenge responses, including `realm` and
+  `error` attributes formatted per the RFCs.
+- CSRF protection uses `crypto.timingSafeEqual()` for token comparison,
+  preventing timing attacks that could reveal token values.
+- CSRF cookies are locked to `httpOnly: true` and `sameSite: 'Strict'` by
+  default. These attributes cannot be overridden by consumer configuration,
+  preventing accidental weakening.
+- `WWW-Authenticate` header values pass through `sanitizeQuotedString` to
+  prevent header injection via challenge attributes.
+
+```js
+router.post("/transfer", {
+  auth: { strategies: [bearerStrategy] },
+  csrf: { secret: process.env.CSRF_SECRET },
+  execute: handleTransfer,
+});
+```
+
+### API3: Broken Object Property Level Authorization
+
+**Risk:** APIs expose object properties that should not be accessible or
+modifiable by the user.
+
+**ergo mitigation:** The `validate()` middleware uses JSON Schema (via AJV)
+for strict property allowlisting. With `additionalProperties: false`, any
+unexpected property in the request body causes a `400 Bad Request` before
+execution.
+
+```js
+router.put("/users/:id", {
+  validate: {
+    body: {
+      type: "object",
+      properties: {
+        name: { type: "string", maxLength: 100 },
+        email: { type: "string", format: "email" },
+      },
+      required: ["name", "email"],
+      additionalProperties: false,
+    },
+  },
+  execute: updateUser,
+});
+```
+
+Properties like `role`, `isAdmin`, or `createdAt` are rejected automatically
+because they are not declared in the schema. This is structural protection —
+it does not depend on the developer remembering to strip fields manually.
+
+### API4: Unrestricted Resource Consumption
+
+**Risk:** APIs that do not limit resource consumption are vulnerable to DoS
+and brute-force attacks.
+
+**ergo mitigation:** Multiple layers of resource bounding are built in:
+
+| Protection | Default | Configuration |
+| ---------- | ------- | ------------- |
+| Rate limiting | Sliding-window counter | `rateLimit({ max, windowMs })` |
+| Request body size | 1 MiB (`DEFAULT_LIMIT`) | `body({ limit })` |
+| Decompressed body size | 10 MiB (`MAX_DECOMPRESSED`) | `body({ decompressedLimit })` |
+| Query string length | 8,192 bytes | `url({ maxQueryLength })` |
+| Query key-value pairs | 256 | `url({ maxPairs })` |
+| Cookie count | 50 | `cookie({ max })` |
+| Multipart parts | Configurable | `body({ maxParts })` |
+| Rate limit store keys | Eviction cap on MemoryStore | `rateLimit({ store })` |
+| Request timeout | Configurable | `timeout({ ms })` |
+
+Decompression bomb protection deserves special mention: a second meter stream
+after the decompressor enforces `decompressedLimit` independently of the
+wire-side `limit`. A 1 KiB compressed payload that expands to 100 MiB is
+caught and rejected.
+
+```js
+router.post("/upload", {
+  body: {
+    limit: 5 * 1024 * 1024,
+    decompressedLimit: 50 * 1024 * 1024,
+    maxParts: 10,
+  },
+  execute: handleUpload,
+});
+```
+
+When rate limiting triggers, ergo returns `429 Too Many Requests` with a
+`Retry-After` header and an RFC 9457 Problem Details body — no custom error
+handling needed.
+
+### API5: Broken Function Level Authorization
+
+**Risk:** APIs expose administrative or privileged functions without proper
+access control checks.
+
+**ergo mitigation:**
+
+- ergo-router's automatic `405 Method Not Allowed` with `Allow` header
+  ensures that only explicitly registered methods are reachable on each path.
+  There are no accidental method exposures.
+- Per-route auth strategy overrides allow different authorization requirements
+  for different operations on the same resource.
+- `OPTIONS` requests are auto-generated from the route table, providing an
+  accurate inventory of supported methods.
+
+```js
+router.get("/admin/users", {
+  auth: { strategies: [adminOnlyStrategy] },
+  execute: listAllUsers,
+});
+
+router.get("/users/:id", {
+  auth: { strategies: [authenticatedUserStrategy] },
+  execute: getUser,
+});
+```
+
+### API6: Unrestricted Access to Sensitive Business Flows
+
+**Risk:** APIs expose business flows without compensating controls, enabling
+automated abuse (credential stuffing, scalping, etc.).
+
+**ergo mitigation:** The `rateLimit()` middleware provides sliding-window rate
+limiting that can be configured per-route. Combined with CSRF protection on
+state-changing operations, this provides the foundational controls for
+throttling automated abuse.
+
+```js
+router.post("/login", {
+  rateLimit: { max: 5, windowMs: 15 * 60 * 1000 },
+  csrf: { secret: process.env.CSRF_SECRET },
+  execute: handleLogin,
+});
+```
+
+<Aside type="caution">
+  Rate limiting alone does not fully address this risk. Business-specific
+  controls (CAPTCHAs, account lockout, anomaly detection) are outside ergo's
+  scope but can be composed into the pipeline as custom middleware.
+</Aside>
+
+### API7: Server Side Request Forgery
+
+**Risk:** APIs that fetch remote resources based on user input can be tricked
+into making requests to internal services.
+
+**ergo mitigation:** ergo is an inbound-only middleware toolkit. It does not
+provide HTTP client utilities, URL fetchers, or proxy helpers. There is no
+built-in mechanism for making outbound requests based on user input. If your
+application needs to fetch external resources, you control that code entirely
+— ergo does not introduce SSRF surface.
+
+### API8: Security Misconfiguration
+
+**Risk:** Missing or misconfigured security settings at any level of the API
+stack.
+
+**ergo mitigation:** ergo and ergo-router ship with conservative defaults
+that require no configuration to be secure:
+
+| Header | Default | Standard |
+| ------ | ------- | -------- |
+| `Content-Security-Policy` | `default-src 'none'` | [W3C CSP Level 3](https://www.w3.org/TR/CSP3/) |
+| `X-Frame-Options` | `DENY` | [RFC 7034](https://www.rfc-editor.org/rfc/rfc7034) |
+| `X-Content-Type-Options` | `nosniff` | Convention |
+| `Referrer-Policy` | `no-referrer` | [W3C Referrer Policy](https://www.w3.org/TR/referrer-policy/) |
+| `X-XSS-Protection` | `0` (disables flawed browser filter) | Convention |
+| `Permissions-Policy` | Restrictive defaults | [W3C Permissions Policy](https://www.w3.org/TR/permissions-policy/) |
+| `Strict-Transport-Security` | Via ergo-router (HTTPS only) | [RFC 6797](https://www.rfc-editor.org/rfc/rfc6797) |
+
+Additional structural protections:
+
+- **Null-prototype objects** for all user-input-derived data (query params,
+  cookies, Prefer headers). Keys like `__proto__`, `constructor`, and
+  `toString` cannot pollute the prototype chain.
+- **CSRF cookie attributes are locked.** `httpOnly` and `sameSite` cannot be
+  overridden via `cookieOptions`, preventing accidental weakening.
+- **Cookie-octet grammar enforcement.** Cookie values and names are validated
+  against RFC 6265 §4.1.1, preventing `Set-Cookie` attribute injection via
+  semicolons or other special characters in values.
+- **Error detail redaction.** 5xx error responses never expose internal error
+  messages. The raw error is available to the logger but the API consumer sees
+  only a generic "Internal Server Error" title.
+
+```js
+const router = createRouter({
+  transport: {
+    security: {},
+    cors: { origin: "https://myapp.com" },
+    rateLimit: { max: 100, windowMs: 60_000 },
+    requestId: {},
+  },
+});
+```
+
+Every response — including 404, 405, and 429 short-circuits — includes
+security headers and a request ID automatically.
+
+### API9: Improper Inventory Management
+
+**Risk:** APIs expose undocumented or deprecated endpoints, increasing the
+attack surface.
+
+**ergo mitigation:** This is primarily a governance concern, but ergo-router
+provides structural support:
+
+- `OPTIONS` requests auto-respond with an `Allow` header listing the methods
+  registered on each path.
+- `405 Method Not Allowed` responses include the `Allow` header, giving
+  clients (and auditors) an accurate inventory of supported methods.
+- The declarative route configuration serves as a single-source-of-truth for
+  what the API exposes.
+
+### API10: Unsafe Consumption of APIs
+
+**Risk:** APIs trust data received from third-party integrations without
+proper validation.
+
+**ergo mitigation:** While this risk primarily concerns outbound API
+consumption, ergo's inbound protections provide a strong foundation:
+
+- The body parser validates `Content-Type` and charset before parsing,
+  preventing content confusion attacks.
+- JSON Schema validation via `validate()` applies the same strictness to
+  webhook payloads and third-party callbacks as to client requests.
+- Bounded parsing defaults apply to all inbound data regardless of source.
+
+## Additional Hardening
+
+Beyond the OWASP API Top 10, ergo includes protections that address broader
+security concerns:
+
+| Protection | Description |
+| ---------- | ----------- |
+| `sanitizeQuotedString` | Escapes backslashes, double-quotes, and strips all CTL characters (except HTAB) per RFC 7230 §3.2.6. Used in `WWW-Authenticate`, `Link`, and `Set-Cookie` headers. |
+| Prefer header ReDoS mitigation | The `lib/prefer.js` parser uses a two-alternative regex pattern that avoids catastrophic backtracking on adversarial input. |
+| Sensitive header redaction | The structured logger redacts `authorization`, `cookie`, `proxy-authorization`, and `set-cookie` header values from log output. |
+| Safe URI decoding | `lib/query.js` wraps `decodeURIComponent` in a `safeDecode()` helper that catches `URIError` on malformed percent-encoded sequences, preventing 500 crashes. |
+| `exec-all` zero-length match guard | Prevents infinite loops when a regex matches the empty string. |
+| Request-ID validation | ergo-router validates incoming `X-Request-Id` headers, rejecting oversized or malformed values. |
+| Stream error propagation | `send()` and `compress()` propagate stream errors via `res.emit('error')` only when listeners are present, preventing both uncaught exceptions and hung responses. |
+
+## Further Reading
+
+- [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/)
+- [OWASP REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)
+- [OWASP Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)
+- [RFC 9205 — Building Protocols with HTTP](https://www.rfc-editor.org/rfc/rfc9205) (BCP 56)
+- [Standards Compliance](/concepts/standards/) — full list of IETF RFCs implemented by ergo
