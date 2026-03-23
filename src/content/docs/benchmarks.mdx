@@ -1,0 +1,317 @@
+---
+title: Benchmarks
+description: Performance comparison of ergo against Node.js http, Express, Fastify, Hono, and Koa across nine scenarios.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Summary
+
+ergo is benchmarked against five Node.js frameworks across nine scenarios
+that exercise different stages of the Fast Fail pipeline. Each scenario
+isolates a specific concern — routing, auth, body parsing, compression,
+conditional requests, rate limiting — to measure where frameworks spend time
+and how ergo's design decisions affect throughput and latency.
+
+**Run date:** 2026-03-22 &nbsp;|&nbsp; **ergo version:** 0.1.0 &nbsp;|&nbsp; **Node.js:** 22 (Alpine)
+
+### Overall Rankings (by average requests per second)
+
+| Scenario | 1st | 2nd | 3rd | 4th | 5th | 6th |
+|----------|-----|-----|-----|-----|-----|-----|
+| Baseline GET | Hono (37,183) | Koa (36,841) | node:http (36,722) | **ergo (36,472)** | Fastify (35,049) | Express (18,581) |
+| Param GET | **ergo (38,798)** | Hono (37,487) | node:http (36,493) | Koa (36,309) | Fastify (36,190) | Express (17,539) |
+| Auth GET | **ergo (36,437)** | node:http (35,041) | Hono (34,500) | Koa (33,424) | Fastify (32,051) | Express (18,197) |
+| JSON POST | **ergo (34,389)** | Koa (33,786) | node:http (33,008) | Fastify (31,993) | Hono (30,811) | Express (14,885) |
+| Full Pipeline | **ergo (34,688)** | Koa (34,014) | node:http (33,107) | Fastify (31,752) | Hono (29,795) | Express (14,704) |
+| Concurrency Ramp | Koa (30,249) | **ergo (30,190)** | Hono (28,969) | node:http (27,930) | Fastify (25,133) | Express (14,312) |
+| Production Stack | node:http (18,008) | **ergo (7,386)** | Koa (6,564) | Express (4,834) | Hono (4,725) | Fastify (4,456) |
+| Conditional GET | Koa (40,626) | Fastify (38,824) | node:http (37,859) | Hono (37,198) | **ergo (36,612)** | Express (17,953) |
+| Rate-Limit Flood | Fastify (35,315) | node:http (34,626) | Hono (34,115) | Koa (33,046) | **ergo (15,430)** | Express (14,035) |
+
+### ergo Highlights
+
+- **Param GET:** #1 — 38,798 RPS (106% of node:http, 107% of Fastify)
+- **Auth GET:** #1 — 36,437 RPS (104% of node:http, 114% of Fastify)
+- **JSON POST:** #1 — 34,389 RPS (104% of node:http, 107% of Fastify)
+- **Full Pipeline:** #1 — 34,688 RPS (105% of node:http, 109% of Fastify)
+- **Concurrency Ramp:** #2 — 30,190 RPS (108% of node:http, 120% of Fastify)
+- **Production Stack:** #2 — 7,386 RPS (166% of Fastify, 156% of Hono)
+- **Baseline GET:** #4 — 36,472 RPS (99% of node:http, 104% of Fastify)
+- **Conditional GET:** #5 — 36,612 RPS (97% of node:http, 94% of Fastify)
+- **Rate-Limit Flood:** #5 — 15,430 RPS (45% of node:http, 44% of Fastify)
+
+ergo ranks **#1 in the four core pipeline scenarios** (Param GET, Auth GET,
+JSON POST, Full Pipeline) — the scenarios that exercise the Fast Fail
+design most directly. In the Production Stack scenario with compression,
+CORS, content negotiation, and timeout middleware, ergo leads all
+full-featured frameworks at 166% of Fastify's throughput.
+
+---
+
+## Per-Scenario Results
+
+All values are the mean across 3 trial runs.
+
+### 01 — Baseline GET
+
+`GET /ping` — routing overhead only. Measures the framework's minimum
+per-request cost with no middleware.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| Hono | 37,183 | 0.88 | 2.19 | 4.64 | 1.06 | 29.1 MB |
+| Koa | 36,841 | 0.88 | 2.25 | 4.89 | 1.07 | 32.7 MB |
+| node:http | 36,722 | 0.89 | 2.21 | 4.80 | 1.08 | 22.4 MB |
+| **ergo** | **36,472** | **0.88** | **2.27** | **5.10** | **1.09** | **31.3 MB** |
+| Fastify | 35,049 | 0.91 | 2.48 | 5.42 | 1.13 | 22.8 MB |
+| Express | 18,581 | 2.10 | 5.18 | 7.03 | 2.14 | 31.8 MB |
+
+### 02 — Param GET
+
+`GET /users/:id?fields=name` — parameterized route with query string
+parsing. Exercises Stage 1 (Negotiation) — URL and query parameter handling.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| **ergo** | **38,798** | **0.85** | **2.08** | **4.46** | **1.02** | **30.3 MB** |
+| Hono | 37,487 | 0.87 | 2.17 | 4.71 | 1.05 | 28.6 MB |
+| node:http | 36,493 | 0.90 | 2.24 | 4.75 | 1.08 | 21.6 MB |
+| Koa | 36,309 | 0.89 | 2.29 | 4.96 | 1.09 | 33.5 MB |
+| Fastify | 36,190 | 0.87 | 2.34 | 5.21 | 1.09 | 30.8 MB |
+| Express | 17,539 | 2.25 | 5.38 | 7.26 | 2.27 | 32.8 MB |
+
+### 03 — Auth GET
+
+`GET /auth/users/:id` with Bearer token — authenticated request. Exercises
+Stage 2 (Authorization) — credential extraction and token verification.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| **ergo** | **36,437** | **0.90** | **2.23** | **4.68** | **1.08** | **29.4 MB** |
+| node:http | 35,041 | 0.94 | 2.33 | 4.85 | 1.13 | 20.4 MB |
+| Hono | 34,500 | 0.95 | 2.37 | 5.00 | 1.15 | 29.3 MB |
+| Koa | 33,424 | 0.97 | 2.53 | 5.26 | 1.18 | 33.1 MB |
+| Fastify | 32,051 | 0.95 | 3.02 | 6.17 | 1.24 | 25.1 MB |
+| Express | 18,197 | 2.15 | 5.26 | 7.17 | 2.18 | 31.1 MB |
+
+### 04 — JSON POST
+
+`POST /users` with JSON body — body parsing. Exercises Stage 3
+(Validation) — request body stream reading and JSON deserialization.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| **ergo** | **34,389** | **0.94** | **2.43** | **5.32** | **1.15** | **31.0 MB** |
+| Koa | 33,786 | 0.96 | 2.48 | 5.22 | 1.17 | 33.4 MB |
+| node:http | 33,008 | 0.98 | 2.47 | 5.41 | 1.20 | 27.5 MB |
+| Fastify | 31,993 | 0.96 | 3.39 | 5.89 | 1.24 | 33.7 MB |
+| Hono | 30,811 | 1.11 | 2.92 | 7.57 | 1.28 | 37.2 MB |
+| Express | 14,885 | 2.70 | 6.03 | 7.83 | 2.67 | 33.5 MB |
+
+### 05 — Full Pipeline
+
+`POST /auth/users` with Bearer token, JSON body, and AJV validation —
+exercises all four Fast Fail stages in sequence.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| **ergo** | **34,688** | **0.94** | **2.35** | **5.04** | **1.14** | **29.7 MB** |
+| Koa | 34,014 | 0.95 | 2.44 | 5.27 | 1.16 | 33.2 MB |
+| node:http | 33,107 | 0.99 | 2.49 | 5.14 | 1.19 | 28.4 MB |
+| Fastify | 31,752 | 0.98 | 3.38 | 5.69 | 1.25 | 35.8 MB |
+| Hono | 29,795 | 1.18 | 2.95 | 7.72 | 1.33 | 38.2 MB |
+| Express | 14,704 | 2.72 | 6.33 | 8.08 | 2.71 | 35.2 MB |
+
+### 06 — Concurrency Ramp
+
+`POST /auth/users` with a ramp from 10 to 500 virtual users — measures
+throughput and latency under increasing concurrency to find the saturation
+point.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| Koa | 30,249 | 2.27 | 19.05 | 32.18 | 5.40 | 33.7 MB |
+| **ergo** | **30,190** | **2.29** | **19.04** | **32.25** | **5.40** | **31.3 MB** |
+| Hono | 28,969 | 2.57 | 19.08 | 37.17 | 5.63 | 39.0 MB |
+| node:http | 27,930 | 2.58 | 20.39 | 37.11 | 5.85 | 28.4 MB |
+| Fastify | 25,133 | 3.04 | 21.73 | 40.68 | 6.49 | 37.8 MB |
+| Express | 14,312 | 5.87 | 39.28 | 49.04 | 11.42 | 49.5 MB |
+
+### 07 — Production Stack
+
+`POST /stack/auth/users` with CORS, content negotiation, timeout,
+auth, body parsing, AJV validation, and gzip compression — a realistic
+production middleware stack. The delta from Scenario 05 isolates
+the cost of additional middleware layers.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| node:http | 18,008 | 1.96 | 5.14 | 9.14 | 2.20 | 23.1 MB |
+| **ergo** | **7,386** | **4.01** | **12.38** | **14.62** | **5.40** | **30.5 MB** |
+| Koa | 6,564 | 4.50 | 14.42 | 17.67 | 6.08 | 32.6 MB |
+| Express | 4,834 | 8.54 | 14.17 | 17.22 | 8.26 | 28.0 MB |
+| Hono | 4,725 | 7.72 | 17.72 | 21.31 | 8.45 | 34.6 MB |
+| Fastify | 4,456 | 8.45 | 17.35 | 22.86 | 8.97 | 33.7 MB |
+
+### 08 — Conditional GET (ETag)
+
+`GET /cached/users/:id` with `If-None-Match` — measures ETag generation
+and 304 Not Modified short-circuiting. Tests how efficiently frameworks
+skip serialization and compression when the resource hasn't changed.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| Koa | 40,626 | 0.81 | 1.99 | 4.26 | 0.97 | 32.7 MB |
+| Fastify | 38,824 | 0.84 | 2.09 | 4.61 | 1.02 | 23.7 MB |
+| node:http | 37,859 | 0.86 | 2.15 | 4.60 | 1.04 | 21.2 MB |
+| Hono | 37,198 | 0.87 | 2.23 | 4.89 | 1.06 | 29.1 MB |
+| **ergo** | **36,612** | **0.87** | **2.31** | **5.07** | **1.08** | **31.2 MB** |
+| Express | 17,953 | 2.16 | 5.35 | 7.37 | 2.22 | 31.6 MB |
+
+### 09 — Rate-Limit Flood
+
+`POST /rate-limited/users` under sustained flood — rate limit set to
+50 requests per 10-second window with 50 concurrent VUs. The vast majority
+of requests are rejected with 429. Tests the Fast Fail principle: rejected
+requests should be cheap because the rate limiter runs in Stage 1 before
+body parsing, auth, and validation.
+
+| Framework | Avg RPS | p50 (ms) | p95 (ms) | p99 (ms) | Avg Latency (ms) | Mem Peak |
+|-----------|--------:|---------:|---------:|---------:|------------------:|---------:|
+| Fastify | 35,315 | 0.93 | 2.28 | 5.00 | 1.12 | 32.1 MB |
+| node:http | 34,626 | 0.94 | 2.35 | 5.06 | 1.14 | 24.7 MB |
+| Hono | 34,115 | 0.95 | 2.46 | 5.20 | 1.16 | 28.4 MB |
+| Koa | 33,046 | 0.95 | 2.65 | 6.14 | 1.21 | 32.4 MB |
+| **ergo** | **15,430** | **0.81** | **2.73** | **5.98** | **2.58** | **31.1 MB** |
+| Express | 14,035 | 2.85 | 6.59 | 8.51 | 2.84 | 32.4 MB |
+
+---
+
+## Methodology
+
+### Docker Isolation
+
+Each server runs in its own Docker container, **one at a time** (sequential,
+never concurrent), to eliminate inter-container CPU contention.
+
+| Resource | Server Container | k6 Container |
+|----------|-----------------|--------------|
+| CPU | `--cpuset-cpus="0"` | `--cpuset-cpus="1"` |
+| Memory | `--memory=512m` | `--memory=1g` |
+| Network | Docker bridge (`bench`) | Docker bridge (`bench`) |
+| Node.js | `node:22-alpine` | — |
+| `NODE_ENV` | `production` | — |
+
+All servers listen on port 3000 and implement identical request/response
+logic — the only variable is the framework.
+
+### Load Profile
+
+k6 staged virtual users per scenario:
+
+| Phase | Duration | Virtual Users | Purpose |
+|-------|----------|---------------|---------|
+| Warmup | 30s | 0 → 50 | JIT warm, connection pools established |
+| Sustain | 60s | 50 | Measurement window |
+| Ramp-down | 10s | 50 → 0 | Graceful drain |
+
+Three trial runs per scenario × framework combination (162 total runs).
+The report computes the mean, standard deviation, and coefficient of
+variation (CoV) across trials to quantify run-to-run consistency.
+
+### Validation Parity
+
+All frameworks use [AJV](https://ajv.js.org/) JSON Schema validation for
+request body validation (Scenarios 05 and 07). Fastify uses its built-in
+AJV integration; all others compile schemas at startup. This ensures
+validation overhead is consistent across the suite.
+
+---
+
+## Framework Versions
+
+| Framework | Version | Key Dependencies |
+|-----------|---------|-----------------|
+| node:http | Node.js 22 (Alpine) | ajv 8.18.0, etag 1.8.1 |
+| Express | 5.2.1 | compression 1.8.1, cors 2.8.6, express-rate-limit 8.3.1 |
+| Fastify | 5.8.2 | @fastify/compress 8.3.1, @fastify/cors 11.2.0, @fastify/etag 6.1.0, @fastify/rate-limit 10.3.0 |
+| Hono | 4.12.8 | @hono/node-server 1.19.11, ajv 8.18.0, etag 1.8.1 |
+| Koa | 3.1.2 | @koa/cors 5.0.0, @koa/router 15.4.0, koa-bodyparser 4.4.1, koa-compress 5.2.1 |
+| ergo | 0.1.0 | ergo-router 0.1.0 |
+
+---
+
+## Statistical Rigor
+
+Each framework × scenario combination is run 3 times. The report computes
+the **coefficient of variation** (CoV = stddev / mean × 100%) for both
+RPS and p99 latency to quantify measurement noise.
+
+| CoV Range | Verdict |
+|-----------|---------|
+| < 3% | Excellent |
+| 3–5% | Acceptable |
+| 5–10% | Noisy |
+| > 10% | Unreliable |
+
+### This Run
+
+- **Average CoV across all 54 combinations:** 1.8%
+- **Noisy (CoV ≥ 5%):** 5 / 54 combinations
+- **Unreliable (CoV ≥ 10%):** 0 / 54 combinations
+- **Overall verdict: CLEAN RUN** — results are highly reliable
+
+The noisy combinations were:
+
+| Framework | Scenario | CoV (RPS) | CoV (p99) |
+|-----------|----------|----------:|----------:|
+| Fastify | Baseline GET | 6.3% | 12.9% |
+| Fastify | Auth GET | 8.6% | 18.0% |
+| ergo | JSON POST | 5.2% | 13.2% |
+| Express | Conditional GET | 5.2% | 4.2% |
+| Koa | Rate-Limit Flood | 9.2% | 18.6% |
+
+The Fastify variability in Scenarios 01 and 03 is consistent with
+Fastify's JIT-sensitive startup behavior under short warmup windows.
+
+---
+
+## Environment
+
+```
+OS:       Darwin 25.3.0 arm64
+CPU:      Apple M4 Pro
+Cores:    14 (12 performance + 2 efficiency)
+RAM:      48 GB
+Docker:   Docker Desktop 4.42.0 (Engine 28.1.1)
+Node.js:  22 (pinned via node:22-alpine)
+k6:       grafana/k6:latest
+```
+
+---
+
+## Reproduce It
+
+The complete benchmark suite — scenarios, server implementations, Docker
+orchestration, and report generator — is committed to the
+[ergo repository](https://github.com/CentralPing/ergo/tree/main/benchmarks)
+for full auditability.
+
+```bash
+cd benchmarks
+chmod +x run.sh
+./run.sh                    # ~2.5 hours for 162 runs
+node generate-report.js     # produces results/report.md
+```
+
+**Prerequisites:** Docker Desktop (or Docker Engine) with multi-core CPU
+pinning support, 2+ CPU cores available, ~4 GB free RAM.
+
+<Aside type="caution" title="Synthetic benchmarks">
+  These benchmarks are synthetic and hardware-dependent. Results will vary
+  across machines, Docker runtimes, and OS configurations. The scenarios are
+  designed to test ergo's specific design decisions (Fast Fail ordering,
+  synchronous middleware fast-path, return-value pipeline model) rather than
+  to declare a universal "fastest framework."
+</Aside>

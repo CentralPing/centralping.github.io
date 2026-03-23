@@ -43,6 +43,12 @@ export default defineConfig({
             { label: "ergo-router", slug: "packages/ergo-router" },
           ],
         },
+        {
+          label: "Performance",
+          items: [
+            { label: "Benchmarks", slug: "benchmarks" },
+          ],
+        },
       ],
       customCss: ["./src/styles/packages.css"],
     }),
