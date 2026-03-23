@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.1",
+    "@observablehq/plot": "^0.6.17",
     "astro": "^6.0.1",
+    "jsdom": "^29.0.1",
     "sharp": "^0.34.2"
   }
 }

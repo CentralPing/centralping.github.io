@@ -1,0 +1,68 @@
+---
+import * as Plot from '@observablehq/plot';
+import {JSDOM} from 'jsdom';
+import benchmarks from '../../data/benchmarks.json';
+import {FRAMEWORKS, COLORS} from './colors.js';
+
+const CORE_IDS = [
+  '01-baseline-get',
+  '03-auth-get',
+  '05-full-pipeline',
+  '07-production-stack',
+];
+
+const scenarios = benchmarks.scenarios.filter(s => CORE_IDS.includes(s.id));
+
+const rows = scenarios.flatMap(s =>
+  s.results.flatMap(r => [
+    {scenario: s.shortLabel, framework: r.framework, percentile: 'p50', ms: r.p50},
+    {scenario: s.shortLabel, framework: r.framework, percentile: 'p95', ms: r.p95},
+    {scenario: s.shortLabel, framework: r.framework, percentile: 'p99', ms: r.p99},
+  ])
+);
+
+const rangeRows = scenarios.flatMap(s =>
+  s.results.map(r => ({
+    scenario: s.shortLabel,
+    framework: r.framework,
+    p50: r.p50,
+    p99: r.p99,
+  }))
+);
+
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+const plot = Plot.plot({
+  document: dom.window.document,
+  width: 928,
+  height: 480,
+  marginLeft: 80,
+  marginRight: 20,
+  x: {label: 'Latency (ms)', grid: true},
+  y: {label: null, padding: 0.25},
+  fy: {label: null, padding: 0.15},
+  color: {domain: ['p50', 'p95', 'p99'], range: ['#22c55e', '#f59e0b', '#ef4444'], legend: true},
+  marks: [
+    Plot.ruleY(rangeRows, {
+      y: 'framework',
+      fy: 'scenario',
+      x1: 'p50',
+      x2: 'p99',
+      stroke: '#94a3b8',
+      strokeWidth: 1,
+    }),
+    Plot.dot(rows, {
+      x: 'ms',
+      y: 'framework',
+      fy: 'scenario',
+      fill: 'percentile',
+      r: 5,
+      sort: {y: null, fy: null},
+    }),
+  ],
+});
+const svg = plot.outerHTML;
+---
+<figure class="bench-chart">
+  <div set:html={svg} />
+  <figcaption>Latency distribution across four key scenarios. Tighter dot clusters indicate more predictable response times. Connecting lines show the p50-to-p99 spread.</figcaption>
+</figure>

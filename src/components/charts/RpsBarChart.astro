@@ -1,0 +1,39 @@
+---
+import * as Plot from '@observablehq/plot';
+import {JSDOM} from 'jsdom';
+import benchmarks from '../../data/benchmarks.json';
+import {FRAMEWORKS, COLORS} from './colors.js';
+
+const rows = benchmarks.scenarios.flatMap(s =>
+  s.results.map(r => ({scenario: s.shortLabel, framework: r.framework, rps: r.rps}))
+);
+
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+const plot = Plot.plot({
+  document: dom.window.document,
+  width: 928,
+  height: 520,
+  marginLeft: 90,
+  marginRight: 20,
+  x: {label: 'Requests per second', tickFormat: s => `${(s / 1000).toFixed(0)}k`},
+  y: {label: null, padding: 0.2},
+  fy: {label: null, padding: 0.15},
+  color: {domain: FRAMEWORKS, range: COLORS, legend: true},
+  marks: [
+    Plot.barX(rows, {
+      x: 'rps',
+      y: 'framework',
+      fy: 'scenario',
+      fill: 'framework',
+      sort: {y: null, fy: null},
+      tip: false,
+    }),
+    Plot.ruleX([0]),
+  ],
+});
+const svg = plot.outerHTML;
+---
+<figure class="bench-chart">
+  <div set:html={svg} />
+  <figcaption>Average requests per second by framework across all 9 scenarios. Higher is better.</figcaption>
+</figure>

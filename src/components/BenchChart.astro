@@ -1,0 +1,19 @@
+---
+import * as Plot from '@observablehq/plot';
+import { JSDOM } from 'jsdom';
+
+interface Props {
+  options: Record<string, unknown>;
+  caption?: string;
+  class?: string;
+}
+
+const { options, caption, class: className } = Astro.props;
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+const plot = Plot.plot({ ...options, document: dom.window.document });
+const svg = plot.outerHTML;
+---
+<figure class:list={['bench-chart', className]}>
+  <div set:html={svg} />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

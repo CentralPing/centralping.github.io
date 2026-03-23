@@ -1,0 +1,42 @@
+---
+import * as Plot from '@observablehq/plot';
+import {JSDOM} from 'jsdom';
+import benchmarks from '../../data/benchmarks.json';
+import {FRAMEWORKS, COLORS} from './colors.js';
+
+const rows = benchmarks.scenarios.flatMap(s =>
+  s.results.map(r => ({
+    scenario: s.shortLabel,
+    framework: r.framework,
+    memPeak: r.memPeak,
+  }))
+);
+
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+const plot = Plot.plot({
+  document: dom.window.document,
+  width: 928,
+  height: 380,
+  marginLeft: 60,
+  marginBottom: 40,
+  x: {label: null, padding: 0.2},
+  y: {label: 'Peak memory (MB)', grid: true},
+  fx: {label: null, padding: 0.1},
+  color: {domain: FRAMEWORKS, range: COLORS, legend: true},
+  marks: [
+    Plot.barY(rows, {
+      x: 'framework',
+      y: 'memPeak',
+      fx: 'scenario',
+      fill: 'framework',
+      sort: {x: null, fx: null},
+    }),
+    Plot.ruleY([0]),
+  ],
+});
+const svg = plot.outerHTML;
+---
+<figure class="bench-chart">
+  <div set:html={svg} />
+  <figcaption>Peak memory usage (MB) by framework across all scenarios. Lower is better.</figcaption>
+</figure>

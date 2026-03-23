@@ -4,6 +4,10 @@ description: Performance comparison of ergo against Node.js http, Express, Fasti
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import RpsBarChart from '../../components/charts/RpsBarChart.astro';
+import PipelineChart from '../../components/charts/PipelineChart.astro';
+import LatencyDotPlot from '../../components/charts/LatencyDotPlot.astro';
+import MemoryChart from '../../components/charts/MemoryChart.astro';
 
 ## Summary
 
@@ -29,6 +33,8 @@ and how ergo's design decisions affect throughput and latency.
 | Conditional GET | Koa (40,626) | Fastify (38,824) | node:http (37,859) | Hono (37,198) | **ergo (36,612)** | Express (17,953) |
 | Rate-Limit Flood | Fastify (35,315) | node:http (34,626) | Hono (34,115) | Koa (33,046) | **ergo (15,430)** | Express (14,035) |
 
+<RpsBarChart />
+
 ### ergo Highlights
 
 - **Param GET:** #1 — 38,798 RPS (106% of node:http, 107% of Fastify)
@@ -46,6 +52,8 @@ JSON POST, Full Pipeline) — the scenarios that exercise the Fast Fail
 design most directly. In the Production Stack scenario with compression,
 CORS, content negotiation, and timeout middleware, ergo leads all
 full-featured frameworks at 166% of Fastify's throughput.
+
+<PipelineChart />
 
 ---
 
@@ -185,6 +193,14 @@ body parsing, auth, and validation.
 | Koa | 33,046 | 0.95 | 2.65 | 6.14 | 1.21 | 32.4 MB |
 | **ergo** | **15,430** | **0.81** | **2.73** | **5.98** | **2.58** | **31.1 MB** |
 | Express | 14,035 | 2.85 | 6.59 | 8.51 | 2.84 | 32.4 MB |
+
+### Latency Distribution
+
+<LatencyDotPlot />
+
+### Memory Footprint
+
+<MemoryChart />
 
 ---
 

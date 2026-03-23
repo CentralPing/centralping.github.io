@@ -50,7 +50,7 @@ export default defineConfig({
           ],
         },
       ],
-      customCss: ["./src/styles/packages.css"],
+      customCss: ["./src/styles/packages.css", "./src/styles/benchmarks.css"],
     }),
   ],
 });

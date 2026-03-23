@@ -1,0 +1,124 @@
+{
+  "date": "2026-03-22",
+  "ergoVersion": "0.1.0",
+  "nodeVersion": "22",
+  "scenarios": [
+    {
+      "id": "01-baseline-get",
+      "label": "Baseline GET",
+      "shortLabel": "Baseline",
+      "results": [
+        { "framework": "node:http", "rps": 36722, "p50": 0.89, "p95": 2.21, "p99": 4.80, "avgLatency": 1.08, "memPeak": 22.4 },
+        { "framework": "Express", "rps": 18581, "p50": 2.10, "p95": 5.18, "p99": 7.03, "avgLatency": 2.14, "memPeak": 31.8 },
+        { "framework": "Fastify", "rps": 35049, "p50": 0.91, "p95": 2.48, "p99": 5.42, "avgLatency": 1.13, "memPeak": 22.8 },
+        { "framework": "Hono", "rps": 37183, "p50": 0.88, "p95": 2.19, "p99": 4.64, "avgLatency": 1.06, "memPeak": 29.1 },
+        { "framework": "Koa", "rps": 36841, "p50": 0.88, "p95": 2.25, "p99": 4.89, "avgLatency": 1.07, "memPeak": 32.7 },
+        { "framework": "ergo", "rps": 36472, "p50": 0.88, "p95": 2.27, "p99": 5.10, "avgLatency": 1.09, "memPeak": 31.3 }
+      ]
+    },
+    {
+      "id": "02-param-get",
+      "label": "Param GET",
+      "shortLabel": "Param",
+      "results": [
+        { "framework": "node:http", "rps": 36493, "p50": 0.90, "p95": 2.24, "p99": 4.75, "avgLatency": 1.08, "memPeak": 21.6 },
+        { "framework": "Express", "rps": 17539, "p50": 2.25, "p95": 5.38, "p99": 7.26, "avgLatency": 2.27, "memPeak": 32.8 },
+        { "framework": "Fastify", "rps": 36190, "p50": 0.87, "p95": 2.34, "p99": 5.21, "avgLatency": 1.09, "memPeak": 30.8 },
+        { "framework": "Hono", "rps": 37487, "p50": 0.87, "p95": 2.17, "p99": 4.71, "avgLatency": 1.05, "memPeak": 28.6 },
+        { "framework": "Koa", "rps": 36309, "p50": 0.89, "p95": 2.29, "p99": 4.96, "avgLatency": 1.09, "memPeak": 33.5 },
+        { "framework": "ergo", "rps": 38798, "p50": 0.85, "p95": 2.08, "p99": 4.46, "avgLatency": 1.02, "memPeak": 30.3 }
+      ]
+    },
+    {
+      "id": "03-auth-get",
+      "label": "Auth GET",
+      "shortLabel": "Auth",
+      "results": [
+        { "framework": "node:http", "rps": 35041, "p50": 0.94, "p95": 2.33, "p99": 4.85, "avgLatency": 1.13, "memPeak": 20.4 },
+        { "framework": "Express", "rps": 18197, "p50": 2.15, "p95": 5.26, "p99": 7.17, "avgLatency": 2.18, "memPeak": 31.1 },
+        { "framework": "Fastify", "rps": 32051, "p50": 0.95, "p95": 3.02, "p99": 6.17, "avgLatency": 1.24, "memPeak": 25.1 },
+        { "framework": "Hono", "rps": 34500, "p50": 0.95, "p95": 2.37, "p99": 5.00, "avgLatency": 1.15, "memPeak": 29.3 },
+        { "framework": "Koa", "rps": 33424, "p50": 0.97, "p95": 2.53, "p99": 5.26, "avgLatency": 1.18, "memPeak": 33.1 },
+        { "framework": "ergo", "rps": 36437, "p50": 0.90, "p95": 2.23, "p99": 4.68, "avgLatency": 1.08, "memPeak": 29.4 }
+      ]
+    },
+    {
+      "id": "04-json-post",
+      "label": "JSON POST",
+      "shortLabel": "Body",
+      "results": [
+        { "framework": "node:http", "rps": 33008, "p50": 0.98, "p95": 2.47, "p99": 5.41, "avgLatency": 1.20, "memPeak": 27.5 },
+        { "framework": "Express", "rps": 14885, "p50": 2.70, "p95": 6.03, "p99": 7.83, "avgLatency": 2.67, "memPeak": 33.5 },
+        { "framework": "Fastify", "rps": 31993, "p50": 0.96, "p95": 3.39, "p99": 5.89, "avgLatency": 1.24, "memPeak": 33.7 },
+        { "framework": "Hono", "rps": 30811, "p50": 1.11, "p95": 2.92, "p99": 7.57, "avgLatency": 1.28, "memPeak": 37.2 },
+        { "framework": "Koa", "rps": 33786, "p50": 0.96, "p95": 2.48, "p99": 5.22, "avgLatency": 1.17, "memPeak": 33.4 },
+        { "framework": "ergo", "rps": 34389, "p50": 0.94, "p95": 2.43, "p99": 5.32, "avgLatency": 1.15, "memPeak": 31.0 }
+      ]
+    },
+    {
+      "id": "05-full-pipeline",
+      "label": "Full Pipeline",
+      "shortLabel": "Full",
+      "results": [
+        { "framework": "node:http", "rps": 33107, "p50": 0.99, "p95": 2.49, "p99": 5.14, "avgLatency": 1.19, "memPeak": 28.4 },
+        { "framework": "Express", "rps": 14704, "p50": 2.72, "p95": 6.33, "p99": 8.08, "avgLatency": 2.71, "memPeak": 35.2 },
+        { "framework": "Fastify", "rps": 31752, "p50": 0.98, "p95": 3.38, "p99": 5.69, "avgLatency": 1.25, "memPeak": 35.8 },
+        { "framework": "Hono", "rps": 29795, "p50": 1.18, "p95": 2.95, "p99": 7.72, "avgLatency": 1.33, "memPeak": 38.2 },
+        { "framework": "Koa", "rps": 34014, "p50": 0.95, "p95": 2.44, "p99": 5.27, "avgLatency": 1.16, "memPeak": 33.2 },
+        { "framework": "ergo", "rps": 34688, "p50": 0.94, "p95": 2.35, "p99": 5.04, "avgLatency": 1.14, "memPeak": 29.7 }
+      ]
+    },
+    {
+      "id": "06-concurrency-ramp",
+      "label": "Concurrency Ramp",
+      "shortLabel": "Concurrency",
+      "results": [
+        { "framework": "node:http", "rps": 27930, "p50": 2.58, "p95": 20.39, "p99": 37.11, "avgLatency": 5.85, "memPeak": 28.4 },
+        { "framework": "Express", "rps": 14312, "p50": 5.87, "p95": 39.28, "p99": 49.04, "avgLatency": 11.42, "memPeak": 49.5 },
+        { "framework": "Fastify", "rps": 25133, "p50": 3.04, "p95": 21.73, "p99": 40.68, "avgLatency": 6.49, "memPeak": 37.8 },
+        { "framework": "Hono", "rps": 28969, "p50": 2.57, "p95": 19.08, "p99": 37.17, "avgLatency": 5.63, "memPeak": 39.0 },
+        { "framework": "Koa", "rps": 30249, "p50": 2.27, "p95": 19.05, "p99": 32.18, "avgLatency": 5.40, "memPeak": 33.7 },
+        { "framework": "ergo", "rps": 30190, "p50": 2.29, "p95": 19.04, "p99": 32.25, "avgLatency": 5.40, "memPeak": 31.3 }
+      ]
+    },
+    {
+      "id": "07-production-stack",
+      "label": "Production Stack",
+      "shortLabel": "Prod Stack",
+      "results": [
+        { "framework": "node:http", "rps": 18008, "p50": 1.96, "p95": 5.14, "p99": 9.14, "avgLatency": 2.20, "memPeak": 23.1 },
+        { "framework": "Express", "rps": 4834, "p50": 8.54, "p95": 14.17, "p99": 17.22, "avgLatency": 8.26, "memPeak": 28.0 },
+        { "framework": "Fastify", "rps": 4456, "p50": 8.45, "p95": 17.35, "p99": 22.86, "avgLatency": 8.97, "memPeak": 33.7 },
+        { "framework": "Hono", "rps": 4725, "p50": 7.72, "p95": 17.72, "p99": 21.31, "avgLatency": 8.45, "memPeak": 34.6 },
+        { "framework": "Koa", "rps": 6564, "p50": 4.50, "p95": 14.42, "p99": 17.67, "avgLatency": 6.08, "memPeak": 32.6 },
+        { "framework": "ergo", "rps": 7386, "p50": 4.01, "p95": 12.38, "p99": 14.62, "avgLatency": 5.40, "memPeak": 30.5 }
+      ]
+    },
+    {
+      "id": "08-conditional-get",
+      "label": "Conditional GET",
+      "shortLabel": "Conditional",
+      "results": [
+        { "framework": "node:http", "rps": 37859, "p50": 0.86, "p95": 2.15, "p99": 4.60, "avgLatency": 1.04, "memPeak": 21.2 },
+        { "framework": "Express", "rps": 17953, "p50": 2.16, "p95": 5.35, "p99": 7.37, "avgLatency": 2.22, "memPeak": 31.6 },
+        { "framework": "Fastify", "rps": 38824, "p50": 0.84, "p95": 2.09, "p99": 4.61, "avgLatency": 1.02, "memPeak": 23.7 },
+        { "framework": "Hono", "rps": 37198, "p50": 0.87, "p95": 2.23, "p99": 4.89, "avgLatency": 1.06, "memPeak": 29.1 },
+        { "framework": "Koa", "rps": 40626, "p50": 0.81, "p95": 1.99, "p99": 4.26, "avgLatency": 0.97, "memPeak": 32.7 },
+        { "framework": "ergo", "rps": 36612, "p50": 0.87, "p95": 2.31, "p99": 5.07, "avgLatency": 1.08, "memPeak": 31.2 }
+      ]
+    },
+    {
+      "id": "09-rate-limit-flood",
+      "label": "Rate-Limit Flood",
+      "shortLabel": "Rate Limit",
+      "results": [
+        { "framework": "node:http", "rps": 34626, "p50": 0.94, "p95": 2.35, "p99": 5.06, "avgLatency": 1.14, "memPeak": 24.7 },
+        { "framework": "Express", "rps": 14035, "p50": 2.85, "p95": 6.59, "p99": 8.51, "avgLatency": 2.84, "memPeak": 32.4 },
+        { "framework": "Fastify", "rps": 35315, "p50": 0.93, "p95": 2.28, "p99": 5.00, "avgLatency": 1.12, "memPeak": 32.1 },
+        { "framework": "Hono", "rps": 34115, "p50": 0.95, "p95": 2.46, "p99": 5.20, "avgLatency": 1.16, "memPeak": 28.4 },
+        { "framework": "Koa", "rps": 33046, "p50": 0.95, "p95": 2.65, "p99": 6.14, "avgLatency": 1.21, "memPeak": 32.4 },
+        { "framework": "ergo", "rps": 15430, "p50": 0.81, "p95": 2.73, "p99": 5.98, "avgLatency": 2.58, "memPeak": 31.1 }
+      ]
+    }
+  ]
+}

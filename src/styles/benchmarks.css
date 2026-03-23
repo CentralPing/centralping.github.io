@@ -1,0 +1,66 @@
+.bench-chart {
+  margin: 2rem 0;
+  overflow-x: auto;
+}
+
+.bench-chart > div {
+  min-width: 0;
+}
+
+.bench-chart figcaption {
+  font-size: 0.85rem;
+  color: var(--sl-color-gray-3);
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.bench-chart svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Observable Plot light-mode overrides */
+.bench-chart [aria-label="x-axis tick label"],
+.bench-chart [aria-label="y-axis tick label"],
+.bench-chart [aria-label="fx-axis tick label"],
+.bench-chart [aria-label="fy-axis tick label"] {
+  fill: var(--sl-color-gray-2);
+}
+
+.bench-chart [aria-label="x-axis label"],
+.bench-chart [aria-label="y-axis label"] {
+  fill: var(--sl-color-gray-2);
+}
+
+.bench-chart [aria-label="x-axis tick"],
+.bench-chart [aria-label="y-axis tick"] {
+  stroke: var(--sl-color-gray-5);
+}
+
+.bench-chart [aria-label="grid"] line,
+.bench-chart [aria-label="grid"] path {
+  stroke: var(--sl-color-gray-6);
+}
+
+/* Dark mode via Starlight's theme attribute */
+:root[data-theme="dark"] .bench-chart [aria-label="x-axis tick label"],
+:root[data-theme="dark"] .bench-chart [aria-label="y-axis tick label"],
+:root[data-theme="dark"] .bench-chart [aria-label="fx-axis tick label"],
+:root[data-theme="dark"] .bench-chart [aria-label="fy-axis tick label"] {
+  fill: var(--sl-color-gray-3);
+}
+
+:root[data-theme="dark"] .bench-chart [aria-label="x-axis label"],
+:root[data-theme="dark"] .bench-chart [aria-label="y-axis label"] {
+  fill: var(--sl-color-gray-3);
+}
+
+:root[data-theme="dark"] .bench-chart [aria-label="x-axis tick"],
+:root[data-theme="dark"] .bench-chart [aria-label="y-axis tick"] {
+  stroke: var(--sl-color-gray-4);
+}
+
+:root[data-theme="dark"] .bench-chart [aria-label="grid"] line,
+:root[data-theme="dark"] .bench-chart [aria-label="grid"] path {
+  stroke: var(--sl-color-gray-5);
+}
