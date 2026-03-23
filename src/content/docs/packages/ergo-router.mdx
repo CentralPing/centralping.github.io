@@ -51,13 +51,16 @@ compliance and a declarative pipeline builder.
 Declaratively compose ergo middleware for each route:
 
 ```js
-import { createRouter } from "ergo-router";
+import createRouter from "ergo-router";
 
-const router = createRouter();
+const router = createRouter({
+  defaults: {
+    accepts: { types: ["application/json"] },
+  },
+});
 
 router.post("/users", {
-  negotiate: { accept: ["application/json"], contentType: ["application/json"] },
-  authorize: myAuthMiddleware,
+  auth: { strategies: [bearerStrategy] },
   validate: { body: userSchema },
   execute: createUser,
 });
@@ -66,16 +69,21 @@ router.post("/users", {
 ### Graceful Shutdown
 
 ```js
-const server = http.createServer(router.handler());
+import createRouter, { graceful } from "ergo-router";
 
-process.on("SIGTERM", () => {
-  router.shutdown().then(() => {
-    server.close();
-  });
+const router = createRouter({ /* ... */ });
+
+const { server, shutdown } = await graceful(router.handle(), {
+  port: 3000,
+  onShutdown: async ({ log }) => {
+    await disconnectDatabase();
+    log.info("Cleanup complete");
+  },
 });
 ```
 
-In-flight requests are drained before the server closes.
+`graceful()` handles signal listeners (SIGINT, SIGTERM), connection draining
+with a configurable timeout, and startup/shutdown lifecycle hooks.
 
 ## Links
 

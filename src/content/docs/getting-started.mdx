@@ -31,19 +31,25 @@ Create a server with a single route that demonstrates all four Fast Fail
 stages:
 
 ```js
-import http from "node:http";
-import { createRouter } from "ergo-router";
+import createRouter, { graceful } from "ergo-router";
 
-const router = createRouter();
+const router = createRouter({
+  defaults: {
+    accepts: { types: ["application/json"] },
+  },
+});
 
 router.get("/users/:id", {
-  negotiate: {
-    accept: ["application/json"],
-  },
-  authorize: ({ req }) => {
-    const token = req.headers.authorization?.replace("Bearer ", "");
-    if (!token) throw { statusCode: 401 };
-    return { userId: token };
+  auth: {
+    strategies: [
+      {
+        type: "Bearer",
+        authorizer: async (attributes, token) => {
+          if (!token) return { authorized: false, info: { statusCode: 401 } };
+          return { authorized: true, info: { userId: token } };
+        },
+      },
+    ],
   },
   validate: {
     params: {
@@ -52,15 +58,18 @@ router.get("/users/:id", {
       required: ["id"],
     },
   },
-  execute: ({ req, params, auth }) => ({
-    id: params.id,
-    name: "Jane Doe",
-    requestedBy: auth.userId,
+  execute: (req, res, acc) => ({
+    response: {
+      body: {
+        id: acc.route.params.id,
+        name: "Jane Doe",
+        requestedBy: acc.auth.userId,
+      },
+    },
   }),
 });
 
-const server = http.createServer(router.handler());
-server.listen(3000, () => console.log("http://localhost:3000"));
+await graceful(router.handle(), { port: 3000 });
 ```
 
 ### What Happens
