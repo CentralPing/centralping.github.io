@@ -1,6 +1,7 @@
 language: en-US
 reviews:
   profile: chill
+  auto_approve_pr: true
   request_changes_workflow: true
   high_level_summary: true
   poem: false
