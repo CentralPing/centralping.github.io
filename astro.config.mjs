@@ -52,6 +52,7 @@ export default defineConfig({
               label: "Standards Compliance",
               slug: "concepts/standards",
             },
+            { label: "Security", slug: "concepts/security" },
           ],
         },
         {
