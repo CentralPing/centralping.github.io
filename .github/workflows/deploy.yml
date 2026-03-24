@@ -22,10 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout ergo source
+        uses: actions/checkout@v4
+        with:
+          repository: CentralPing/ergo
+          path: .ergo-source
+          ref: ${{ github.event.client_payload.version == 'dev' && 'main' || github.event.client_payload.version || 'main' }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
+      - name: Install ergo dependencies
+        run: npm install --ignore-scripts --omit=dev
+        working-directory: .ergo-source
 
       - run: npm ci
 
