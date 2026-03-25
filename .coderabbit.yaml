@@ -1,14 +1,44 @@
 language: en-US
+tone_instructions: >
+  Focus on content accuracy (ergo/ergo-router API references, RFC citations),
+  accessible Starlight/Astro patterns, and correct Typedoc integration.
 reviews:
   profile: chill
   request_changes_workflow: true
   high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_details: true
   poem: false
   review_status: true
+  related_issues: true
+  related_prs: true
   path_filters:
     - "!public/**"
+    - "!dist/**"
+  path_instructions:
+    - path: "src/content/**"
+      instructions: >
+        Documentation content (MDX). Verify technical accuracy of ergo/ergo-router
+        API descriptions, correct RFC references, and consistent terminology with
+        the library READMEs and JSDoc.
+    - path: "src/components/**"
+      instructions: >
+        Astro components. Verify accessibility, responsive design, and correct
+        data binding from benchmark JSON data.
   auto_review:
     enabled: true
     drafts: false
 chat:
   auto_reply: true
+knowledge_base:
+  learnings:
+    scope: auto
+  linked_repositories:
+    - repository: "CentralPing/ergo"
+      instructions: >
+        Core middleware toolkit. API reference docs are generated from ergo's JSDoc
+        via starlight-typedoc. Content pages reference ergo's architecture and middleware.
+    - repository: "CentralPing/ergo-router"
+      instructions: >
+        REST-compliant router. API reference docs will be generated from ergo-router's
+        JSDoc. Content pages reference routing and transport features.
