@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import starlightTypeDoc, { typeDocSidebarGroup } from "starlight-typedoc";
 
 export default defineConfig({
   site: "https://centralping.github.io",
@@ -11,6 +12,23 @@ export default defineConfig({
       logo: {
         src: "./src/assets/logo.svg",
       },
+      plugins: [
+        starlightTypeDoc({
+          entryPoints: [".ergo-source/http/index.js"],
+          tsconfig: "./tsconfig.typedoc.json",
+          output: "api/ergo",
+          sidebar: {
+            label: "ergo",
+            collapsed: true,
+          },
+          typeDoc: {
+            skipErrorChecking: true,
+            excludeExternals: true,
+            excludePrivate: true,
+            excludeProtected: true,
+          },
+        }),
+      ],
       social: [
         {
           icon: "github",
@@ -43,6 +61,10 @@ export default defineConfig({
             { label: "ergo", slug: "packages/ergo" },
             { label: "ergo-router", slug: "packages/ergo-router" },
           ],
+        },
+        {
+          label: "API Reference",
+          items: [typeDocSidebarGroup],
         },
         {
           label: "Performance",
