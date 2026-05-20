@@ -10,17 +10,17 @@ import { Badge } from "@astrojs/starlight/components";
   <img class="dark" src="/assets/router-wordmark-dark.svg" alt="ergo-router" width="340" />
 </div>
 
-<Badge text="v0.1.0" variant="note" />
+<Badge text="v0.1.0-beta.1" variant="note" />
 <Badge text="Node.js ≥ 22" variant="tip" />
 <Badge text="Pure ESM" variant="caution" />
 
 ## Installation
 
 ```bash
-npm install ergo-router ergo
+npm install @centralping/ergo-router @centralping/ergo
 ```
 
-`ergo-router` has a peer dependency on `ergo`.
+`@centralping/ergo-router` has a peer dependency on `@centralping/ergo`.
 
 ## Overview
 
@@ -51,7 +51,7 @@ compliance and a declarative pipeline builder.
 Declaratively compose ergo middleware for each route:
 
 ```js
-import createRouter from "ergo-router";
+import createRouter from "@centralping/ergo-router";
 
 const router = createRouter({
   defaults: {
@@ -69,7 +69,7 @@ router.post("/users", {
 ### Graceful Shutdown
 
 ```js
-import createRouter, { graceful } from "ergo-router";
+import createRouter, { graceful } from "@centralping/ergo-router";
 
 const router = createRouter({ /* ... */ });
 
@@ -88,5 +88,5 @@ with a configurable timeout, and startup/shutdown lifecycle hooks.
 ## Links
 
 - [GitHub](https://github.com/CentralPing/ergo-router)
-- [npm](https://www.npmjs.com/package/ergo-router)
+- [npm](https://www.npmjs.com/package/@centralping/ergo-router)
 - [Changelog](https://github.com/CentralPing/ergo-router/blob/main/CHANGELOG.md)
