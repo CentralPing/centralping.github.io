@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Install ergo and ergo-router and build your first Fast Fail REST API.
+description: Install @centralping/ergo and @centralping/ergo-router and build your first Fast Fail REST API.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -15,12 +15,12 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 <Tabs>
   <TabItem label="Both packages">
     ```bash
-    npm install ergo ergo-router
+    npm install @centralping/ergo @centralping/ergo-router
     ```
   </TabItem>
   <TabItem label="ergo only">
     ```bash
-    npm install ergo
+    npm install @centralping/ergo
     ```
   </TabItem>
 </Tabs>
@@ -31,7 +31,7 @@ Create a server with a single route that demonstrates all four Fast Fail
 stages:
 
 ```js
-import createRouter, { graceful } from "ergo-router";
+import createRouter, { graceful } from "@centralping/ergo-router";
 
 const router = createRouter({
   defaults: {
