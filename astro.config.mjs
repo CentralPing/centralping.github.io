@@ -5,6 +5,12 @@ import starlightTypeDoc, { typeDocSidebarGroup } from "starlight-typedoc";
 
 export default defineConfig({
   site: "https://centralping.github.io",
+  redirects: {
+    // TEMPORARY: remove when TypeDoc API reference generation is fixed (ergo#37)
+    "/api/ergo": "/packages/ergo/",
+    "/api/ergo-router": "/packages/ergo-router/",
+    "/architecture": "/why-ergo/",
+  },
   integrations: [
     starlight({
       title: "ergo",
