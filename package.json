@@ -12,10 +12,10 @@
   "dependencies": {
     "@astrojs/starlight": "^0.39.2",
     "@observablehq/plot": "^0.6.17",
-    "astro": "^6.3.6",
+    "astro": "^6.3.7",
     "jsdom": "^29.1.1",
     "sharp": "^0.34.2",
-    "starlight-typedoc": "^0.22.0",
+    "starlight-typedoc": "^0.23.0",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.11.0"
   }
