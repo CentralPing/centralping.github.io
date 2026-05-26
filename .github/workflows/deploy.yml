@@ -27,9 +27,12 @@ jobs:
       - name: Resolve source refs
         id: source_refs
         shell: bash
+        env:
+          CLIENT_PACKAGE: ${{ github.event.client_payload.package || '' }}
+          CLIENT_VERSION: ${{ github.event.client_payload.version || 'main' }}
         run: |
-          pkg="${{ github.event.client_payload.package || '' }}"
-          ver="${{ github.event.client_payload.version || 'main' }}"
+          pkg="${CLIENT_PACKAGE}"
+          ver="${CLIENT_VERSION}"
           if [[ "$ver" == "dev" ]]; then ver="main"; fi
 
           validate_ref() {
@@ -40,12 +43,15 @@ jobs:
             fi
           }
 
-          if [[ "$pkg" == "ergo-router" ]]; then
+          if [[ -z "$pkg" || "$pkg" == "ergo" ]]; then
+            ergo_ref="$ver"
+            router_ref="main"
+          elif [[ "$pkg" == "ergo-router" ]]; then
             ergo_ref="main"
             router_ref="$ver"
           else
-            ergo_ref="$ver"
-            router_ref="main"
+            echo "::error::Unsupported package: $pkg"
+            exit 1
           fi
 
           validate_ref "$ergo_ref" "ergo"
@@ -79,7 +85,7 @@ jobs:
 
       - name: Install ergo-router dependencies
         run: |
-          ln -s "$GITHUB_WORKSPACE/.ergo-source" "$GITHUB_WORKSPACE/../ergo"
+          ln -s "$GITHUB_WORKSPACE/.ergo-source" "$GITHUB_WORKSPACE/ergo"
           npm install --ignore-scripts --omit=dev
         working-directory: .ergo-router-source
 
