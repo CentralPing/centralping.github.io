@@ -24,24 +24,55 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Resolve ergo ref
-        id: ergo_ref
+      - name: Resolve source refs
+        id: source_refs
         shell: bash
+        env:
+          CLIENT_PACKAGE: ${{ github.event.client_payload.package || '' }}
+          CLIENT_VERSION: ${{ github.event.client_payload.version || 'main' }}
         run: |
-          ref="${{ github.event.client_payload.version || 'main' }}"
-          if [[ "$ref" == "dev" ]]; then ref="main"; fi
-          if [[ "$ref" != "main" && ! "$ref" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-            echo "::error::Invalid ergo ref: $ref"
+          pkg="${CLIENT_PACKAGE}"
+          ver="${CLIENT_VERSION}"
+          if [[ "$ver" == "dev" ]]; then ver="main"; fi
+
+          validate_ref() {
+            local ref="$1" label="$2"
+            if [[ "$ref" != "main" && ! "$ref" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+              echo "::error::Invalid $label ref: $ref"
+              exit 1
+            fi
+          }
+
+          if [[ -z "$pkg" || "$pkg" == "ergo" ]]; then
+            ergo_ref="$ver"
+            router_ref="main"
+          elif [[ "$pkg" == "ergo-router" ]]; then
+            ergo_ref="main"
+            router_ref="$ver"
+          else
+            echo "::error::Unsupported package: $pkg"
             exit 1
           fi
-          echo "value=$ref" >> "$GITHUB_OUTPUT"
+
+          validate_ref "$ergo_ref" "ergo"
+          validate_ref "$router_ref" "ergo-router"
+
+          echo "ergo=$ergo_ref" >> "$GITHUB_OUTPUT"
+          echo "router=$router_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout ergo source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           repository: CentralPing/ergo
           path: .ergo-source
-          ref: ${{ steps.ergo_ref.outputs.value }}
+          ref: ${{ steps.source_refs.outputs.ergo }}
+
+      - name: Checkout ergo-router source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: CentralPing/ergo-router
+          path: .ergo-router-source
+          ref: ${{ steps.source_refs.outputs.router }}
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -51,6 +82,13 @@ jobs:
       - name: Install ergo dependencies
         run: npm install --ignore-scripts --omit=dev
         working-directory: .ergo-source
+
+      - name: Install ergo-router dependencies
+        run: |
+          ln -s "$GITHUB_WORKSPACE/.ergo-source" "$GITHUB_WORKSPACE/ergo"
+          npm pkg delete scripts.prepare --prefix "$GITHUB_WORKSPACE/ergo"
+          npm install --ignore-scripts --omit=dev
+        working-directory: .ergo-router-source
 
       - run: npm ci
 

@@ -1,12 +1,14 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
-import starlightTypeDoc, { typeDocSidebarGroup } from "starlight-typedoc";
+import { createStarlightTypeDocPlugin } from "starlight-typedoc";
+
+const [ergoTypeDoc, ergoSidebarGroup] = createStarlightTypeDocPlugin();
+const [routerTypeDoc, routerSidebarGroup] = createStarlightTypeDocPlugin();
 
 export default defineConfig({
   site: "https://centralping.github.io",
   redirects: {
-    "/api/ergo-router": "/packages/ergo-router/",
     "/architecture": "/why-ergo/",
   },
   integrations: [
@@ -17,12 +19,36 @@ export default defineConfig({
         src: "./src/assets/logo.svg",
       },
       plugins: [
-        starlightTypeDoc({
-          entryPoints: [".ergo-source/http/index.js"],
+        ergoTypeDoc({
+          entryPoints: [
+            ".ergo-source/http/index.js",
+            ".ergo-source/lib/cookie/index.js",
+            ".ergo-source/lib/json-api-query/index.js",
+            ".ergo-source/utils/buffers/index.js",
+            ".ergo-source/utils/iterables/index.js",
+            ".ergo-source/utils/observables/index.js",
+            ".ergo-source/utils/streams/index.js",
+          ],
           tsconfig: "./tsconfig.typedoc.json",
           output: "api/ergo",
           sidebar: {
             label: "ergo",
+            collapsed: true,
+          },
+          typeDoc: {
+            entryFileName: "index",
+            skipErrorChecking: true,
+            excludeExternals: true,
+            excludePrivate: true,
+            excludeProtected: true,
+          },
+        }),
+        routerTypeDoc({
+          entryPoints: [".ergo-router-source/index.js"],
+          tsconfig: "./tsconfig.typedoc-router.json",
+          output: "api/ergo-router",
+          sidebar: {
+            label: "ergo-router",
             collapsed: true,
           },
           typeDoc: {
@@ -69,13 +95,11 @@ export default defineConfig({
         },
         {
           label: "API Reference",
-          items: [typeDocSidebarGroup],
+          items: [ergoSidebarGroup, routerSidebarGroup],
         },
         {
           label: "Performance",
-          items: [
-            { label: "Benchmarks", slug: "benchmarks" },
-          ],
+          items: [{ label: "Benchmarks", slug: "benchmarks" }],
         },
       ],
       customCss: ["./src/styles/packages.css", "./src/styles/benchmarks.css"],
