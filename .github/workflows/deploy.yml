@@ -86,6 +86,7 @@ jobs:
       - name: Install ergo-router dependencies
         run: |
           ln -s "$GITHUB_WORKSPACE/.ergo-source" "$GITHUB_WORKSPACE/ergo"
+          npm pkg delete scripts.prepare --prefix "$GITHUB_WORKSPACE/ergo"
           npm install --ignore-scripts --omit=dev
         working-directory: .ergo-router-source
 
