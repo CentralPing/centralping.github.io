@@ -1,0 +1,208 @@
+---
+title: Architecture
+description: How ergo's middleware toolkit is structured — the two-accumulator pipeline model, shared primitives, and package composition.
+---
+
+## Overview
+
+ergo is composed of two packages that work together to provide a complete
+REST API toolkit:
+
+| Package | Responsibility |
+| --- | --- |
+| `@centralping/ergo` | Core middleware library (auth, body, CORS, send, etc.) |
+| `@centralping/ergo-router` | REST-compliant routing and transport-level concerns |
+
+`@centralping/ergo` is a **library**, not a runnable server. It provides
+composable middleware functions that can be used standalone or assembled by
+`@centralping/ergo-router` into a full HTTP server with declarative route
+configuration.
+
+## Two-Accumulator Pipeline Model
+
+Every ergo pipeline uses a **two-accumulator** composition model powered by
+`compose-with`. Two objects travel through the middleware chain:
+
+- **Domain accumulator** — inter-middleware data (parsed body, auth identity,
+  cookies, URL parameters)
+- **Response accumulator** — HTTP response properties (status code, headers,
+  body, error details)
+
+```
+  Request
+    │
+    ▼
+┌────────────────────────────────────────────────┐
+│           compose-with pipeline                │
+│                                                │
+│   domainAcc = {}     responseAcc = {}          │
+│                                                │
+│   middleware₁ → { value?, response? }          │
+│     value  → merges into domainAcc at setPath  │
+│     response → merges into responseAcc         │
+│                                                │
+│   middleware₂ → { value?, response? }          │
+│     ...                                        │
+│                                                │
+│   BREAK when responseAcc.statusCode is set     │
+│                                                │
+└────────────────────────────────────────────────┘
+    │
+    ▼
+  send(req, res, responseAcc, domainAcc)
+```
+
+### Middleware Return Convention
+
+Every middleware function returns `{value?, response?}`:
+
+- `value` merges into the domain accumulator at the path specified by the
+  tuple's second element
+- `response` merges into the response accumulator (headers append, scalar
+  properties overwrite)
+- A `response` with `statusCode` breaks the pipeline immediately — no
+  further middleware executes
+
+### Tuple Format
+
+Middleware are registered as `[fn, setPath]` tuples that pair the middleware
+function with its domain accumulator key:
+
+```js
+const pipeline = compose(
+  [logger(), 'log'],
+  [cors(), 'cors'],
+  [accepts({types: ['application/json']}), 'accepts'],
+  [authorization({strategies: [...]}), 'auth'],
+  [body(), 'body'],
+  (req, res, acc) => ({response: {body: acc.body.parsed}})
+);
+```
+
+## Four-Stage Fast Fail Ordering
+
+The [Fast Fail Pipeline](/concepts/fast-fail/) arranges middleware into four
+ordered stages. The ordering is not arbitrary — it reflects a deliberate
+cost/risk gradient:
+
+1. **Negotiation** — cheap, stateless header and URL inspection. Logger runs
+   first for request ID tracing. All other Stage 1 middleware are
+   parallelizable since they read different parts of the request independently.
+2. **Authorization** — crypto and token verification. Runs before body parsing
+   to avoid processing large payloads for unauthorized callers.
+3. **Validation** — the most expensive pre-execution work (body stream I/O,
+   JSON Schema validation). Only runs for authenticated requests with
+   negotiable content types.
+4. **Execution** — business logic. By this point the request has been fully
+   vetted.
+
+### Pipeline Break
+
+When any middleware sets `responseAcc.statusCode`, the serial loop breaks
+immediately. This replaces `throw httpErrors()` for expected outcomes (rate
+limit, auth failure, validation error), eliminating async throw/catch overhead.
+
+### send() Is Outside the Pipeline
+
+`handler.js` (standalone) or `auto-wrap.js` (ergo-router) creates both
+accumulators, runs the pipeline, catches unexpected errors, and calls
+`send(req, res, responseAcc, domainAcc)` exactly once. `send()` is the sole
+authority for HTTP response formatting, including
+[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) error bodies.
+
+## Middleware Factory Pattern
+
+Every `http/` module exports a **factory function** that returns a middleware
+function. Configuration is captured at factory time; the returned function
+receives `(req, res, domainAcc, responseAcc)` at request time.
+
+```js
+// Factory — called once at startup
+const rateLimiter = rateLimit({ max: 100, windowMs: 60_000 });
+
+// Middleware — called per request
+// Returns { response: { statusCode: 429, retryAfter } } or headers
+rateLimiter(req, res, domainAcc, responseAcc);
+```
+
+This pattern enables:
+- Zero per-request allocation for configuration
+- Middleware reuse across routes with different options
+- Declarative pipeline assembly in ergo-router's pipeline builder
+
+## Shared Primitives (lib/)
+
+Core logic for cross-cutting concerns lives in `lib/` as **shared
+primitives** — pure functions and classes with no transport or framework
+dependencies. Both ergo's pipeline middleware (`http/`) and ergo-router's
+transport layer consume the same primitives:
+
+| Shared Primitive | Ergo Consumer | Ergo-Router Consumer |
+| --- | --- | --- |
+| `lib/cors.js` | `http/cors.js` | `transport/cors.js` |
+| `lib/rate-limit.js` | `http/rate-limit.js` | `transport/rate-limit.js` |
+| `lib/security-headers.js` | `http/security-headers.js` | `transport/security-headers.js` |
+
+This split eliminates code duplication between the two packages. Standalone
+ergo users get the primitives directly; ergo-router users get transport-level
+adapters that wrap the same underlying logic.
+
+### lib/ vs http/ Boundary
+
+| Directory | Contains | Dependencies |
+| --- | --- | --- |
+| `lib/` | Pure logic: parsers, validators, stores, formatters | Node.js built-ins only |
+| `http/` | Pipeline middleware factories | `lib/` primitives + request/response types |
+| `utils/` | Composition utilities, iterables, streams, buffers | Node.js built-ins only |
+
+## Module System
+
+Both packages use `"type": "module"` (pure ESM). All source files use
+`import`/`export` with no `require()` or `module.exports` calls.
+
+Node.js 22.12+ supports `require(esm)` (unflagged) as long as there is no
+top-level `await`. Both packages intentionally avoid top-level `await`, so
+CJS consumers on Node 22.12+ can `require('@centralping/ergo')` without
+any adapter.
+
+## Stream and Iterator Architecture
+
+The pipeline and utilities are built on Node.js streams, async iterators,
+and generators rather than callback chains:
+
+| Utility | Purpose |
+| --- | --- |
+| `utils/compose.js` | Keyed result accumulation with `breakWhen` predicate |
+| `utils/compose-with.js` | Two-accumulator path-based composition |
+| `utils/iterables/` | Async iterable primitives (map, filter, reduce, chain, take, range) |
+| `utils/observables/` | Observable-style async primitives |
+| `utils/streams/` | Node.js stream utilities (meter, tee) |
+| `utils/buffers/` | Buffer-level KMP match/split for multipart parsing |
+
+## Declarative Pipeline Assembly
+
+ergo-router's `pipeline-builder.js` assembles middleware into the four-stage
+pipeline from a declarative configuration object. Each route specifies which
+middleware to include and their options:
+
+```js
+{
+  accepts: { types: ['application/json'] },
+  auth: { strategies: [bearerStrategy] },
+  body: true,
+  validate: { body: schema },
+  execute: handler
+}
+```
+
+The builder resolves route-level overrides against router-level defaults,
+auto-includes method-appropriate middleware (e.g., `body` for POST/PUT/PATCH),
+and produces a `[fn, setPath]` tuple array ready for `compose-with`.
+
+## Further Reading
+
+- [Fast Fail Pipeline](/concepts/fast-fail/) — detailed stage-by-stage walkthrough
+- [Standards Compliance](/concepts/standards/) — RFC conformance across all middleware
+- [Security](/concepts/security/) — OWASP API Top 10 mapping
+- [ergo package](/packages/ergo/) — middleware reference
+- [ergo-router package](/packages/ergo-router/) — routing and transport reference
