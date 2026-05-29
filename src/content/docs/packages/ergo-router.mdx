@@ -68,6 +68,10 @@ router.post("/users", {
 
 ### Graceful Shutdown
 
+`graceful(handler, options?)` creates an HTTP server with full lifecycle
+management. It works with any `http.Server` handler — not coupled to
+ergo-router.
+
 ```js
 import createRouter, { graceful } from "@centralping/ergo-router";
 
@@ -75,15 +79,36 @@ const router = createRouter({ /* ... */ });
 
 const { server, shutdown } = await graceful(router.handle(), {
   port: 3000,
-  onShutdown: async ({ log }) => {
+  onStartup: async ({ log }) => {
+    await connectDatabase();
+    log.info("Database connected");
+  },
+  onShutdown: async ({ log, signal }) => {
     await disconnectDatabase();
     log.info("Cleanup complete");
   },
 });
 ```
 
-`graceful()` handles signal listeners (SIGINT, SIGTERM), connection draining
-with a configurable timeout, and startup/shutdown lifecycle hooks.
+#### Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `port` | `number` | `3000` | Port to listen on |
+| `hostname` | `string` | `'0.0.0.0'` | Hostname to bind to |
+| `log` | `object` | `console` | Logger with `.info()`, `.warn()`, `.error()` methods |
+| `signals` | `string[]` | `['SIGINT', 'SIGTERM']` | OS signals that trigger shutdown |
+| `timeout` | `number` | `5000` | Maximum time (ms) to wait for connections to drain before forcing exit |
+| `exit` | `function` | `process.exit` | Exit function (override for testing) |
+| `onStartup` | `function` | — | Async hook called before `server.listen()`. Receives `{log}`. Rejection prevents the server from starting. |
+| `onShutdown` | `function` | — | Async hook called after `server.close()`. Receives `{log, signal}`. Errors are caught and logged; shutdown continues. |
+
+#### Return Value
+
+Returns `Promise<{server, shutdown}>`:
+
+- **`server`** — the `http.Server` instance
+- **`shutdown`** — a function to trigger graceful shutdown programmatically (useful in tests)
 
 ## Links
 
