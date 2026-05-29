@@ -9,7 +9,7 @@ const [routerTypeDoc, routerSidebarGroup] = createStarlightTypeDocPlugin();
 export default defineConfig({
   site: "https://centralping.github.io",
   redirects: {
-    "/architecture": "/why-ergo/",
+    "/architecture": "/concepts/architecture/",
   },
   integrations: [
     starlight({
@@ -78,6 +78,7 @@ export default defineConfig({
         {
           label: "Concepts",
           items: [
+            { label: "Architecture", slug: "concepts/architecture" },
             { label: "Fast Fail Pipeline", slug: "concepts/fast-fail" },
             {
               label: "Standards Compliance",
