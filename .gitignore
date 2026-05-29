@@ -2,7 +2,8 @@ node_modules
 dist
 .astro
 .DS_Store
-.ergo-source/
+/.ergo-source
+/.ergo-router-source
 src/content/docs/api/
 
 # Agent/editor local files
