@@ -30,74 +30,176 @@ import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 Create a server with a single route that demonstrates all four Fast Fail
 stages:
 
-```js
-import createRouter, { graceful } from "@centralping/ergo-router";
+<Tabs>
+  <TabItem label="JavaScript">
+    ```js
+    import createRouter, { graceful } from "@centralping/ergo-router";
 
-const router = createRouter({
-  defaults: {
-    accepts: { types: ["application/json"] },
-  },
-});
+    const router = createRouter({
+      defaults: {
+        accepts: { types: ["application/json"] },
+      },
+    });
 
-router.get("/users/:id", {
-  auth: {
-    strategies: [
-      {
-        type: "Bearer",
-        authorizer: async (attributes, token) => {
-          if (!token) return { authorized: false, info: { statusCode: 401 } };
-          return { authorized: true, info: { userId: token } };
+    router.get("/users/:id", {
+      auth: {
+        strategies: [
+          {
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              if (!token) return { authorized: false, info: { statusCode: 401 } };
+              return { authorized: true, info: { userId: token } };
+            },
+          },
+        ],
+      },
+      validate: {
+        params: {
+          type: "object",
+          properties: { id: { type: "string", minLength: 1 } },
+          required: ["id"],
         },
       },
-    ],
-  },
-  validate: {
-    params: {
-      type: "object",
-      properties: { id: { type: "string", minLength: 1 } },
-      required: ["id"],
-    },
-  },
-  execute: (req, res, acc) => ({
-    response: {
-      body: {
-        id: acc.route.params.id,
-        name: "Jane Doe",
-        requestedBy: acc.auth.userId,
-      },
-    },
-  }),
-});
+      execute: (req, res, acc) => ({
+        response: {
+          body: {
+            id: acc.route.params.id,
+            name: "Jane Doe",
+            requestedBy: acc.auth.userId,
+          },
+        },
+      }),
+    });
 
-router.post("/users", {
-  auth: {
-    strategies: [
-      {
-        type: "Bearer",
-        authorizer: async (attributes, token) => {
-          if (!token) return { authorized: false, info: { statusCode: 401 } };
-          return { authorized: true, info: { userId: token } };
+    router.post("/users", {
+      auth: {
+        strategies: [
+          {
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              if (!token) return { authorized: false, info: { statusCode: 401 } };
+              return { authorized: true, info: { userId: token } };
+            },
+          },
+        ],
+      },
+      validate: {
+        body: {
+          type: "object",
+          properties: { name: { type: "string", minLength: 1 } },
+          required: ["name"],
         },
       },
-    ],
-  },
-  validate: {
-    body: {
-      type: "object",
-      properties: { name: { type: "string", minLength: 1 } },
-      required: ["name"],
-    },
-  },
-  execute: (req, res, acc) => ({
-    response: {
-      statusCode: 201,
-      body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
-    },
-  }),
-});
+      execute: (req, res, acc) => ({
+        response: {
+          statusCode: 201,
+          body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
+        },
+      }),
+    });
 
-await graceful(router.handle(), { port: 3000 });
-```
+    await graceful(router.handle(), { port: 3000 });
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```ts
+    import type { IncomingMessage, ServerResponse } from "node:http";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    interface AuthInfo {
+      authorized: boolean;
+      info?: { statusCode?: number; userId?: string };
+    }
+
+    const router = createRouter({
+      defaults: {
+        accepts: { types: ["application/json"] },
+      },
+    });
+
+    router.get("/users/:id", {
+      auth: {
+        strategies: [
+          {
+            type: "Bearer" as const,
+            authorizer: async (
+              attributes: Record<string, string>,
+              token: string,
+            ): Promise<AuthInfo> => {
+              if (!token) return { authorized: false, info: { statusCode: 401 } };
+              return { authorized: true, info: { userId: token } };
+            },
+          },
+        ],
+      },
+      validate: {
+        params: {
+          type: "object",
+          properties: { id: { type: "string", minLength: 1 } },
+          required: ["id"],
+        },
+      },
+      execute: (
+        req: IncomingMessage,
+        res: ServerResponse,
+        acc: { route: { params: { id: string } }; auth: { userId: string } },
+      ) => ({
+        response: {
+          body: {
+            id: acc.route.params.id,
+            name: "Jane Doe",
+            requestedBy: acc.auth.userId,
+          },
+        },
+      }),
+    });
+
+    router.post("/users", {
+      auth: {
+        strategies: [
+          {
+            type: "Bearer" as const,
+            authorizer: async (
+              attributes: Record<string, string>,
+              token: string,
+            ): Promise<AuthInfo> => {
+              if (!token) return { authorized: false, info: { statusCode: 401 } };
+              return { authorized: true, info: { userId: token } };
+            },
+          },
+        ],
+      },
+      validate: {
+        body: {
+          type: "object",
+          properties: { name: { type: "string", minLength: 1 } },
+          required: ["name"],
+        },
+      },
+      execute: (
+        req: IncomingMessage,
+        res: ServerResponse,
+        acc: {
+          body: { parsed: { name: string } };
+          auth: { userId: string };
+        },
+      ) => ({
+        response: {
+          statusCode: 201,
+          body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
+        },
+      }),
+    });
+
+    await graceful(router.handle(), { port: 3000 });
+    ```
+
+    > **Note:** The type annotations above represent the expected types for the
+    > accumulator properties. As ergo's `.d.ts` type declarations improve, these
+    > types will be inferred automatically — removing the need for explicit
+    > annotations.
+  </TabItem>
+</Tabs>
 
 <Aside type="tip" title="The accumulator body object">
   The POST route above reads `acc.body.parsed` — the decoded JavaScript value

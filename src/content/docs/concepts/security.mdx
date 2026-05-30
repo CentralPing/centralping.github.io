@@ -3,7 +3,7 @@ title: Security
 description: How ergo's pipeline design and conservative defaults address the OWASP API Security Top 10.
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 ergo is not a security certification — it is a middleware toolkit whose
 pipeline structure and default configuration address the most common REST API
@@ -31,29 +31,77 @@ body parsing and before execution. Every request is authenticated and identity
 information is available in the accumulator before any business logic runs.
 Pluggable strategies support Bearer, Basic, and custom schemes.
 
-```js
-router.get("/accounts/:id", {
-  auth: {
-    strategies: [
-      {
-        type: "Bearer",
-        authorizer: async (attributes, token) => {
-          const user = await verifyToken(token);
-          return user
-            ? { authorized: true, info: user }
-            : { authorized: false };
-        },
+<Tabs>
+  <TabItem label="JavaScript">
+    ```js
+    router.get("/accounts/:id", {
+      auth: {
+        strategies: [
+          {
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              const user = await verifyToken(token);
+              return user
+                ? { authorized: true, info: user }
+                : { authorized: false };
+            },
+          },
+        ],
       },
-    ],
-  },
-  execute: (req, res, acc) => {
-    if (acc.auth.id !== acc.route.params.id) {
-      return { response: { statusCode: 403, detail: "Access denied" } };
+      execute: (req, res, acc) => {
+        if (acc.auth.id !== acc.route.params.id) {
+          return { response: { statusCode: 403, detail: "Access denied" } };
+        }
+        return { response: { body: getAccount(acc.route.params.id) } };
+      },
+    });
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```ts
+    import type { IncomingMessage, ServerResponse } from "node:http";
+
+    interface User {
+      id: string;
+      name: string;
     }
-    return { response: { body: getAccount(acc.route.params.id) } };
-  },
-});
-```
+
+    router.get("/accounts/:id", {
+      auth: {
+        strategies: [
+          {
+            type: "Bearer" as const,
+            authorizer: async (
+              attributes: Record<string, string>,
+              token: string,
+            ): Promise<
+              { authorized: true; info: User } | { authorized: false }
+            > => {
+              const user = await verifyToken(token);
+              return user
+                ? { authorized: true, info: user }
+                : { authorized: false };
+            },
+          },
+        ],
+      },
+      execute: (
+        req: IncomingMessage,
+        res: ServerResponse,
+        acc: {
+          auth: { id: string };
+          route: { params: { id: string } };
+        },
+      ) => {
+        if (acc.auth.id !== acc.route.params.id) {
+          return { response: { statusCode: 403, detail: "Access denied" } };
+        }
+        return { response: { body: getAccount(acc.route.params.id) } };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
 
 The pipeline guarantees that `acc.auth` is always populated before `execute`
 runs. There is no code path where business logic executes without
@@ -95,22 +143,59 @@ for strict property allowlisting. With `additionalProperties: false`, any
 unexpected property in the request body causes a `400 Bad Request` before
 execution.
 
-```js
-router.put("/users/:id", {
-  validate: {
-    body: {
-      type: "object",
-      properties: {
-        name: { type: "string", maxLength: 100 },
-        email: { type: "string", format: "email" },
+<Tabs>
+  <TabItem label="JavaScript">
+    ```js
+    router.put("/users/:id", {
+      validate: {
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string", maxLength: 100 },
+            email: { type: "string", format: "email" },
+          },
+          required: ["name", "email"],
+          additionalProperties: false,
+        },
       },
-      required: ["name", "email"],
-      additionalProperties: false,
-    },
-  },
-  execute: updateUser,
-});
-```
+      execute: updateUser,
+    });
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```ts
+    import type { IncomingMessage, ServerResponse } from "node:http";
+
+    interface UserUpdate {
+      name: string;
+      email: string;
+    }
+
+    const updateUser = (
+      req: IncomingMessage,
+      res: ServerResponse,
+      acc: { body: { parsed: UserUpdate }; route: { params: { id: string } } },
+    ) => ({
+      response: { body: updateUserById(acc.route.params.id, acc.body.parsed) },
+    });
+
+    router.put("/users/:id", {
+      validate: {
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string", maxLength: 100 },
+            email: { type: "string", format: "email" },
+          },
+          required: ["name", "email"],
+          additionalProperties: false,
+        },
+      },
+      execute: updateUser,
+    });
+    ```
+  </TabItem>
+</Tabs>
 
 Properties like `role`, `isAdmin`, or `createdAt` are rejected automatically
 because they are not declared in the schema. This is structural protection —
