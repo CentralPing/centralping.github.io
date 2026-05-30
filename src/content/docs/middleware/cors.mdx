@@ -1,0 +1,81 @@
+---
+title: cors
+description: Cross-Origin Resource Sharing middleware — validates origins, methods, and headers per the Fetch Standard.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Validates CORS requests against allowed origins, methods, and headers.
+No-op when the `Origin` header is absent (same-origin requests). Preflight
+`OPTIONS` requests are handled at the router level by ergo-router.
+
+**Pipeline stage:** Negotiation
+
+## Import
+
+```js
+import { cors } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `origins` | `string \| string[] \| RegExp \| function` | `'*'` | Allowed origins |
+| `allowMethods` | `string[]` | — | Allowed HTTP methods |
+| `allowHeaders` | `string \| string[] \| RegExp \| function` | `'*'` | Allowed request headers |
+| `exposeHeaders` | `string \| string[]` | — | Headers exposed to the client |
+| `allowCredentials` | `boolean` | `false` | Allow credentials (cookies, auth headers) |
+| `maxAge` | `number` | — | Preflight cache duration in seconds |
+
+## Return Value
+
+The middleware returns one of three results:
+
+- **No `Origin` header:** `undefined` (no-op, same-origin request)
+- **CORS allowed:** `{ response: { headers: [...] } }` with
+  `Access-Control-Allow-Origin` and related headers
+- **CORS denied:** `{ response: { statusCode: 403 } }`
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **403 Forbidden** | `Origin` header present but not allowed by policy |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, cors } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [cors({
+        origins: ["https://app.example.com"],
+        allowMethods: ["GET", "POST"],
+        allowHeaders: ["Authorization", "Content-Type"],
+      }), "cors"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      cors: {
+        origins: ["https://app.example.com"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE"],
+        allowCredentials: true,
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [Fetch Standard — CORS Protocol](https://fetch.spec.whatwg.org/#http-cors-protocol)
+
+## API Reference
+
+See the auto-generated [cors API docs](/api/ergo/@centralping/ergo/variables/cors/).

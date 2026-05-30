@@ -97,6 +97,11 @@ export default defineConfig({
           ],
         },
         {
+          label: "Middleware",
+          collapsed: true,
+          items: [{ autogenerate: { directory: "middleware" } }],
+        },
+        {
           label: "API Reference",
           items: [ergoSidebarGroup, routerSidebarGroup],
         },

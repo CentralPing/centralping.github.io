@@ -1,0 +1,72 @@
+---
+title: json-api-query
+description: JSON:API query validation middleware — validates filter, sort, fields, include, and page parameters.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Validates the parsed query accumulator against a
+[JSON:API](https://jsonapi.org/) query schema, covering `filter`, `sort`,
+`fields`, `include`, and `page` parameters. Uses AJV 8 with JSON Schema
+2020-12. Must run after `url()`.
+
+**Pipeline stage:** Validation (after `url()`)
+
+## Import
+
+```js
+import { jsonApiQuery } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `...options` | `*` | — | Forwarded to the JSON:API validator |
+
+## Return Value
+
+Returns `undefined` on success — validation is a gate, not a data
+producer.
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **400 Bad Request** | Query parameters fail JSON:API schema validation |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, url, jsonApiQuery } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [url(), "url"],
+      [jsonApiQuery(), "jsonApiQuery"],
+      // acc.url.query is validated against JSON:API conventions
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/articles", {
+      jsonApiQuery: {},
+      execute: (req, res, acc) => ({
+        response: {
+          body: queryArticles(acc.url.query),
+        },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [JSON:API Specification](https://jsonapi.org/format/)
+
+## API Reference
+
+See the auto-generated [jsonApiQuery API docs](/api/ergo/@centralping/ergo/variables/jsonApiQuery/).

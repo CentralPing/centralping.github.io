@@ -1,0 +1,93 @@
+---
+title: handler
+description: Pipeline executor — creates accumulators, runs the pipeline, handles errors, and calls send().
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The HTTP request handler factory for ergo's two-accumulator model.
+Creates domain and response accumulators per request, runs the composed
+pipeline, catches unexpected errors, and calls `send()` exactly once.
+This is the standalone equivalent of ergo-router's `auto-wrap`.
+
+**Pipeline stage:** Execution (wraps the entire pipeline)
+
+## Import
+
+```js
+import { handler } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `pipeline` | `function` | — | **Required.** Composed middleware pipeline |
+| `sendOptions` | `object` | `{}` | Options forwarded to `send()` (see [send](/middleware/send/)) |
+
+## Return Value
+
+Returns an async handler `(req, res) => void` suitable for
+`http.createServer()`.
+
+## Error Handling
+
+- Sets `responseAcc.statusCode = 500` for uncaught pipeline errors
+  (unless a timeout or earlier pipeline break already set the status)
+- Attaches `instance` from the `X-Request-Id` response header
+- Emits error on `res` if error listeners are present
+- If `send()` itself throws: `res.statusCode = 500; res.end()`
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **500 Internal Server Error** | Uncaught pipeline error (detail is redacted for security) |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import {
+      handler, compose, logger, authorization, body,
+    } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [logger(), "log"],
+      [authorization({ strategies }), "auth"],
+      [body(), "body"],
+      (req, res, acc) => ({
+        response: {
+          body: processRequest(acc),
+          statusCode: 200,
+        },
+      }),
+    );
+
+    const server = http.createServer(handler(pipeline));
+    server.listen(3000);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    // ergo-router uses auto-wrap internally — you don't call
+    // handler() directly. The router's handle() method creates
+    // the two-accumulator wrapper automatically.
+
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const router = createRouter();
+    router.get("/health", {
+      execute: () => ({ response: { body: { ok: true } } }),
+    });
+
+    await graceful(router.handle(), { port: 3000 });
+    ```
+  </TabItem>
+</Tabs>
+
+## API Reference
+
+See the auto-generated [handler API docs](/api/ergo/@centralping/ergo/variables/handler/).

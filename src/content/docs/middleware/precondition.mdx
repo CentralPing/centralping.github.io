@@ -1,0 +1,72 @@
+---
+title: precondition
+description: Precondition Required middleware — enforces If-Match or If-Unmodified-Since on unsafe requests (RFC 6585 §3).
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Enforces that unsafe requests include a conditional header (`If-Match` or
+`If-Unmodified-Since`) before proceeding. Prevents lost-update problems
+by requiring clients to prove they have a current representation.
+
+**Pipeline stage:** Negotiation (Fast Fail)
+
+## Import
+
+```js
+import { precondition } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `methods` | `string[] \| Set<string>` | — | Methods to enforce on; omit to enforce unconditionally |
+
+## Return Value
+
+Returns `undefined` on success — the middleware is a gate.
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **428 Precondition Required** | Neither `If-Match` nor `If-Unmodified-Since` header is present |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, precondition } from "@centralping/ergo";
+
+    // Enforce on all methods
+    const pipeline = compose(
+      [precondition(), "precondition"],
+    );
+
+    // Enforce only on PUT and PATCH
+    const pipeline = compose(
+      [precondition({ methods: ["PUT", "PATCH"] }), "precondition"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.put("/users/:id", {
+      preconditionRequired: true,
+      execute: (req, res, acc) => ({
+        response: { body: { updated: true } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 6585 §3 — 428 Precondition Required](https://www.rfc-editor.org/rfc/rfc6585#section-3)
+
+## API Reference
+
+See the auto-generated [precondition API docs](/api/ergo/@centralping/ergo/variables/precondition/).

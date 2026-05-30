@@ -1,0 +1,96 @@
+---
+title: logger
+description: Structured logging middleware — request/response metadata with request ID, duration, and header redaction.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Produces structured request/response log entries with method, URL, client
+IP, request ID, status code, and duration. Sensitive headers are
+automatically redacted. Place first in the pipeline so every subsequent
+middleware has a request ID available.
+
+**Pipeline stage:** Negotiation (first middleware)
+
+## Import
+
+```js
+import { logger } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `log` | `function` | `console.log` | Log function for completed requests |
+| `error` | `function` | `console.error` | Log function for errors |
+| `uuid` | `function` | `crypto.randomUUID` | Fallback UUID generator |
+| `headerRequestIdName` | `string` | `'x-request-id'` | Request ID header name |
+| `headerRequestIpName` | `string` | `'x-real-ip'` | Client IP header name |
+| `redactHeaders` | `Set<string>` | See below | Headers replaced with `'[REDACTED]'` |
+
+### Default Redacted Headers
+
+`authorization`, `proxy-authorization`, `cookie`, `set-cookie`
+
+### Request ID Resolution Order
+
+1. `res.getHeader(headerRequestIdName)` — set by ergo-router's transport
+2. `req.headers[headerRequestIdName]` — set by upstream proxy
+3. `uuid()` — generated as fallback
+
+## Return Value
+
+Returns a log entry stored at `acc.log`:
+
+```js
+{
+  requestId: "550e8400-e29b-41d4-a716-446655440000",
+  timestamp: "2026-05-30T04:00:00.000Z",
+  ip: "127.0.0.1",
+  method: "GET",
+  url: "/users",
+  httpVersion: "1.1",
+  host: { hostname, arch, platform, pid },
+  request: { headers, encrypted, remoteAddress, remotePort }
+}
+```
+
+On response `finish`, the log callback adds `statusCode`, `duration`,
+and `response: { headers, statusMessage, writableFinished }`.
+
+## Error Responses
+
+None. Logger is observability-only.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, logger } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [logger({
+        log: (info) => structuredLog.info(info),
+        error: (info) => structuredLog.error(info),
+      }), "log"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        logger: {
+          log: (info) => structuredLog.info(info),
+        },
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## API Reference
+
+See the auto-generated [logger API docs](/api/ergo/@centralping/ergo/variables/logger/).

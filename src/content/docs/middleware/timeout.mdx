@@ -1,0 +1,71 @@
+---
+title: timeout
+description: Request timeout middleware — races the pipeline against a deadline and destroys the request on expiry.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Races the pipeline against a configurable deadline. On timeout, sets the
+response status and detail via closure, then destroys the request stream.
+The timer is cleared automatically when the response finishes.
+
+**Pipeline stage:** Cross-cutting
+
+## Import
+
+```js
+import { timeout } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `ms` | `number` | `30000` (30s) | Timeout duration in milliseconds |
+| `statusCode` | `number` | `408` | HTTP status on timeout (typically `408` or `504`) |
+
+## Return Value
+
+The middleware is side-effect only — it does not produce an accumulator
+value. On timeout it sets `responseAcc.statusCode` and
+`responseAcc.detail` directly.
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **408 Request Timeout** | Default — deadline exceeded |
+| **504 Gateway Timeout** | When configured with `statusCode: 504` |
+
+The error `detail` is: `Request timed out after ${ms}ms`.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, timeout } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [timeout({ ms: 10_000, statusCode: 504 }), "timeout"],
+      async (req, res, acc) => ({
+        response: { body: await slowOperation(), statusCode: 200 },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/slow-report", {
+      timeout: { ms: 60_000 },
+      execute: async (req, res, acc) => ({
+        response: { body: await generateReport() },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## API Reference
+
+See the auto-generated [timeout API docs](/api/ergo/@centralping/ergo/variables/timeout/).

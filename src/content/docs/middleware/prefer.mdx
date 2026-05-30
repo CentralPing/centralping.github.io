@@ -1,0 +1,89 @@
+---
+title: prefer
+description: Prefer header parsing middleware — RFC 7240 return=minimal and return=representation support.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Parses the `Prefer` request header per RFC 7240. Works in concert with
+`send()`'s `prefer: true` option to automatically handle
+`return=minimal` (200 → 204) and `return=representation` behaviors.
+
+**Pipeline stage:** Negotiation
+
+## Import
+
+```js
+import { prefer } from "@centralping/ergo";
+```
+
+## Options
+
+None. The `prefer()` factory takes no parameters.
+
+## Return Value
+
+Returns parsed preferences stored at `acc.prefer`:
+
+```js
+{
+  return: "minimal",
+  // other preferences as key-value pairs
+}
+```
+
+When `send()` has `prefer: true` enabled and the client sends
+`Prefer: return=minimal`, success responses are automatically converted:
+200 → 204 with the body stripped and a `Preference-Applied: return=minimal`
+header added.
+
+## Error Responses
+
+None.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, prefer, handler } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [prefer(), "prefer"],
+      (req, res, acc) => ({
+        response: { body: { id: 1, name: "item" } },
+      }),
+    );
+
+    // With send's prefer option enabled
+    const server = http.createServer(
+      handler(pipeline, { prefer: true }),
+    );
+    // Client: Prefer: return=minimal
+    // Response: 204 No Content + Preference-Applied: return=minimal
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        send: { prefer: true },
+      },
+    });
+
+    router.get("/items/:id", {
+      execute: (req, res, acc) => ({
+        response: { body: { id: 1, name: "item" } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 7240 — Prefer Header for HTTP](https://www.rfc-editor.org/rfc/rfc7240)
+
+## API Reference
+
+See the auto-generated [prefer API docs](/api/ergo/@centralping/ergo/variables/prefer/).
