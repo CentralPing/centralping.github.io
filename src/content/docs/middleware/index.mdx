@@ -3,8 +3,6 @@ title: Middleware
 description: Per-middleware guides with options, return values, error responses, and usage examples.
 ---
 
-import { Badge } from "@astrojs/starlight/components";
-
 ergo ships 20 middleware factories covering every stage of the
 [Fast Fail pipeline](/concepts/fast-fail/). Each guide page documents the
 full options table, return value, error responses, and usage examples for
@@ -14,6 +12,7 @@ both standalone composition and declarative ergo-router configuration.
 
 | Stage | Middleware | Purpose |
 | ----- | ---------- | ------- |
+| Negotiation | [logger](/middleware/logger/) | Structured request/response logging |
 | Negotiation | [accepts](/middleware/accepts/) | Content negotiation (Accept, Accept-Language, etc.) |
 | Negotiation | [cors](/middleware/cors/) | Cross-origin resource sharing |
 | Negotiation | [cookie](/middleware/cookie/) | Cookie parsing |
@@ -36,7 +35,6 @@ both standalone composition and declarative ergo-router configuration.
 | ---------- | ------- |
 | [cache-control](/middleware/cache-control/) | Cache-Control header defaults |
 | [compress](/middleware/compress/) | Response compression (gzip, br, deflate) |
-| [logger](/middleware/logger/) | Structured request/response logging |
 | [security-headers](/middleware/security-headers/) | Security response headers (CSP, HSTS, etc.) |
 | [timeout](/middleware/timeout/) | Request timeout via AbortSignal |
 
