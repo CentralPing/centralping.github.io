@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import starlightChangelogs from "starlight-changelogs";
 import { createStarlightTypeDocPlugin } from "starlight-typedoc";
 
 const [ergoTypeDoc, ergoSidebarGroup] = createStarlightTypeDocPlugin();
@@ -19,6 +20,7 @@ export default defineConfig({
         src: "./src/assets/logo.svg",
       },
       plugins: [
+        starlightChangelogs(),
         ergoTypeDoc({
           entryPoints: [
             ".ergo-source/http/index.js",
@@ -106,6 +108,13 @@ export default defineConfig({
         {
           label: "Performance",
           items: [{ label: "Benchmarks", slug: "benchmarks" }],
+        },
+        {
+          label: "Changelog",
+          items: [
+            { label: "ergo", link: "/changelog/ergo/" },
+            { label: "ergo-router", link: "/changelog/ergo-router/" },
+          ],
         },
       ],
       customCss: ["./src/styles/packages.css", "./src/styles/benchmarks.css"],
