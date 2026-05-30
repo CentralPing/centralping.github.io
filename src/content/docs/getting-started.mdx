@@ -105,9 +105,9 @@ await graceful(router.handle(), { port: 3000 });
   PATCH routes, so no explicit `body: true` is needed in the config.
 
   The full body result also includes `acc.body.raw` (the raw string, useful for
-  signature verification) and metadata like `type`, `charset`, and `length`. See
-  the [body middleware API reference](/api/ergo/http/body/) for the complete
-  shape.
+  signature verification) and metadata such as `type`, `charset`, `encoding`,
+  `length`, and `received`. See the
+  [ergo API reference](/api/ergo/centralping/ergo/) for the complete shape.
 </Aside>
 
 <Aside type="note" title="Transport vs. route-level middleware">
