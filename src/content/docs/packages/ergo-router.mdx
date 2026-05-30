@@ -110,6 +110,58 @@ Returns `Promise<{server, shutdown}>`:
 - **`server`** — the `http.Server` instance
 - **`shutdown`** — a function to trigger graceful shutdown programmatically (useful in tests)
 
+#### Usage Examples
+
+##### Custom Logger
+
+Replace the default `console` with any object that provides `.info()`,
+`.warn()`, and `.error()` methods — for example, a structured JSON logger:
+
+```js
+import createRouter, { graceful } from "@centralping/ergo-router";
+
+const log = {
+  info: (msg) => console.log(JSON.stringify({ level: "info", msg, ts: new Date().toISOString() })),
+  warn: (msg) => console.log(JSON.stringify({ level: "warn", msg, ts: new Date().toISOString() })),
+  error: (msg) => console.log(JSON.stringify({ level: "error", msg, ts: new Date().toISOString() })),
+};
+
+const router = createRouter({ /* ... */ });
+
+await graceful(router.handle(), { port: 3000, log });
+```
+
+##### Testing with Programmatic Shutdown
+
+Override `exit` to prevent `process.exit` during tests, use `port: 0` for an
+ephemeral port, and call the returned `shutdown()` for cleanup:
+
+```js
+import { describe, it, after } from "node:test";
+import assert from "node:assert/strict";
+import { graceful } from "@centralping/ergo-router";
+
+describe("server lifecycle", () => {
+  let shutdown;
+
+  after(async () => {
+    if (shutdown) await shutdown("test-cleanup");
+  });
+
+  it("starts on an ephemeral port", async () => {
+    const result = await graceful(
+      (req, res) => { res.writeHead(200); res.end("ok"); },
+      { port: 0, exit() {} },
+    );
+    shutdown = result.shutdown;
+
+    const { port } = result.server.address();
+    const res = await fetch(`http://localhost:${port}/`);
+    assert.equal(res.status, 200);
+  });
+});
+```
+
 ## Links
 
 - [GitHub](https://github.com/CentralPing/ergo-router)
