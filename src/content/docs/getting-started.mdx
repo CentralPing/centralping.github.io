@@ -3,7 +3,7 @@ title: Getting Started
 description: Install @centralping/ergo and @centralping/ergo-router and build your first Fast Fail REST API.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Prerequisites
 
@@ -69,8 +69,55 @@ router.get("/users/:id", {
   }),
 });
 
+router.post("/users", {
+  auth: {
+    strategies: [
+      {
+        type: "Bearer",
+        authorizer: async (attributes, token) => {
+          if (!token) return { authorized: false, info: { statusCode: 401 } };
+          return { authorized: true, info: { userId: token } };
+        },
+      },
+    ],
+  },
+  validate: {
+    body: {
+      type: "object",
+      properties: { name: { type: "string", minLength: 1 } },
+      required: ["name"],
+    },
+  },
+  execute: (req, res, acc) => ({
+    response: {
+      statusCode: 201,
+      body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
+    },
+  }),
+});
+
 await graceful(router.handle(), { port: 3000 });
 ```
+
+<Aside type="tip" title="The accumulator body object">
+  The POST route above reads `acc.body.parsed` — the decoded JavaScript value
+  from the request body. Body parsing is **auto-included** for POST, PUT, and
+  PATCH routes, so no explicit `body: true` is needed in the config.
+
+  The full body result also includes `acc.body.raw` (the raw string, useful for
+  signature verification) and metadata such as `type`, `charset`, `encoding`,
+  `length`, and `received`. See the
+  [ergo API reference](/api/ergo/centralping/ergo/) for the complete shape.
+</Aside>
+
+<Aside type="note" title="Transport vs. route-level middleware">
+  The `defaults` key on `createRouter()` sets **route-level** middleware that
+  runs after a route is matched. ergo-router also supports a `transport` key for
+  **transport-level** middleware (request IDs, security headers, rate limiting,
+  CORS) that runs on _every_ request — including 404 and 405 responses. See
+  [Architecture — Shared Primitives](/concepts/architecture/#shared-primitives-lib)
+  for more detail.
+</Aside>
 
 ### What Happens
 
@@ -79,6 +126,9 @@ await graceful(router.handle(), { port: 3000 });
 | `GET /users/42` with `Accept: text/xml` | **406 Not Acceptable** — negotiation fails |
 | `GET /users/42` without `Authorization` | **401 Unauthorized** — authorization fails |
 | `GET /users/42` with valid Bearer token | **200 OK** — all stages pass |
+| `POST /users` without `Content-Type` | **415 Unsupported Media Type** — missing content type |
+| `POST /users` with invalid JSON body | **400 Bad Request** — body validation fails |
+| `POST /users` with valid JSON + Bearer token | **201 Created** — resource created |
 
 Every error response is a
 [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) JSON object.
