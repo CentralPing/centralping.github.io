@@ -32,6 +32,7 @@ jobs:
           CLIENT_VERSION: ${{ github.event.client_payload.version || 'main' }}
         run: |
           pkg="${CLIENT_PACKAGE}"
+          pkg="${pkg#@centralping/}"
           ver="${CLIENT_VERSION}"
           if [[ "$ver" == "dev" ]]; then ver="main"; fi
 
