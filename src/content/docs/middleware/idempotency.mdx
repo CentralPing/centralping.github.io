@@ -1,0 +1,92 @@
+---
+title: idempotency
+description: Idempotency-Key middleware — replay stored responses for duplicate requests per IETF draft.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Implements the
+[Idempotency-Key HTTP header](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/)
+draft specification. Replays stored responses for duplicate request keys
+and detects fingerprint conflicts for concurrent or mismatched requests.
+
+Place after `body()` in the pipeline (Stage 3) so the request fingerprint
+can include the parsed body.
+
+**Pipeline stage:** Validation (after body parsing)
+
+## Import
+
+```js
+import { idempotency } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `store` | `object` | In-memory store | Pluggable store with `get`/`set`/`complete`/`delete` |
+| `ttlMs` | `number` | `86400000` (24h) | TTL for default in-memory store |
+| `required` | `boolean` | `false` | Return `400` if header is missing on applicable methods |
+| `methods` | `Set<string> \| string[]` | `POST`, `PATCH` | HTTP methods to enforce |
+
+## Return Value
+
+Depends on the request state:
+
+| State | Return |
+| ----- | ------ |
+| Method not applicable or key absent (not required) | `{}` |
+| New request | `{ value: { key, fingerprint, complete(response), discard() } }` |
+| Replay (stored response exists) | `{ value: { replayed: true }, response: storedResponse }` |
+
+For new requests, call `complete(response)` after your execute stage to
+store the response for future replays, or `discard()` to remove the key.
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **400 Bad Request** | `required: true` and `Idempotency-Key` header is missing or invalid |
+| **409 Conflict** | Same key with a different request fingerprint |
+| **409 Conflict** | Concurrent request with the same key still processing |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body, idempotency } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      [idempotency({ required: true }), "idempotency"],
+      (req, res, acc) => ({
+        response: { statusCode: 201, body: { created: true } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/payments", {
+      idempotency: { required: true },
+      validate: {
+        body: paymentSchema,
+      },
+      execute: async (req, res, acc) => {
+        const result = await processPayment(acc.body.parsed);
+        return { response: { statusCode: 201, body: result } };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [Idempotency-Key Header — IETF Draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/)
+
+## API Reference
+
+See the auto-generated [idempotency API docs](/api/ergo/@centralping/ergo/variables/idempotency/).

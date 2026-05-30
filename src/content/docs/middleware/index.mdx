@@ -1,0 +1,50 @@
+---
+title: Middleware
+description: Per-middleware guides with options, return values, error responses, and usage examples.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+ergo ships 20 middleware factories covering every stage of the
+[Fast Fail pipeline](/concepts/fast-fail/). Each guide page documents the
+full options table, return value, error responses, and usage examples for
+both standalone composition and declarative ergo-router configuration.
+
+## Pipeline Stages
+
+| Stage | Middleware | Purpose |
+| ----- | ---------- | ------- |
+| Negotiation | [accepts](/middleware/accepts/) | Content negotiation (Accept, Accept-Language, etc.) |
+| Negotiation | [cors](/middleware/cors/) | Cross-origin resource sharing |
+| Negotiation | [cookie](/middleware/cookie/) | Cookie parsing |
+| Negotiation | [url](/middleware/url/) | URL and query string parsing |
+| Negotiation | [prefer](/middleware/prefer/) | Prefer header parsing (RFC 7240) |
+| Negotiation | [precondition](/middleware/precondition/) | Conditional request enforcement |
+| Negotiation | [rate-limit](/middleware/rate-limit/) | Per-client rate limiting |
+| Authorization | [authorization](/middleware/authorization/) | Bearer / Basic / API-key auth |
+| Authorization | [csrf](/middleware/csrf/) | CSRF token issue and verify |
+| Validation | [body](/middleware/body/) | Request body parsing |
+| Validation | [validate](/middleware/validate/) | JSON Schema validation (AJV) |
+| Validation | [json-api-query](/middleware/json-api-query/) | JSON:API query validation |
+| Validation | [idempotency](/middleware/idempotency/) | Idempotency-Key enforcement |
+| Execution | [handler](/middleware/handler/) | Pipeline executor |
+| Execution | [send](/middleware/send/) | Response serialization |
+
+## Cross-Cutting
+
+| Middleware | Purpose |
+| ---------- | ------- |
+| [cache-control](/middleware/cache-control/) | Cache-Control header defaults |
+| [compress](/middleware/compress/) | Response compression (gzip, br, deflate) |
+| [logger](/middleware/logger/) | Structured request/response logging |
+| [security-headers](/middleware/security-headers/) | Security response headers (CSP, HSTS, etc.) |
+| [timeout](/middleware/timeout/) | Request timeout via AbortSignal |
+
+## Two-Layer Documentation
+
+Each middleware has two documentation surfaces:
+
+- **Guide pages** (this section) — options, examples, error tables, and RFC
+  references written for developers building with ergo.
+- **API Reference** — auto-generated from JSDoc with precise type signatures.
+  Linked at the bottom of each guide page.

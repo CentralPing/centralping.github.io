@@ -1,0 +1,90 @@
+---
+title: url
+description: URL parsing middleware — extracts pathname, query parameters, and raw search string from the request URL.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Parses the request URL into pathname, parsed query parameters, and the
+raw search string. Uses a fast single-pass parser (`indexOf` + `slice`)
+instead of the `URL` constructor for performance. Multi-value query
+parameters automatically become arrays.
+
+**Pipeline stage:** Negotiation
+
+## Import
+
+```js
+import { url } from "@centralping/ergo";
+```
+
+## Options
+
+None. The `url()` factory takes no parameters.
+
+## Return Value
+
+Returns a URL descriptor stored at `acc.url`:
+
+```js
+{
+  pathname: "/users",
+  search: "?page=1&filter=a&filter=b",
+  query: {
+    page: "1",
+    filter: ["a", "b"]
+  }
+}
+```
+
+- `query` uses a null-prototype object to prevent prototype pollution
+- Multi-value keys become arrays automatically
+- `search` is `undefined` when no query string is present
+- Bounded by `maxPairs: 256` and `maxQueryLength: 8192` defaults
+
+## Error Responses
+
+None.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, url } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [url(), "url"],
+      (req, res, acc) => ({
+        response: {
+          body: {
+            path: acc.url.pathname,
+            page: acc.url.query.page,
+          },
+        },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    // ergo-router automatically includes URL parsing.
+    // acc.url.query is available in your execute handler.
+
+    router.get("/articles", {
+      execute: (req, res, acc) => ({
+        response: {
+          body: queryArticles({
+            page: acc.url.query.page,
+            filter: acc.url.query.filter,
+          }),
+        },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## API Reference
+
+See the auto-generated [url API docs](/api/ergo/@centralping/ergo/variables/url/).

@@ -1,0 +1,76 @@
+---
+title: compress
+description: Response compression middleware — negotiates Accept-Encoding and applies gzip, br, or deflate.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Negotiates `Accept-Encoding` and wraps the response stream through the
+best-matching compressor (Brotli, gzip, or deflate). Compression is
+skipped automatically for small bodies, non-compressible content types,
+and no-body status codes.
+
+**Pipeline stage:** Cross-cutting (place before `send`)
+
+## Import
+
+```js
+import { compress } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `threshold` | `number` | `1024` | Minimum body size in bytes before compression kicks in |
+| `encodings` | `string[]` | `['br', 'gzip', 'deflate']` | Supported encodings in priority order |
+
+## Return Value
+
+The middleware modifies the response stream in-place (wrapping
+`res.write` and `res.end`). It does not add to the domain accumulator.
+
+## Compression Skipped When
+
+- Status code is **204** or **304**
+- `Content-Type` is non-compressible (binary, images, etc.)
+- Body is below `threshold` bytes
+- No acceptable encoding found in `Accept-Encoding`
+
+## Error Responses
+
+None. Compression is silently skipped when conditions are not met.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, compress } from "@centralping/ergo";
+
+    const pipeline = compose(
+      compress({ threshold: 1024, encodings: ["br", "gzip"] }),
+      (req, res, acc) => ({
+        response: { body: largePayload },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        compress: { threshold: 512 },
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 9110 §12.5.3 — Accept-Encoding](https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3)
+
+## API Reference
+
+See the auto-generated [compress API docs](/api/ergo/@centralping/ergo/variables/compress/).

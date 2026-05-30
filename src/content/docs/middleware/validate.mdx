@@ -1,0 +1,106 @@
+---
+title: validate
+description: JSON Schema validation middleware — validates request body, query parameters, and route parameters using AJV.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Validates accumulator properties against JSON Schemas compiled at factory
+time using [AJV](https://ajv.js.org/). Supports body, query parameter,
+and route parameter schemas. Includes `ajv-formats` for standard format
+keywords (`email`, `uri`, `date-time`, `uuid`, etc.) out of the box.
+
+**Pipeline stage:** Validation (after `body()` and `url()`)
+
+## Import
+
+```js
+import { validate } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `schemas.body` | `object` | — | JSON Schema for the parsed request body |
+| `schemas.query` | `object` | — | JSON Schema for query parameters |
+| `schemas.params` | `object` | — | JSON Schema for route path parameters |
+| `options.formats` | `boolean \| string[] \| object` | all standard | `ajv-formats` configuration |
+
+### `formats` Values
+
+| Value | Behavior |
+| ----- | -------- |
+| `undefined` or `true` | All standard formats enabled |
+| `false` | Formats disabled |
+| `['email', 'uri']` | Only listed formats enabled |
+| `{ mode: 'fast' }` | Full `ajv-formats` plugin config |
+
+### Route Parameter Resolution
+
+Route parameters are resolved from `acc.route?.params` (ergo-router) with
+a fallback to `acc.params` (standalone).
+
+## Return Value
+
+The middleware returns `undefined` on success — validation is a gate, not
+a data producer.
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **422 Unprocessable Entity** | Validation failure — response includes `details` array with per-field errors |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body, url, validate } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      [url(), "url"],
+      [validate({
+        body: {
+          type: "object",
+          properties: { name: { type: "string" } },
+          required: ["name"],
+        },
+        query: {
+          type: "object",
+          properties: {
+            page: { type: "string", pattern: "^[0-9]+$" },
+          },
+        },
+      }), "validation"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/users", {
+      validate: {
+        body: {
+          type: "object",
+          properties: { name: { type: "string", format: "email" } },
+          required: ["name"],
+        },
+        params: {
+          type: "object",
+          properties: { id: { type: "string", minLength: 1 } },
+          required: ["id"],
+        },
+      },
+      execute: (req, res, acc) => ({
+        response: { statusCode: 201, body: { created: true } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## API Reference
+
+See the auto-generated [validate API docs](/api/ergo/@centralping/ergo/variables/validate/).

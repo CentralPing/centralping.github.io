@@ -1,0 +1,95 @@
+---
+title: cookie
+description: Cookie parsing middleware — RFC 6265 cookie jar with dual incoming/outgoing storage.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Parses the `Cookie` request header into an RFC 6265-compliant cookie jar.
+The jar uses dual storage: incoming cookies are accessible as own
+properties; outgoing cookies are managed via `set()` and serialized by
+`toHeader()` into `Set-Cookie` headers.
+
+**Pipeline stage:** Negotiation
+
+## Import
+
+```js
+import { cookie } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `options` | `object` | — | Forwarded to the RFC 6265 parser (e.g., `{ max: 50 }` for cookie count limit) |
+
+## Return Value
+
+Returns a cookie jar stored at `acc.cookies`:
+
+```js
+acc.cookies.session    // "abc123" (incoming cookie, own property)
+acc.cookies.set(name, value, directives)  // queue outgoing cookie
+acc.cookies.toHeader() // ["session=abc123; HttpOnly; Secure", ...]
+```
+
+### Jar Methods
+
+| Method | Description |
+| ------ | ----------- |
+| `set(name, value, directives)` | Queue an outgoing cookie with optional directives |
+| `get(name)` | Get an outgoing cookie object |
+| `clear(name)` | Clear an outgoing cookie |
+| `toHeader()` | Serialize all outgoing cookies to `Set-Cookie` header values |
+
+### Security
+
+- Cookie values are validated against RFC 6265 `cookie-octet` grammar
+- Cookie names must be valid HTTP tokens
+- Names that collide with jar methods are silently dropped
+- Null-prototype parsing prevents prototype pollution
+
+## Error Responses
+
+None.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, cookie } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [cookie(), "cookies"],
+      (req, res, acc) => {
+        const session = acc.cookies.session;
+        acc.cookies.set("visited", "true", {
+          httpOnly: true,
+          sameSite: "Strict",
+        });
+        return { response: { body: { session } } };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/dashboard", {
+      cookie: {},
+      execute: (req, res, acc) => ({
+        response: { body: { session: acc.cookies.session } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 6265 — HTTP State Management](https://www.rfc-editor.org/rfc/rfc6265)
+
+## API Reference
+
+See the auto-generated [cookie API docs](/api/ergo/@centralping/ergo/variables/cookie/).

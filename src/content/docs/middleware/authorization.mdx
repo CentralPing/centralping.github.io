@@ -1,0 +1,109 @@
+---
+title: authorization
+description: Authentication middleware — parses the Authorization header using pluggable strategies (Bearer, Basic, API key).
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Parses the `Authorization` request header and delegates credential
+verification to one or more pluggable strategies. Each strategy defines a
+scheme type, optional attribute matching, and an async authorizer function.
+
+**Pipeline stage:** Authorization
+
+## Import
+
+```js
+import { authorization } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `strategies` | `Array<Strategy>` | `[]` | Authentication strategy definitions |
+
+### Strategy Object
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `type` | `string` | Yes | Scheme name (`Bearer`, `Basic`, `ApiKey`, etc.) |
+| `attributes` | `object` | No | Additional matching criteria |
+| `authorizer` | `function` | Yes | `(attributes, credentials) => { authorized, info }` |
+
+The `authorizer` receives raw (un-decoded) credentials. The `basic`
+strategy is responsible for its own base64 decoding and
+`username:password` splitting.
+
+## Return Value
+
+On success, the middleware returns the `info` object from the matching
+strategy, stored at `acc.auth`:
+
+```js
+{ user: { id: "42", role: "admin" } }
+```
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **401 Unauthorized** | Missing or invalid credentials; strategy returns `{ authorized: false, info: { statusCode: 401 } }` |
+| **403 Forbidden** | Default when `authorized` is `false` and no `statusCode` is specified |
+
+When a strategy provides an `authenticate` value, ergo includes a
+`WWW-Authenticate` response header with the challenge.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [authorization({
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const user = await verifyJwt(token);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false, info: { statusCode: 401 } };
+          },
+        }],
+      }), "auth"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/users/:id", {
+      auth: {
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const user = await verifyJwt(token);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false, info: { statusCode: 401 } };
+          },
+        }],
+      },
+      execute: (req, res, acc) => ({
+        response: { body: { userId: acc.auth.user.id } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 6750 — Bearer Token Usage](https://www.rfc-editor.org/rfc/rfc6750)
+- [RFC 7617 — Basic HTTP Authentication](https://www.rfc-editor.org/rfc/rfc7617)
+- [RFC 7235 — HTTP Authentication](https://www.rfc-editor.org/rfc/rfc7235)
+
+## API Reference
+
+See the auto-generated [authorization API docs](/api/ergo/@centralping/ergo/variables/authorization/).

@@ -1,0 +1,112 @@
+---
+title: send
+description: Response serialization — JSON, streams, ETags, conditional requests, RFC 9457 errors, and Prefer header support.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The terminal response writer in ergo's two-accumulator model. Called once
+by `handler()` (or ergo-router's `auto-wrap`) after the pipeline
+completes. Reads from both the response accumulator and domain
+accumulator to serialize the HTTP response.
+
+`send` is **not** placed inside the pipeline — it runs after the pipeline
+via `handler()`.
+
+**Pipeline stage:** Post-pipeline (called by `handler`)
+
+## Import
+
+```js
+import { send } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `prettify` | `boolean` | `false` | Pretty-print JSON output |
+| `vary` | `string[]` | `['Accept']` | Vary header values to append |
+| `etag` | `boolean` | `true` | Generate ETags and evaluate conditional headers |
+| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation` |
+| `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope |
+
+### Envelope Values
+
+| Value | Behavior |
+| ----- | -------- |
+| `false` | No envelope (default) |
+| `true` | Built-in `{ id, status, data, count? }` |
+| `function` | Custom `(body, ctx) => wrappedBody` |
+
+## Accumulator Inputs
+
+**Response accumulator:** `statusCode`, `body`, `headers`, `detail`,
+`retryAfter`, `instance`, `location`, `lastModified`, `type`
+
+**Domain accumulator:** `cookies` (cookie jar → `Set-Cookie`), `prefer`
+(parsed Prefer header)
+
+## Body Handling (statusCode < 400)
+
+| Body Type | Content-Type | Behavior |
+| --------- | ------------ | -------- |
+| `null` / `undefined` | — | Default status text (empty for 204/304) |
+| `string` | Auto-detected HTML or text | Written as-is |
+| `Uint8Array` | `application/octet-stream` | Written as binary |
+| `Stream` | — | Piped to response |
+| `Object` | `application/json` | JSON-serialized (respects `prettify`) |
+
+## Error Responses (statusCode ≥ 400)
+
+Error bodies are automatically formatted as
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) from
+the response accumulator's `statusCode`, `detail`, `retryAfter`,
+`instance`, and any extension members.
+
+## Conditional Requests
+
+| Status | Condition |
+| ------ | --------- |
+| **304 Not Modified** | `If-None-Match` weak-matches the ETag, or `If-Modified-Since` and resource not modified |
+| **412 Precondition Failed** | `If-Match` fails on unsafe methods, or `If-Unmodified-Since` fails |
+| **204 No Content** | `Prefer: return=minimal` on 2xx responses (200 → 204) |
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { handler, compose, send } from "@centralping/ergo";
+
+    const pipeline = compose(
+      (req, res, acc) => ({
+        response: { statusCode: 200, body: { hello: "world" } },
+      }),
+    );
+
+    const server = http.createServer(
+      handler(pipeline, { etag: true, prettify: true }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        send: { etag: true, prefer: true },
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 9110 — HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110)
+- [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
+- [RFC 7240 — Prefer Header for HTTP](https://www.rfc-editor.org/rfc/rfc7240)
+
+## API Reference
+
+See the auto-generated [send API docs](/api/ergo/@centralping/ergo/variables/send/).

@@ -1,0 +1,92 @@
+---
+title: cache-control
+description: Cache-Control middleware — pre-computed response header directives with zero per-request cost.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Returns pre-computed `Cache-Control` response header tuples. The
+directive string is built at factory time, so there is zero per-request
+overhead. Accepts either a raw directive string or structured options.
+
+**Pipeline stage:** Cross-cutting
+
+## Import
+
+```js
+import { cacheControl } from "@centralping/ergo";
+```
+
+## Options
+
+Pass `directives` as a raw string to bypass structured options.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `directives` | `string` | — | Raw directive string (overrides all below) |
+| `public` | `boolean` | `false` | Add `public` |
+| `private` | `boolean` | `false` | Add `private` |
+| `noCache` | `boolean` | `false` | Add `no-cache` |
+| `noStore` | `boolean` | `false` | Add `no-store` |
+| `noTransform` | `boolean` | `false` | Add `no-transform` |
+| `mustRevalidate` | `boolean` | `false` | Add `must-revalidate` |
+| `proxyRevalidate` | `boolean` | `false` | Add `proxy-revalidate` |
+| `immutable` | `boolean` | `false` | Add `immutable` |
+| `maxAge` | `number` | — | `max-age` in seconds |
+| `sMaxAge` | `number` | — | `s-maxage` in seconds |
+| `staleWhileRevalidate` | `number` | — | `stale-while-revalidate` in seconds |
+| `staleIfError` | `number` | — | `stale-if-error` in seconds |
+
+## Return Value
+
+Always returns response headers:
+
+```js
+{ response: { headers: [["Cache-Control", "private, no-cache"]] } }
+```
+
+## Error Responses
+
+None. This middleware always injects headers.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, cacheControl } from "@centralping/ergo";
+
+    // String shorthand
+    const pipeline = compose(
+      [cacheControl({ directives: "public, max-age=3600" }), "cache"],
+    );
+
+    // Structured options
+    const pipeline = compose(
+      [cacheControl({
+        private: true,
+        maxAge: 0,
+        mustRevalidate: true,
+      }), "cache"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/static/:id", {
+      cacheControl: { public: true, maxAge: 86400, immutable: true },
+      execute: (req, res, acc) => ({
+        response: { body: staticContent },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 9111 — HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111)
+
+## API Reference
+
+See the auto-generated [cacheControl API docs](/api/ergo/@centralping/ergo/variables/cacheControl/).

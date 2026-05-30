@@ -1,0 +1,110 @@
+---
+title: security-headers
+description: Security response headers middleware — CSP, HSTS, X-Frame-Options, and more with per-header control.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Injects pre-computed security response headers. Each header is
+individually configurable or disableable (`false`). All values are built
+at factory time for zero per-request overhead.
+
+**Pipeline stage:** Cross-cutting
+
+## Import
+
+```js
+import { securityHeaders } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `contentSecurityPolicy` | `string \| false` | `"default-src 'none'"` | Content-Security-Policy |
+| `strictTransportSecurity` | `string \| object \| false` | `false` | HSTS — off by default (see note) |
+| `xContentTypeOptions` | `string \| false` | `'nosniff'` | X-Content-Type-Options |
+| `xFrameOptions` | `string \| false` | `'DENY'` | X-Frame-Options |
+| `referrerPolicy` | `string \| false` | `'no-referrer'` | Referrer-Policy |
+| `xXssProtection` | `string \| false` | `'0'` | X-XSS-Protection (0 disables legacy browser filter) |
+| `permissionsPolicy` | `string` | — | Permissions-Policy (omitted by default) |
+
+### HSTS Note
+
+HSTS defaults to `false` because this middleware returns pre-computed
+header tuples with no access to the request object, so it cannot verify
+HTTPS. Per RFC 6797 §7.2, HSTS MUST only be sent over secure transport.
+ergo-router's transport-level middleware performs the HTTPS check and
+enables HSTS appropriately.
+
+### Structured HSTS
+
+When using a string: `'max-age=31536000; includeSubDomains; preload'`
+
+When using an object: `{ maxAge: 31536000, includeSubDomains: true, preload: true }`
+
+## Return Value
+
+Always returns response headers:
+
+```js
+{
+  response: {
+    headers: [
+      ["Content-Security-Policy", "default-src 'none'"],
+      ["X-Content-Type-Options", "nosniff"],
+      ["X-Frame-Options", "DENY"],
+      ["Referrer-Policy", "no-referrer"],
+      ["X-XSS-Protection", "0"]
+    ]
+  }
+}
+```
+
+## Error Responses
+
+None.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, securityHeaders } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [securityHeaders(), "security"],
+    );
+
+    // Custom configuration
+    const pipeline = compose(
+      [securityHeaders({
+        xFrameOptions: "SAMEORIGIN",
+        permissionsPolicy: "camera=(), microphone=()",
+        xXssProtection: false,
+      }), "security"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        securityHeaders: {
+          contentSecurityPolicy: "default-src 'self'",
+          xFrameOptions: "SAMEORIGIN",
+        },
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 6797 — HTTP Strict Transport Security (HSTS)](https://www.rfc-editor.org/rfc/rfc6797)
+- [W3C Content Security Policy Level 3](https://www.w3.org/TR/CSP3/)
+
+## API Reference
+
+See the auto-generated [securityHeaders API docs](/api/ergo/@centralping/ergo/variables/securityHeaders/).

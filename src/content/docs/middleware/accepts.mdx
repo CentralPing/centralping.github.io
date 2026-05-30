@@ -1,0 +1,88 @@
+---
+title: accepts
+description: Content negotiation middleware — validates Accept, Accept-Language, Accept-Charset, and Accept-Encoding headers.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Validates the client's `Accept`, `Accept-Language`, `Accept-Charset`, and
+`Accept-Encoding` request headers against the server's supported values.
+Returns `406 Not Acceptable` when any negotiation fails (configurable).
+
+**Pipeline stage:** Negotiation
+
+## Import
+
+```js
+import { accepts } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `throwIfFail` | `boolean` | `true` | Return `406` when any negotiated value is `undefined` |
+| `types` | `string[]` | — | Acceptable media types |
+| `languages` | `string[]` | — | Acceptable languages |
+| `charsets` | `string[]` | — | Acceptable character sets |
+| `encodings` | `string[]` | — | Acceptable content encodings |
+
+## Return Value
+
+On success, the middleware returns a negotiation result stored at
+`acc.accepts`:
+
+```js
+{
+  type: "application/json",
+  language: "en",
+  charset: "utf-8",
+  encoding: "identity"
+}
+```
+
+Each key corresponds to the best match for the respective header. When no
+constraint is provided for a key, the negotiated value is the client's
+top preference.
+
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **406 Not Acceptable** | Any negotiated value is `undefined` and `throwIfFail` is `true` |
+
+The `detail` field in the RFC 9457 response identifies which header
+failed: `Failed to negotiate content for: [Accept].`
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, accepts } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [accepts({ types: ["application/json"] }), "accepts"],
+      // acc.accepts.type === "application/json"
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/users", {
+      accepts: { types: ["application/json"] },
+      execute: (req, res, acc) => ({
+        response: { body: users },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 9110 §12.5 — Content Negotiation](https://www.rfc-editor.org/rfc/rfc9110#section-12.5)
+
+## API Reference
+
+See the auto-generated [accepts API docs](/api/ergo/@centralping/ergo/variables/accepts/).
