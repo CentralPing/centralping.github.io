@@ -133,7 +133,7 @@ When a strategy provides an `authenticate` value, ergo includes a
   <TabItem label="ergo-router">
     ```js
     router.get("/admin", {
-      auth: {
+      authorization: {
         strategies: [{
           type: "Basic",
           attributes: { realm: "admin" },
