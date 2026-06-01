@@ -60,7 +60,7 @@ const router = createRouter({
 });
 
 router.post("/users", {
-  auth: { strategies: [bearerStrategy] },
+  authorization: { strategies: [bearerStrategy] },
   validate: { body: userSchema },
   execute: createUser,
 });

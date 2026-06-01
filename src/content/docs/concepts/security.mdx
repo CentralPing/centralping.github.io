@@ -35,7 +35,7 @@ Pluggable strategies support Bearer, Basic, and custom schemes.
   <TabItem label="JavaScript">
     ```js
     router.get("/accounts/:id", {
-      auth: {
+      authorization: {
         strategies: [
           {
             type: "Bearer",
@@ -67,7 +67,7 @@ Pluggable strategies support Bearer, Basic, and custom schemes.
     }
 
     router.get("/accounts/:id", {
-      auth: {
+      authorization: {
         strategies: [
           {
             type: "Bearer" as const,
@@ -127,7 +127,7 @@ attackers to assume other users' identities.
 
 ```js
 router.post("/transfer", {
-  auth: { strategies: [bearerStrategy] },
+  authorization: { strategies: [bearerStrategy] },
   csrf: { secret: process.env.CSRF_SECRET },
   execute: handleTransfer,
 });
@@ -257,12 +257,12 @@ access control checks.
 
 ```js
 router.get("/admin/users", {
-  auth: { strategies: [adminOnlyStrategy] },
+  authorization: { strategies: [adminOnlyStrategy] },
   execute: listAllUsers,
 });
 
 router.get("/users/:id", {
-  auth: { strategies: [authenticatedUserStrategy] },
+  authorization: { strategies: [authenticatedUserStrategy] },
   execute: getUser,
 });
 ```

@@ -188,7 +188,7 @@ middleware to include and their options:
 ```js
 {
   accepts: { types: ['application/json'] },
-  auth: { strategies: [bearerStrategy] },
+  authorization: { strategies: [bearerStrategy] },
   body: true,
   validate: { body: schema },
   execute: handler
@@ -196,8 +196,9 @@ middleware to include and their options:
 ```
 
 The builder resolves route-level overrides against router-level defaults,
-auto-includes method-appropriate middleware (e.g., `body` for POST/PUT/PATCH),
-and produces a `[fn, setPath]` tuple array ready for `compose-with`.
+auto-includes method-appropriate middleware (`url` for GET/DELETE, `body` for
+POST/PUT/PATCH), and produces a `[fn, setPath]` tuple array ready for
+`compose-with`.
 
 ## Further Reading
 
