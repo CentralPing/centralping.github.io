@@ -29,11 +29,18 @@ import { authorization } from "@centralping/ergo";
 | -------- | ---- | -------- | ----------- |
 | `type` | `string` | Yes | Scheme name (`Bearer`, `Basic`, `ApiKey`, etc.) |
 | `attributes` | `object` | No | Additional matching criteria |
-| `authorizer` | `function` | Yes | `(attributes, credentials) => { authorized, info }` |
+| `authorizer` | `function` | Yes | Async function — signature varies by scheme (see below) |
 
-The `authorizer` receives raw (un-decoded) credentials. The `basic`
-strategy is responsible for its own base64 decoding and
-`username:password` splitting.
+#### Authorizer Signatures
+
+The library parses credentials internally and calls your `authorizer` with
+a scheme-specific signature:
+
+| Scheme | Signature | Description |
+| ------ | --------- | ----------- |
+| `Basic` | `(attributes, username, password) => { authorized, info }` | Base64 decoded and split on `:` by the library |
+| `Bearer` | `(attributes, token) => { authorized, info }` | Raw token string (no decoding) |
+| Custom | `(attributes, credentials) => { authorized, info }` | Raw credential string for any other scheme |
 
 ## Return Value
 
@@ -55,6 +62,8 @@ When a strategy provides an `authenticate` value, ergo includes a
 `WWW-Authenticate` response header with the challenge.
 
 ## Usage
+
+### Bearer Authentication
 
 <Tabs>
   <TabItem label="Standalone">
@@ -92,6 +101,52 @@ When a strategy provides an `authenticate` value, ergo includes a
       },
       execute: (req, res, acc) => ({
         response: { body: { userId: acc.auth.user.id } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Basic Authentication
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [authorization({
+        strategies: [{
+          type: "Basic",
+          attributes: { realm: "api" },
+          authorizer: async (attributes, username, password) => {
+            const user = await validateCredentials(username, password);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false };
+          },
+        }],
+      }), "auth"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/admin", {
+      auth: {
+        strategies: [{
+          type: "Basic",
+          attributes: { realm: "admin" },
+          authorizer: async (attributes, username, password) => {
+            const user = await validateCredentials(username, password);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false };
+          },
+        }],
+      },
+      execute: (req, res, acc) => ({
+        response: { body: { admin: acc.auth.user.name } },
       }),
     });
     ```
