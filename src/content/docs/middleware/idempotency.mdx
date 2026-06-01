@@ -43,11 +43,28 @@ Depends on the request state:
 For new requests, call `complete(response)` after your execute stage to
 store the response for future replays, or `discard()` to remove the key.
 
+## Header Format
+
+The `Idempotency-Key` header value must be an
+[RFC 8941 structured field string](https://www.rfc-editor.org/rfc/rfc8941#section-3.3.3)
+— a double-quoted value on the wire:
+
+```bash
+curl -X POST https://api.example.com/payments \
+  -H 'Idempotency-Key: "my-unique-key-123"' \
+  -H 'Content-Type: application/json' \
+  -d '{"amount": 1000}'
+```
+
+Unquoted values (e.g., `Idempotency-Key: my-key`) are rejected with a
+`400` response that includes format guidance.
+
 ## Error Responses
 
 | Status | Condition |
 | ------ | --------- |
-| **400 Bad Request** | `required: true` and `Idempotency-Key` header is missing or invalid |
+| **400 Bad Request** | Header is present but not a valid RFC 8941 sf-string (always, regardless of `required`) |
+| **400 Bad Request** | Header is absent and `required: true` |
 | **409 Conflict** | Same key with a different request fingerprint |
 | **409 Conflict** | Concurrent request with the same key still processing |
 
@@ -86,6 +103,7 @@ store the response for future replays, or `discard()` to remove the key.
 ## RFC References
 
 - [Idempotency-Key Header — IETF Draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/)
+- [RFC 8941 — Structured Field Values for HTTP](https://www.rfc-editor.org/rfc/rfc8941)
 
 ## API Reference
 
