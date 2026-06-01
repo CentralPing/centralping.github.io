@@ -79,7 +79,7 @@ When a strategy provides an `authenticate` value, ergo includes a
   <TabItem label="ergo-router">
     ```js
     router.get("/users/:id", {
-      auth: {
+      authorization: {
         strategies: [{
           type: "Bearer",
           authorizer: async (attributes, token) => {

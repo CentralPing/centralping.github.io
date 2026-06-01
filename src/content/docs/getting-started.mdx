@@ -42,7 +42,7 @@ stages:
     });
 
     router.get("/users/:id", {
-      auth: {
+      authorization: {
         strategies: [
           {
             type: "Bearer",
@@ -72,7 +72,7 @@ stages:
     });
 
     router.post("/users", {
-      auth: {
+      authorization: {
         strategies: [
           {
             type: "Bearer",
@@ -118,7 +118,7 @@ stages:
     });
 
     router.get("/users/:id", {
-      auth: {
+      authorization: {
         strategies: [
           {
             type: "Bearer" as const,
@@ -155,7 +155,7 @@ stages:
     });
 
     router.post("/users", {
-      auth: {
+      authorization: {
         strategies: [
           {
             type: "Bearer" as const,
@@ -201,14 +201,20 @@ stages:
   </TabItem>
 </Tabs>
 
+<Aside type="tip" title="Auto-included middleware">
+  Some middleware is automatically included based on the HTTP method:
+
+  - **URL parsing** (`url`) is auto-included for **GET** and **DELETE** routes — no explicit `url: true` needed.
+  - **Body parsing** (`body`) is auto-included for **POST**, **PUT**, and **PATCH** routes — no explicit `body: true` needed.
+
+  Setting the key to `false` disables auto-inclusion for that route.
+</Aside>
+
 <Aside type="tip" title="The accumulator body object">
   The POST route above reads `acc.body.parsed` — the decoded JavaScript value
-  from the request body. Body parsing is **auto-included** for POST, PUT, and
-  PATCH routes, so no explicit `body: true` is needed in the config.
-
-  The full body result also includes `acc.body.raw` (the raw string, useful for
-  signature verification) and metadata such as `type`, `charset`, `encoding`,
-  `length`, and `received`. See the
+  from the request body. The full body result also includes `acc.body.raw` (the
+  raw string, useful for signature verification) and metadata such as `type`,
+  `charset`, `encoding`, `length`, and `received`. See the
   [ergo API reference](/api/ergo/centralping/ergo/) for the complete shape.
 </Aside>
 
