@@ -21,7 +21,7 @@ array. `send()` applies them to the response before writing the body.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, handler } from "@centralping/ergo";
+    import { compose } from "@centralping/ergo";
 
     const pipeline = compose(
       (req, res, acc) => ({
@@ -55,11 +55,10 @@ array. `send()` applies them to the response before writing the body.
 
 ### Response Time Header
 
-A middleware that measures pipeline execution time and adds an
-`X-Response-Time` header:
+A middleware that adds an `X-Response-Time` header to the response:
 
 ```js
-import { compose, handler, send } from "@centralping/ergo";
+import { compose } from "@centralping/ergo";
 
 const withResponseTime = (req, res, acc) => {
   const start = performance.now();

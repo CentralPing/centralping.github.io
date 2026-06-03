@@ -169,8 +169,8 @@ pattern is used throughout ergo's own functional test suite.
 
 ### Black-Box Testing
 
-Test through the HTTP interface using `fetch()` (built into Node.js
-22+). This validates the full middleware pipeline — content negotiation,
+Test through the HTTP interface using `fetch()` (built into Node.js,
+no polyfill needed). This validates the full middleware pipeline — content negotiation,
 body parsing, validation, and response serialization — without coupling
 tests to internal middleware structure.
 
