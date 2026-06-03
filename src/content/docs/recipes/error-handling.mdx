@@ -1,0 +1,170 @@
+---
+title: Error Handling
+description: Custom error responses, RFC 9457 extension members, and correlation IDs using ergo's error model.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to return structured error responses with custom detail
+messages, extension members (additional fields beyond the RFC 9457
+standard), and request correlation IDs for debugging.
+
+## Solution
+
+### Custom Error Details
+
+Return an error response from any middleware or execute handler by
+setting `statusCode` to 400+ on the response accumulator. `send()`
+automatically formats it as an RFC 9457 Problem Details body.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, handler } from "@centralping/ergo";
+
+    const pipeline = compose(
+      (req, res, acc) => ({
+        response: {
+          statusCode: 409,
+          detail: "Resource version conflict",
+        },
+      }),
+    );
+
+    // Response body:
+    // {
+    //   "type": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409",
+    //   "title": "Conflict",
+    //   "status": 409,
+    //   "detail": "Resource version conflict"
+    // }
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.put("/articles/:id", {
+      execute: async (req, res, acc) => {
+        const current = await db.get(acc.route.params.id);
+        if (current.version !== acc.body.parsed.version) {
+          return {
+            response: {
+              statusCode: 409,
+              detail: "Resource version conflict",
+            },
+          };
+        }
+        // ... update logic
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Extension Members
+
+Any property on the response accumulator that is not a reserved key
+(`statusCode`, `body`, `headers`, `detail`, `retryAfter`, `instance`,
+`type`, `lastModified`, `location`) is included as an RFC 9457 extension
+member in the error response body:
+
+```js
+(req, res, acc) => ({
+  response: {
+    statusCode: 422,
+    detail: "Validation failed",
+    errors: [
+      { field: "email", message: "must be a valid email address" },
+      { field: "age", message: "must be a positive integer" },
+    ],
+  },
+});
+
+// Response body:
+// {
+//   "errors": [
+//     { "field": "email", "message": "must be a valid email address" },
+//     { "field": "age", "message": "must be a positive integer" }
+//   ],
+//   "type": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422",
+//   "title": "Unprocessable Entity",
+//   "status": 422,
+//   "detail": "Validation failed"
+// }
+```
+
+### Correlation IDs via `instance`
+
+The `instance` field identifies the specific occurrence of an error.
+When ergo-router's request ID middleware is active, `send()` uses the
+request ID as the `instance` value for conditional request failures
+(412). You can set `instance` explicitly for your own errors:
+
+```js
+(req, res, acc) => ({
+  response: {
+    statusCode: 500,
+    instance: `urn:uuid:${acc.requestId}`,
+  },
+});
+
+// Response body includes:
+// "instance": "urn:uuid:abc-123-def"
+```
+
+### Retry-After for Rate Limiting
+
+The `retryAfter` field on the response accumulator automatically sets
+both the `Retry-After` response header and an extension member in the
+error body:
+
+```js
+(req, res, acc) => ({
+  response: {
+    statusCode: 429,
+    detail: "Rate limit exceeded",
+    retryAfter: 60,
+  },
+});
+// Sets header: Retry-After: 60
+// Body includes: "retryAfter": 60
+```
+
+## Explanation
+
+### The Return-Value Error Model
+
+ergo middleware signals errors by returning `{response: {statusCode}}`
+with a 4xx or 5xx status code — not by throwing exceptions. This design
+is intentional:
+
+1. **Performance** — `throw` in V8 triggers stack trace capture (~12 µs
+   per call). The return-value model avoids this overhead in hot paths
+   like rate-limit rejections.
+2. **Pipeline control** — a `statusCode` on the response accumulator
+   triggers a pipeline break. Subsequent middleware is skipped, and
+   `send()` serializes the error response.
+3. **Testability** — middleware functions are pure: given inputs, they
+   return a predictable output. No `try`/`catch` required in tests.
+
+### RFC 9457 Problem Details Format
+
+All error responses (statusCode ≥ 400) are serialized as RFC 9457
+Problem Details with `Content-Type: application/problem+json`:
+
+| Field | Source |
+| ----- | ------ |
+| `type` | MDN docs URL for the status code |
+| `title` | Standard HTTP status text |
+| `status` | The numeric status code |
+| `detail` | From `responseAcc.detail` (5xx responses redact internal details) |
+| `instance` | From `responseAcc.instance` (optional) |
+| Extension members | Any non-reserved keys on the response accumulator |
+
+### 5xx Detail Redaction
+
+For server errors (statusCode ≥ 500), `send()` uses the standard status
+text as the detail rather than exposing internal error messages. This
+prevents information leakage. Use structured logging to capture the full
+error context server-side.

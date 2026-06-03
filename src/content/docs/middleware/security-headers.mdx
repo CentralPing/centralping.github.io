@@ -3,7 +3,7 @@ title: security-headers
 description: Security response headers middleware — CSP, HSTS, X-Frame-Options, and more with per-header control.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Injects pre-computed security response headers. Each header is
 individually configurable or disableable (`false`). All values are built
@@ -23,7 +23,7 @@ import { securityHeaders } from "@centralping/ergo";
 | ------ | ---- | ------- | ----------- |
 | `contentSecurityPolicy` | `string \| false` | `"default-src 'none'"` | Content-Security-Policy |
 | `strictTransportSecurity` | `string \| object \| false` | `false` | HSTS — off by default (see note) |
-| `xContentTypeOptions` | `string \| false` | `'nosniff'` | X-Content-Type-Options |
+| `xContentTypeOptions` | `string \| boolean` | `'nosniff'` | X-Content-Type-Options (`true` → `'nosniff'`, `false` disables) |
 | `xFrameOptions` | `string \| false` | `'DENY'` | X-Frame-Options |
 | `referrerPolicy` | `string \| false` | `'no-referrer'` | Referrer-Policy |
 | `xXssProtection` | `string \| false` | `'0'` | X-XSS-Protection (0 disables legacy browser filter) |
@@ -99,6 +99,69 @@ None.
     ```
   </TabItem>
 </Tabs>
+
+## CSP Implications
+
+The default `contentSecurityPolicy` is `"default-src 'none'"` — the most
+restrictive Content Security Policy possible. This is appropriate for
+**JSON API endpoints** that never serve HTML content, but it will break
+any response that contains inline styles, scripts, images, or other
+embedded resources.
+
+### When `default-src 'none'` Matters
+
+If your endpoint returns JSON (the common case for ergo APIs), the
+restrictive CSP is invisible — browsers do not evaluate CSP for JSON
+responses. The default exists as defense-in-depth: if an attacker
+somehow causes your API to return HTML, the CSP prevents the browser
+from executing any embedded content.
+
+### Relaxing CSP for HTML-Serving Routes
+
+If you have routes that serve HTML content (e.g., server-rendered pages,
+health check dashboards, or documentation endpoints), override
+`contentSecurityPolicy` on those routes:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, securityHeaders } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [securityHeaders({
+        contentSecurityPolicy: "default-src 'self'; style-src 'self' 'unsafe-inline'",
+      }), "security"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    // Per-route override
+    router.get("/dashboard", {
+      securityHeaders: {
+        contentSecurityPolicy: "default-src 'self'; style-src 'self' 'unsafe-inline'",
+      },
+      execute: (req, res, acc) => ({
+        response: { body: "<html>...</html>" },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+To disable CSP entirely for a route:
+
+```js
+securityHeaders({ contentSecurityPolicy: false })
+```
+
+<Aside type="caution" title="Security tradeoff">
+  Relaxing or disabling `contentSecurityPolicy` removes a layer of
+  defense against cross-site scripting (XSS). Only relax CSP on routes
+  that genuinely serve HTML, and use the most restrictive policy that
+  still allows your content to render. Never set
+  `contentSecurityPolicy: false` as a blanket default.
+</Aside>
 
 ## RFC References
 

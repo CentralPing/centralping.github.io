@@ -102,6 +102,11 @@ export default defineConfig({
           items: [{ autogenerate: { directory: "middleware" } }],
         },
         {
+          label: "Recipes",
+          collapsed: true,
+          items: [{ autogenerate: { directory: "recipes" } }],
+        },
+        {
           label: "API Reference",
           items: [ergoSidebarGroup, routerSidebarGroup],
         },

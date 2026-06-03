@@ -1,0 +1,25 @@
+---
+title: Recipes
+description: Common patterns and solutions for building APIs with ergo.
+---
+
+Practical solutions for common API development tasks using ergo. Each
+recipe follows a **Problem → Solution → Explanation** structure with
+working code examples for both standalone composition and declarative
+ergo-router configuration.
+
+## Available Recipes
+
+| Recipe | Problem |
+| ------ | ------- |
+| [Pagination](/recipes/pagination/) | Offset and cursor pagination with RFC 8288 Link headers |
+| [Testing Patterns](/recipes/testing-patterns/) | Reliable HTTP testing with ephemeral ports and graceful shutdown |
+| [Custom Headers](/recipes/custom-headers/) | Adding response headers from middleware and execute handlers |
+| [Error Handling](/recipes/error-handling/) | Custom error responses, extension members, and correlation IDs |
+
+## When to Use Recipes vs. Middleware Guides
+
+- **Middleware guides** document individual middleware — options, return
+  values, error responses, and per-middleware usage examples.
+- **Recipes** solve cross-cutting problems that involve multiple
+  middleware or patterns that don't belong to a single middleware page.

@@ -1,0 +1,127 @@
+---
+title: Custom Headers
+description: Adding custom response headers from middleware and execute handlers using the response accumulator.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to add custom response headers — timing headers, correlation
+IDs, cache directives, or API-specific metadata — from middleware or
+execute handlers without calling `res.setHeader()` directly.
+
+## Solution
+
+### From an Execute Handler
+
+Return headers as `[name, value]` tuples in the `response.headers`
+array. `send()` applies them to the response before writing the body.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, handler } from "@centralping/ergo";
+
+    const pipeline = compose(
+      (req, res, acc) => ({
+        response: {
+          body: { ok: true },
+          headers: [
+            ["X-Custom-Header", "my-value"],
+            ["X-Request-Start", String(Date.now())],
+          ],
+        },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/health", {
+      execute: (req, res, acc) => ({
+        response: {
+          body: { status: "ok" },
+          headers: [
+            ["X-Custom-Header", "my-value"],
+            ["X-Request-Start", String(Date.now())],
+          ],
+        },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Response Time Header
+
+A middleware that measures pipeline execution time and adds an
+`X-Response-Time` header:
+
+```js
+import { compose, handler, send } from "@centralping/ergo";
+
+const withResponseTime = (req, res, acc) => {
+  const start = performance.now();
+  return {
+    response: {
+      headers: [
+        ["X-Response-Time", `${(performance.now() - start).toFixed(2)}ms`],
+      ],
+    },
+  };
+};
+
+const pipeline = compose(
+  [withResponseTime, "timing"],
+  [(req, res, acc) => ({
+    response: { body: { hello: "world" } },
+  }), "execute"],
+);
+```
+
+### Removing a Header
+
+Set a header value to `undefined` to clear it from the response:
+
+```js
+(req, res, acc) => ({
+  response: {
+    headers: [["X-Powered-By", undefined]],
+  },
+});
+```
+
+## Explanation
+
+### How Headers Flow Through the Pipeline
+
+Headers from the response accumulator are applied by `send()` after the
+pipeline completes. `send()` iterates the `headers` array and calls
+`res.setHeader(name, value)` for each tuple, or `res.clearHeader(name)`
+when the value is `undefined`.
+
+This design means:
+
+1. **Multiple middleware can contribute headers** — each returns its own
+   `headers` array, and the pipeline merges them into the response
+   accumulator.
+2. **Later middleware can override earlier headers** — if two middleware
+   set the same header name, the last one wins (standard HTTP semantics).
+3. **No `res` mutation in middleware** — middleware never calls
+   `res.setHeader()` directly. All header contributions flow through the
+   accumulator, keeping the pipeline pure and testable.
+
+### Built-In Header Middleware
+
+ergo includes middleware that manages common headers automatically:
+
+| Middleware | Headers Set |
+| ---------- | ----------- |
+| [security-headers](/middleware/security-headers/) | `Content-Security-Policy`, `X-Frame-Options`, etc. |
+| [cache-control](/middleware/cache-control/) | `Cache-Control` |
+| [cors](/middleware/cors/) | `Access-Control-*` headers |
+| [compress](/middleware/compress/) | `Content-Encoding`, `Vary` |
+
+Use custom headers for application-specific metadata that these
+middleware do not cover.
