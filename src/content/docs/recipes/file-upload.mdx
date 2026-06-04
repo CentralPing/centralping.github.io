@@ -1,0 +1,198 @@
+---
+title: File Upload
+description: Handling multipart file uploads with size limits and accessing parsed file content.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to accept file uploads via `multipart/form-data`, enforce size
+limits, and access file content (name, filename, body buffer) from within
+your execute handler.
+
+## Solution
+
+ergo's `body()` middleware handles multipart parsing automatically. When
+the request `Content-Type` is `multipart/form-data`, `acc.body.parsed`
+contains an array of part objects — one per form field or file.
+
+### Single File Upload
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      async (req, res, acc) => {
+        const [file] = acc.body.parsed;
+        await saveFile(file.filename, file.body);
+        return {
+          response: {
+            statusCode: 201,
+            body: { filename: file.filename, size: file.body.length },
+          },
+        };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/uploads", {
+      body: { limit: 5 * 1024 * 1024 },
+      execute: async (req, res, acc) => {
+        const [file] = acc.body.parsed;
+        await saveFile(file.filename, file.body);
+        return {
+          response: {
+            statusCode: 201,
+            body: { filename: file.filename, size: file.body.length },
+          },
+        };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Multiple File Upload
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body({ limit: 10 * 1024 * 1024 }), "body"],
+      async (req, res, acc) => {
+        const files = acc.body.parsed.filter((part) => part.filename);
+        const results = await Promise.all(
+          files.map((file) => saveFile(file.filename, file.body)),
+        );
+        return {
+          response: {
+            statusCode: 201,
+            body: { uploaded: results.length },
+          },
+        };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/uploads/batch", {
+      body: { limit: 10 * 1024 * 1024 },
+      execute: async (req, res, acc) => {
+        const files = acc.body.parsed.filter((part) => part.filename);
+        const results = await Promise.all(
+          files.map((file) => saveFile(file.filename, file.body)),
+        );
+        return {
+          response: {
+            statusCode: 201,
+            body: { uploaded: results.length },
+          },
+        };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Accessing Form Fields Alongside Files
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      async (req, res, acc) => {
+        const parts = acc.body.parsed;
+        const description = parts.find((p) => p.name === "description");
+        const file = parts.find((p) => p.filename);
+        return {
+          response: {
+            statusCode: 201,
+            body: {
+              description: description?.body.toString(),
+              filename: file?.filename,
+            },
+          },
+        };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/documents", {
+      body: true,
+      execute: async (req, res, acc) => {
+        const parts = acc.body.parsed;
+        const description = parts.find((p) => p.name === "description");
+        const file = parts.find((p) => p.filename);
+        return {
+          response: {
+            statusCode: 201,
+            body: {
+              description: description?.body.toString(),
+              filename: file?.filename,
+            },
+          },
+        };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### Multipart Parsed Shape
+
+When the body middleware parses a `multipart/form-data` request,
+`acc.body.parsed` is an array of part objects:
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `headers` | `object` | Parsed MIME headers (`content-disposition`, `content-type`) |
+| `name` | `string` | The form field name from `Content-Disposition` |
+| `filename` | `string \| undefined` | The original filename (present only for file fields) |
+| `body` | `Buffer` | The raw binary content of the part |
+
+File fields have a `filename` property; regular form fields do not. Use
+this distinction to separate files from text fields in the parts array.
+
+### Size Limit Configuration
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `limit` | `1048576` (1 MiB) | Maximum total body size in bytes (compressed) |
+| `decompressedLimit` | `min(10 × limit, 10 MiB)` | Maximum decompressed body size (bomb protection) |
+
+The `limit` applies to the entire multipart body — all parts combined,
+not per-part. For endpoints accepting large file uploads, increase the
+limit explicitly:
+
+```js
+body({ limit: 20 * 1024 * 1024 }); // 20 MiB
+```
+
+### Content Type Detection
+
+The body middleware accepts `multipart/form-data` by default (included
+in the default `types` array). No additional configuration is needed to
+enable multipart parsing — it works out of the box alongside JSON and
+form-urlencoded bodies.
+
+### Part Count Limit
+
+The multipart parser enforces a maximum of 100 parts per request by
+default, preventing abuse from requests with thousands of empty parts.
+This limit is internal to the parser and does not require configuration.
