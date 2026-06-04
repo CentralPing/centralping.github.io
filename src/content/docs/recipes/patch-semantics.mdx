@@ -1,0 +1,239 @@
+---
+title: PATCH Semantics
+description: Implementing RFC 7386 JSON Merge Patch and RFC 6902 JSON Patch endpoints with strict content-type enforcement.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need PATCH endpoints that distinguish between RFC 7386 JSON Merge
+Patch (partial object merge) and RFC 6902 JSON Patch (operations array),
+with proper content-type enforcement and validation schemas for partial
+updates.
+
+## Solution
+
+### JSON Merge Patch (RFC 7386)
+
+A merge-patch request sends a partial JSON object. Properties present in
+the patch overwrite the target; properties set to `null` are removed.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body, validate } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      [validate({
+        body: {
+          type: "object",
+          minProperties: 1,
+          properties: {
+            name: { type: "string" },
+            email: { type: "string", format: "email" },
+            bio: { type: ["string", "null"] },
+          },
+          additionalProperties: false,
+        },
+      }), "validation"],
+      async (req, res, acc) => {
+        const updated = await db.merge(acc.route.params.id, acc.body.parsed);
+        return { response: { body: updated } };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.patch("/users/:id", {
+      validate: {
+        body: {
+          type: "object",
+          minProperties: 1,
+          properties: {
+            name: { type: "string" },
+            email: { type: "string", format: "email" },
+            bio: { type: ["string", "null"] },
+          },
+          additionalProperties: false,
+        },
+      },
+      execute: async (req, res, acc) => {
+        const updated = await db.merge(acc.route.params.id, acc.body.parsed);
+        return { response: { body: updated } };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### JSON Patch (RFC 6902)
+
+A JSON Patch request sends an array of operations (`add`, `remove`,
+`replace`, `move`, `copy`, `test`). Each operation targets a specific
+path in the document.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body, validate } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      [validate({
+        body: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["op", "path"],
+            properties: {
+              op: { type: "string", enum: ["add", "remove", "replace", "move", "copy", "test"] },
+              path: { type: "string", pattern: "^/" },
+              value: {},
+              from: { type: "string", pattern: "^/" },
+            },
+            additionalProperties: false,
+          },
+        },
+      }), "validation"],
+      async (req, res, acc) => {
+        const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
+        return { response: { body: updated } };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.patch("/documents/:id", {
+      validate: {
+        body: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["op", "path"],
+            properties: {
+              op: { type: "string", enum: ["add", "remove", "replace", "move", "copy", "test"] },
+              path: { type: "string", pattern: "^/" },
+              value: {},
+              from: { type: "string", pattern: "^/" },
+            },
+            additionalProperties: false,
+          },
+        },
+      },
+      execute: async (req, res, acc) => {
+        const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
+        return { response: { body: updated } };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Dispatching by Content-Type
+
+When a single endpoint needs to handle both merge-patch and JSON Patch,
+inspect `acc.body.type` to determine which format was sent:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      async (req, res, acc) => {
+        const { type, parsed } = acc.body;
+        const id = acc.route.params.id;
+
+        if (type === "application/json-patch+json") {
+          const updated = await db.applyPatch(id, parsed);
+          return { response: { body: updated } };
+        }
+
+        // Default: merge-patch semantics for application/json
+        // and application/merge-patch+json
+        const updated = await db.merge(id, parsed);
+        return { response: { body: updated } };
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.patch("/resources/:id", {
+      execute: async (req, res, acc) => {
+        const { type, parsed } = acc.body;
+        const id = acc.route.params.id;
+
+        if (type === "application/json-patch+json") {
+          const updated = await db.applyPatch(id, parsed);
+          return { response: { body: updated } };
+        }
+
+        const updated = await db.merge(id, parsed);
+        return { response: { body: updated } };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### `strictPatch` Enforcement
+
+ergo-router enforces valid PATCH content types at the transport level
+**before** the request reaches your route pipeline. This is enabled by
+default and configured at router creation time (not per-route):
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+// strictPatch defaults to true — explicit here for clarity
+const router = createRouter({ strictPatch: true });
+```
+
+When a PATCH request arrives with a content type not in the allowed set,
+the router immediately responds with `415 Unsupported Media Type` and an
+`Accept-Patch` header listing the valid types.
+
+### Allowed PATCH Content Types
+
+| Content-Type | RFC | Semantics |
+| ------------ | --- | --------- |
+| `application/json` | — | Generic JSON (treated as merge-patch by convention) |
+| `application/merge-patch+json` | RFC 7386 | Explicit merge-patch semantics |
+| `application/json-patch+json` | RFC 6902 | Operations array |
+
+All three types are parsed as JSON by the body middleware (included in
+the default `types` array). The distinction is semantic — the parsed
+result is always a JavaScript object or array.
+
+### Validation Schema Design for Partial Updates
+
+Merge-patch schemas differ from creation schemas:
+
+| Concern | Create (POST) | Partial Update (PATCH) |
+| ------- | ------------- | ---------------------- |
+| `required` | List mandatory fields | Omit entirely — any subset is valid |
+| `minProperties` | Optional | `1` — reject empty patches |
+| `null` values | Typically disallowed | Allow for field removal (RFC 7386 §2) |
+| `additionalProperties` | `false` | `false` — reject unknown fields |
+
+### Disabling `strictPatch`
+
+For APIs that accept custom PATCH content types or use PATCH for
+non-standard semantics, disable enforcement at router creation:
+
+```js
+const router = createRouter({ strictPatch: false });
+```
+
+This removes the transport-level content-type check. Your route pipeline
+is then responsible for validating the incoming content type.
