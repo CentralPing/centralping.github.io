@@ -23,7 +23,6 @@ and orderly shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { createServer } from "node:http";
     import { handler } from "@centralping/ergo";
     import { graceful } from "@centralping/ergo-router";
 
@@ -128,7 +127,7 @@ and orderly shutdown.
     });
 
     // Expose shutdown state in your health check route
-    // acc.isShuttingDown can be checked in the execute handler
+    // check the closure variable `isShuttingDown` in your handler
     function healthCheck() {
       if (isShuttingDown) {
         return { response: { statusCode: 503, body: { status: "draining" } } };
