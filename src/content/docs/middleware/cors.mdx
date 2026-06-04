@@ -22,7 +22,7 @@ import { cors } from "@centralping/ergo";
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
 | `origins` | `string \| string[] \| RegExp \| function` | `'*'` | Allowed origins |
-| `allowMethods` | `string[]` | — | Allowed HTTP methods |
+| `allowMethods` | `string[]` | All standard methods | Allowed HTTP methods (default: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, TRACE) |
 | `allowHeaders` | `string \| string[] \| RegExp \| function` | `'*'` | Allowed request headers |
 | `exposeHeaders` | `string \| string[]` | — | Headers exposed to the client |
 | `allowCredentials` | `boolean` | `false` | Allow credentials (cookies, auth headers) |
