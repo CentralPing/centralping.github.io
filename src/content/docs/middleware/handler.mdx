@@ -76,7 +76,9 @@ Returns an async handler `(req, res) => void` suitable for
       }),
     );
 
-    const server = http.createServer(handler(pipeline));
+    const server = http.createServer(
+      handler(pipeline, { debug: true, prettify: true }),
+    );
     server.listen(3000);
     ```
   </TabItem>
