@@ -55,8 +55,13 @@ strategy, stored at `acc.auth`:
 
 | Status | Condition |
 | ------ | --------- |
-| **401 Unauthorized** | Missing or invalid credentials; strategy returns `{ authorized: false, info: { statusCode: 401 } }` |
-| **403 Forbidden** | Default when `authorized` is `false` and no `statusCode` is specified |
+| **401 Unauthorized** | Missing or invalid credentials (Bearer default; missing header with configured strategies) |
+| **403 Forbidden** | Default when `authorized` is `false` (Basic always; custom schemes; no configured strategies) |
+| **400 Bad Request** | Bearer only — authorizer returns `info.type: 'invalid_request'` |
+
+The exact status code depends on the scheme. See
+[Per-Scheme Rejection Behavior](#per-scheme-rejection-behavior) below for
+the full mapping.
 
 When a strategy provides an `authenticate` value, ergo includes a
 `WWW-Authenticate` response header with the challenge.
@@ -120,7 +125,7 @@ configured strategy:
             const user = await verifyJwt(token);
             return user
               ? { authorized: true, info: { user } }
-              : { authorized: false, info: { statusCode: 401 } };
+              : { authorized: false };
           },
         }],
       }), "auth"],
@@ -137,7 +142,7 @@ configured strategy:
             const user = await verifyJwt(token);
             return user
               ? { authorized: true, info: { user } }
-              : { authorized: false, info: { statusCode: 401 } };
+              : { authorized: false };
           },
         }],
       },
