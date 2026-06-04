@@ -28,7 +28,7 @@ import { send } from "@centralping/ergo";
 | `prettify` | `boolean` | `false` | Pretty-print JSON output |
 | `vary` | `string[]` | `['Accept']` | Vary header values to append |
 | `etag` | `boolean` | `true` | Generate ETags and evaluate conditional headers |
-| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation` |
+| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation`. When `true`, appends `Prefer` to the `Vary` header |
 | `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope |
 
 ### Envelope Values
@@ -36,7 +36,7 @@ import { send } from "@centralping/ergo";
 | Value | Behavior |
 | ----- | -------- |
 | `false` | No envelope (default) |
-| `true` | Built-in `{ id, status, data, count? }` |
+| `true` | Built-in `{ id, status, data, count? }` — `id` is read from the `x-request-id` response header |
 | `function` | Custom `(body, ctx) => wrappedBody` |
 
 ## Accumulator Inputs

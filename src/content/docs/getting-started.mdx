@@ -235,7 +235,7 @@ stages:
 | `GET /users/42` without `Authorization` | **401 Unauthorized** — authorization fails |
 | `GET /users/42` with valid Bearer token | **200 OK** — all stages pass |
 | `POST /users` without `Content-Type` | **415 Unsupported Media Type** — missing content type |
-| `POST /users` with invalid JSON body | **400 Bad Request** — body validation fails |
+| `POST /users` with invalid JSON body | **400 Bad Request** — body parsing fails (malformed JSON) |
 | `POST /users` with valid JSON + Bearer token | **201 Created** — resource created |
 
 Every error response is a
