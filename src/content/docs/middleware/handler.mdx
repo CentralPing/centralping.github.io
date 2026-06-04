@@ -18,13 +18,22 @@ This is the standalone equivalent of ergo-router's `auto-wrap`.
 import { handler } from "@centralping/ergo";
 ```
 
+## Arguments
+
+| Argument | Type | Description |
+| -------- | ---- | ----------- |
+| `pipeline` | `function` | **Required.** Composed middleware pipeline |
+
 ## Options
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `pipeline` | `function` | — | **Required.** Composed middleware pipeline |
 | `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an RFC 9457 extension member. |
-| `sendOptions` | `object` | `{}` | Options forwarded to `send()` — `prettify`, `vary`, `etag`, `prefer`, `envelope` (see [send](/middleware/send/)) |
+| `prettify` | `boolean` | `false` | Pretty-print JSON output (forwarded to [send](/middleware/send/)) |
+| `vary` | `string[]` | `['Accept']` | Vary header values to append (forwarded to [send](/middleware/send/)) |
+| `etag` | `boolean` | `true` | Generate ETags and evaluate conditional headers (forwarded to [send](/middleware/send/)) |
+| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation` (forwarded to [send](/middleware/send/)) |
+| `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope (forwarded to [send](/middleware/send/)) |
 
 ## Return Value
 
