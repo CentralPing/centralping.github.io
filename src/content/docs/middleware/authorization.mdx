@@ -3,7 +3,7 @@ title: authorization
 description: Authentication middleware — parses the Authorization header using pluggable strategies (Bearer, Basic, API key).
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Parses the `Authorization` request header and delegates credential
 verification to one or more pluggable strategies. Each strategy defines a
@@ -55,11 +55,58 @@ strategy, stored at `acc.auth`:
 
 | Status | Condition |
 | ------ | --------- |
-| **401 Unauthorized** | Missing or invalid credentials; strategy returns `{ authorized: false, info: { statusCode: 401 } }` |
-| **403 Forbidden** | Default when `authorized` is `false` and no `statusCode` is specified |
+| **401 Unauthorized** | Missing or invalid credentials (Bearer default; missing header with configured strategies) |
+| **403 Forbidden** | Default when `authorized` is `false` (Basic always; custom schemes; no configured strategies) |
+| **400 Bad Request** | Bearer only — authorizer returns `info.type: 'invalid_request'` |
+
+The exact status code depends on the scheme. See
+[Per-Scheme Rejection Behavior](#per-scheme-rejection-behavior) below for
+the full mapping.
 
 When a strategy provides an `authenticate` value, ergo includes a
 `WWW-Authenticate` response header with the challenge.
+
+### Per-Scheme Rejection Behavior
+
+The status code and `WWW-Authenticate` challenge on authorization failure
+vary by scheme:
+
+#### Bearer (RFC 6750)
+
+When the authorizer returns `{ authorized: false, info }`, ergo maps the
+`info.type` field to an HTTP status code per RFC 6750 §3.1:
+
+| `info.type` | Status | Description |
+| ----------- | ------ | ----------- |
+| `'invalid_request'` | **400 Bad Request** | Malformed request (e.g. missing required parameter) |
+| `'insufficient_scope'` | **403 Forbidden** | Valid token but insufficient privileges |
+| _(default)_ | **401 Unauthorized** | Invalid or expired token (`'invalid_token'` or unset) |
+
+The response includes a `WWW-Authenticate: Bearer` header with `error`,
+`error_description`, and `error_uri` attributes derived from `info.type`,
+`info.desc`, and `info.uri` respectively.
+
+#### Basic
+
+When the authorizer returns `{ authorized: false }`, ergo **always**
+responds with **403 Forbidden** regardless of any `statusCode` or `info`
+properties. No `WWW-Authenticate` header is included in the rejection
+response.
+
+<Aside type="note" title="Why 403 for Basic?">
+  Basic credentials are fully decoded (base64 username:password) before
+  the authorizer runs. A rejection means the credentials were understood
+  but not accepted — a 403 (Forbidden), not a 401 (Unauthorized).
+</Aside>
+
+#### Missing or Malformed Header
+
+When the `Authorization` header is missing, empty, or does not match any
+configured strategy:
+
+- **With configured strategies:** **401 Unauthorized** with a combined
+  `WWW-Authenticate` header listing all configured scheme challenges
+- **With no configured strategies:** **403 Forbidden**
 
 ## Usage
 
@@ -78,7 +125,7 @@ When a strategy provides an `authenticate` value, ergo includes a
             const user = await verifyJwt(token);
             return user
               ? { authorized: true, info: { user } }
-              : { authorized: false, info: { statusCode: 401 } };
+              : { authorized: false };
           },
         }],
       }), "auth"],
@@ -95,7 +142,7 @@ When a strategy provides an `authenticate` value, ergo includes a
             const user = await verifyJwt(token);
             return user
               ? { authorized: true, info: { user } }
-              : { authorized: false, info: { statusCode: 401 } };
+              : { authorized: false };
           },
         }],
       },

@@ -3,7 +3,7 @@ title: validate
 description: JSON Schema validation middleware — validates request body, query parameters, and route parameters using AJV.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Validates accumulator properties against JSON Schemas compiled at factory
 time using [AJV](https://ajv.js.org/). Supports body, query parameter,
@@ -20,14 +20,34 @@ import { validate } from "@centralping/ergo";
 
 ## Options
 
-| Option | Type | Default | Description |
-| ------ | ---- | ------- | ----------- |
-| `schemas.body` | `object` | — | JSON Schema for the parsed request body |
-| `schemas.query` | `object` | — | JSON Schema for query parameters |
-| `schemas.params` | `object` | — | JSON Schema for route path parameters |
-| `options.formats` | `boolean \| string[] \| object` | all standard | `ajv-formats` configuration |
+The `validate()` factory accepts two arguments: a schemas object and an
+options object — `validate(schemas, options)`.
 
-### `formats` Values
+### Schemas (first argument)
+
+| Property | Type | Default | Description |
+| -------- | ---- | ------- | ----------- |
+| `body` | `object` | — | JSON Schema for the parsed request body |
+| `query` | `object` | — | JSON Schema for query parameters |
+| `params` | `object` | — | JSON Schema for route path parameters |
+
+These are **direct properties** of the first argument, not nested under a
+wrapper key. For example: `validate({body: schema})`, not
+`validate({schemas: {body: schema}})`.
+
+<Aside type="caution" title="Unrecognized keys warning">
+  Passing unrecognized keys (e.g. `validate({schemas: {body: ...}})`)
+  emits a one-time `ERGO_VALIDATE_UNKNOWN_KEY` process warning. The
+  recognized keys are `body`, `query`, and `params` only.
+</Aside>
+
+### Options (second argument)
+
+| Property | Type | Default | Description |
+| -------- | ---- | ------- | ----------- |
+| `formats` | `boolean \| string[] \| object` | all standard | `ajv-formats` configuration |
+
+#### `formats` Values
 
 | Value | Behavior |
 | ----- | -------- |
@@ -51,6 +71,7 @@ a data producer.
 | Status | Condition |
 | ------ | --------- |
 | **422 Unprocessable Entity** | Validation failure — response includes `details` array with per-field errors |
+| **500 Internal Server Error** | A body schema is configured but `acc.body` is missing — `body()` middleware was not placed before `validate()` in the pipeline. Emits a one-time `ERGO_VALIDATE_NO_BODY` process warning |
 
 ## Usage
 

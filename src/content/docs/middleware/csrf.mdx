@@ -3,7 +3,7 @@ title: csrf
 description: CSRF protection middleware — HMAC-signed token issue and verify with timing-safe comparison.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Provides CSRF protection using HMAC-signed tokens. Unlike other
 middleware, `csrf()` returns an object with two methods — `issue` and
@@ -44,7 +44,15 @@ The factory returns `{ issue, verify }`:
 - **`issue(req, res, acc)`** — Sets token and UUID cookies on the jar
   (`acc.cookies`). No return value.
 - **`verify(req, res, acc)`** — Compares the request header token against
-  the cookie using `crypto.timingSafeEqual()`.
+  the cookie using `crypto.timingSafeEqual()`. Returns `undefined` on
+  success. On failure, returns
+  `{response: {statusCode: 403, detail: 'CSRF verification failed'}}`.
+
+<Aside type="tip" title="ergo-router Stage 2 ordering">
+  In ergo-router's pipeline builder, CSRF verification runs **before**
+  authorization in Stage 2 (Authorization). This ensures the request's
+  integrity is verified before credential checks on unsafe methods.
+</Aside>
 
 ## Error Responses
 
