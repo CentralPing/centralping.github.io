@@ -3,7 +3,7 @@ title: Middleware
 description: Per-middleware guides with options, return values, error responses, and usage examples.
 ---
 
-ergo ships 20 middleware factories covering every stage of the
+ergo ships 21 middleware factories covering every stage of the
 [Fast Fail pipeline](/concepts/fast-fail/). Each guide page documents the
 full options table, return value, error responses, and usage examples for
 both standalone composition and declarative ergo-router configuration.
@@ -36,7 +36,8 @@ both standalone composition and declarative ergo-router configuration.
 | [cache-control](/middleware/cache-control/) | Cache-Control header defaults |
 | [compress](/middleware/compress/) | Response compression (gzip, br, deflate) |
 | [security-headers](/middleware/security-headers/) | Security response headers (CSP, HSTS, etc.) |
-| [timeout](/middleware/timeout/) | Request timeout via AbortSignal |
+| [timeout](/middleware/timeout/) | Configurable request deadline (setTimeout + close listener) |
+| [tracing](/middleware/tracing/) | OpenTelemetry distributed tracing |
 
 ## Two-Layer Documentation
 
