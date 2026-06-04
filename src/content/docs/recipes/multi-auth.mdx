@@ -1,0 +1,271 @@
+---
+title: Multi-Auth Strategies
+description: Per-route authentication overrides, optional auth, and API key authentication via custom schemes.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need different authentication strategies on different routes — some
+routes require Bearer tokens, some accept API keys, some are public, and
+some allow both authenticated and anonymous access.
+
+## Solution
+
+### Per-Route Auth Override
+
+Set router-level defaults and override per route. Setting
+`authorization: false` disables auth entirely for that route.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    // Protected route — Bearer auth
+    const protectedPipeline = compose(
+      [authorization({
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const user = await verifyJwt(token);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false, info: { statusCode: 401 } };
+          },
+        }],
+      }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { userId: acc.auth.user.id } },
+      }),
+    );
+
+    // Public route — no auth middleware in the pipeline
+    const publicPipeline = compose(
+      (req, res, acc) => ({
+        response: { body: { status: "healthy" } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter from "@centralping/ergo-router";
+
+    const router = createRouter({
+      defaults: {
+        authorization: {
+          strategies: [{
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              const user = await verifyJwt(token);
+              return user
+                ? { authorized: true, info: { user } }
+                : { authorized: false, info: { statusCode: 401 } };
+            },
+          }],
+        },
+      },
+    });
+
+    // Inherits Bearer auth from defaults
+    router.get("/users/:id", {
+      execute: (req, res, acc) => ({
+        response: { body: { userId: acc.auth.user.id } },
+      }),
+    });
+
+    // Disables auth entirely
+    router.get("/health", {
+      authorization: false,
+      execute: (req, res, acc) => ({
+        response: { body: { status: "healthy" } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Optional Auth (Authenticated or Anonymous)
+
+`authorization: false` skips auth entirely — it does not attempt
+authentication. For truly optional auth (attempt auth, allow anonymous
+on failure), use a custom middleware wrapper:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    function optionalAuth(options) {
+      const authMiddleware = authorization(options);
+      return async (req, res, acc, responseAcc) => {
+        const result = await authMiddleware(req, res, acc, responseAcc);
+        if (result?.response?.statusCode) {
+          // Auth failed — clear the pipeline break and continue anonymous
+          return { value: { user: undefined } };
+        }
+        return result;
+      };
+    }
+
+    const pipeline = compose(
+      [optionalAuth({
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const user = await verifyJwt(token);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false };
+          },
+        }],
+      }), "auth"],
+      (req, res, acc) => ({
+        response: {
+          body: {
+            greeting: acc.auth?.user
+              ? `Hello, ${acc.auth.user.name}`
+              : "Hello, guest",
+          },
+        },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { authorization } from "@centralping/ergo";
+    import createRouter from "@centralping/ergo-router";
+
+    function optionalAuth(options) {
+      const authMiddleware = authorization(options);
+      return async (req, res, acc, responseAcc) => {
+        const result = await authMiddleware(req, res, acc, responseAcc);
+        if (result?.response?.statusCode) {
+          return { value: { user: undefined } };
+        }
+        return result;
+      };
+    }
+
+    const router = createRouter();
+
+    router.get("/feed", {
+      authorization: false,
+      use: [[optionalAuth({
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const user = await verifyJwt(token);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false };
+          },
+        }],
+      }), "auth"]],
+      execute: (req, res, acc) => ({
+        response: {
+          body: {
+            greeting: acc.auth?.user
+              ? `Hello, ${acc.auth.user.name}`
+              : "Hello, guest",
+          },
+        },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### API Key via Custom Scheme
+
+Use a custom scheme type to authenticate via a non-standard header
+(e.g., `X-API-Key`). Custom schemes receive the raw credential string.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [authorization({
+        strategies: [{
+          type: "ApiKey",
+          authorizer: async (attributes, credentials) => {
+            const key = await lookupApiKey(credentials);
+            return key
+              ? { authorized: true, info: { client: key.clientId } }
+              : { authorized: false, info: { statusCode: 401 } };
+          },
+        }],
+      }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { clientId: acc.auth.client } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/api/data", {
+      authorization: {
+        strategies: [{
+          type: "ApiKey",
+          authorizer: async (attributes, credentials) => {
+            const key = await lookupApiKey(credentials);
+            return key
+              ? { authorized: true, info: { client: key.clientId } }
+              : { authorized: false, info: { statusCode: 401 } };
+          },
+        }],
+      },
+      execute: (req, res, acc) => ({
+        response: { body: { clientId: acc.auth.client } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### Strategy Evaluation
+
+The authorization middleware evaluates strategies in array order. It
+parses the `Authorization` header, extracts the scheme name, and matches
+it against strategy `type` values (case-insensitive). The first matching
+strategy's `authorizer` is called.
+
+| Scheme | Authorizer Signature | Description |
+| ------ | -------------------- | ----------- |
+| `Basic` | `(attributes, username, password)` | Base64 decoded and split on `:` by the library |
+| `Bearer` | `(attributes, token)` | Raw token string (no decoding) |
+| Custom | `(attributes, credentials)` | Raw credential string for any non-standard scheme |
+
+### `authorization: false` vs Optional Auth
+
+| Pattern | Effect | Use Case |
+| ------- | ------ | -------- |
+| `authorization: false` | Removes auth middleware from the pipeline entirely | Health checks, public endpoints, login |
+| Optional auth wrapper | Attempts auth, continues with `undefined` on failure | Feeds, previews, mixed-access endpoints |
+
+With `authorization: false`, no `Authorization` header is parsed and
+`acc.auth` is not populated. With the optional auth pattern, `acc.auth`
+contains user info when authenticated or `{ user: undefined }` for
+anonymous access.
+
+### Route-Level Resolution
+
+In ergo-router, each route config key is resolved against router-level
+defaults:
+
+- **`undefined`** (not specified) — inherits the router default
+- **`false`** — explicitly disables, regardless of default
+- **`true`** — uses empty options `{}` (default behavior)
+- **`{ ... }`** — overrides the default with custom options
+
+This allows a single `defaults.authorization` to protect the entire
+router while individual routes opt out or override with different
+strategies.

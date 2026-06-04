@@ -1,0 +1,245 @@
+---
+title: Graceful Shutdown
+description: Managing server lifecycle with database connections, OpenTelemetry, and health checks using ergo-router's graceful() utility.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to manage the full production lifecycle of an HTTP server —
+connecting to databases before serving requests, draining in-flight
+requests on shutdown signals, and cleaning up resources (database pools,
+OpenTelemetry SDK, background jobs) before the process exits.
+
+## Solution
+
+ergo-router's `graceful()` utility manages the complete server
+lifecycle: startup prerequisites, signal handling, connection draining,
+and orderly shutdown.
+
+### Database Connection Lifecycle
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { createServer } from "node:http";
+    import { handler } from "@centralping/ergo";
+    import { graceful } from "@centralping/ergo-router";
+
+    const pipeline = handler(/* ... your pipeline ... */);
+
+    const { server, shutdown } = await graceful(pipeline, {
+      port: 3000,
+      onStartup: async ({ log }) => {
+        await db.connect();
+        log.info("Database connected");
+      },
+      onShutdown: async ({ log, signal }) => {
+        await db.disconnect();
+        log.info(`Database disconnected (${signal})`);
+      },
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const router = createRouter({ /* ...options... */ });
+    router.get("/users", { /* ...routes... */ });
+
+    const { server, shutdown } = await graceful(router.handle(), {
+      port: 3000,
+      onStartup: async ({ log }) => {
+        await db.connect();
+        log.info("Database connected");
+      },
+      onShutdown: async ({ log, signal }) => {
+        await db.disconnect();
+        log.info(`Database disconnected (${signal})`);
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### OpenTelemetry SDK Lifecycle
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { NodeSDK } from "@opentelemetry/sdk-node";
+    import { graceful } from "@centralping/ergo-router";
+
+    const sdk = new NodeSDK({ /* ...config... */ });
+
+    const { server, shutdown } = await graceful(pipeline, {
+      port: 3000,
+      onStartup: async ({ log }) => {
+        sdk.start();
+        log.info("OpenTelemetry SDK started");
+      },
+      onShutdown: async ({ log }) => {
+        await sdk.shutdown();
+        log.info("OpenTelemetry SDK flushed and shut down");
+      },
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { NodeSDK } from "@opentelemetry/sdk-node";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const sdk = new NodeSDK({ /* ...config... */ });
+    const router = createRouter({ /* ...options... */ });
+
+    const { server, shutdown } = await graceful(router.handle(), {
+      port: 3000,
+      onStartup: async ({ log }) => {
+        sdk.start();
+        log.info("OpenTelemetry SDK started");
+      },
+      onShutdown: async ({ log }) => {
+        await sdk.shutdown();
+        log.info("OpenTelemetry SDK flushed and shut down");
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Health Check with Shutdown State
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { graceful } from "@centralping/ergo-router";
+
+    let isShuttingDown = false;
+
+    const { server, shutdown } = await graceful(pipeline, {
+      port: 3000,
+      onShutdown: async ({ log }) => {
+        isShuttingDown = true;
+        await db.disconnect();
+      },
+    });
+
+    // Expose shutdown state in your health check route
+    // acc.isShuttingDown can be checked in the execute handler
+    function healthCheck() {
+      if (isShuttingDown) {
+        return { response: { statusCode: 503, body: { status: "draining" } } };
+      }
+      return { response: { body: { status: "healthy" } } };
+    }
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    let isShuttingDown = false;
+
+    const router = createRouter();
+
+    router.get("/health", {
+      authorization: false,
+      execute: (req, res, acc) => {
+        if (isShuttingDown) {
+          return { response: { statusCode: 503, body: { status: "draining" } } };
+        }
+        return { response: { body: { status: "healthy" } } };
+      },
+    });
+
+    const { server, shutdown } = await graceful(router.handle(), {
+      port: 3000,
+      onShutdown: async ({ log }) => {
+        isShuttingDown = true;
+        await db.disconnect();
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### Lifecycle Flow
+
+```
+onStartup({log})
+    │
+    ▼
+server.listen(port, hostname)
+    │
+    ▼
+◀── serving requests ──▶
+    │
+    │  (SIGINT or SIGTERM received)
+    ▼
+server.close()  ← stops accepting new connections
+    │
+    ▼
+onShutdown({log, signal})
+    │
+    ▼
+ waiting for in-flight connections to drain...
+    │
+    ├── connections drained → "Shutdown complete" → exit(0)
+    │
+    └── timeout exceeded → server.closeAllConnections() → exit(1)
+```
+
+### Configuration Options
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `port` | `3000` | Port to listen on |
+| `hostname` | `'0.0.0.0'` | Hostname to bind to |
+| `log` | `console` | Logger with `.info()`, `.warn()`, `.error()` methods |
+| `signals` | `['SIGINT', 'SIGTERM']` | OS signals that trigger shutdown |
+| `timeout` | `5000` | Maximum time (ms) to wait for connections to drain |
+| `exit` | `process.exit` | Exit function (override for testing) |
+| `onStartup` | — | Hook called before `server.listen()` |
+| `onShutdown` | — | Hook called after `server.close()` |
+
+### Startup Failure
+
+If `onStartup` rejects (throws), the server never starts listening. Use
+this to enforce prerequisites — database connectivity, config
+validation, secret loading — before accepting traffic.
+
+### Timeout Backstop
+
+The `timeout` option provides a hard deadline for graceful shutdown. If
+in-flight connections do not close within the timeout window, the server
+forcefully terminates all connections and exits with code 1. Set the
+timeout to match your load balancer's drain timeout.
+
+### Programmatic Shutdown
+
+`graceful()` returns `{ server, shutdown }`. Call `shutdown(signal)`
+programmatically to initiate the same graceful shutdown flow without
+waiting for an OS signal. This is useful for health-check-driven
+shutdown or integration tests.
+
+For test-specific lifecycle patterns (ephemeral ports, preventing
+`process.exit`), see [Testing Patterns](/recipes/testing-patterns/).
+
+### Multiple Resource Cleanup
+
+Chain cleanup operations in `onShutdown`. Errors in `onShutdown` are
+caught and logged — they do not prevent the shutdown from completing:
+
+```js
+onShutdown: async ({ log, signal }) => {
+  await db.disconnect();
+  await cache.quit();
+  await sdk.shutdown();
+  log.info(`All resources released (${signal})`);
+}
+```
