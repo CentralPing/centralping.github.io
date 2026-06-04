@@ -1,0 +1,171 @@
+---
+title: Pagination
+description: Offset and cursor pagination with RFC 8288 Link headers using ergo's built-in pagination utilities.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need paginated list endpoints that return RFC 8288 `Link` headers
+(`first`, `prev`, `next`, `last`) and respect bounded page sizes to
+prevent unbounded queries.
+
+## Solution
+
+ergo ships pagination utilities as pure functions in
+`@centralping/ergo/lib/paginate`. These are not middleware — they are
+called inside your execute handler and return a pipeline-compatible
+response shape.
+
+### Offset Pagination
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, url } from "@centralping/ergo";
+    import {
+      parseOffsetParams,
+      offsetResponse,
+    } from "@centralping/ergo/lib/paginate";
+
+    const pipeline = compose(
+      [url(), "url"],
+      async (req, res, acc) => {
+        const params = parseOffsetParams(acc.url.query);
+        const items = await db.find(params.offset, params.limit);
+        const total = await db.count();
+        return offsetResponse(items, {
+          baseUrl: acc.url.pathname,
+          ...params,
+          total,
+        });
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import {
+      parseOffsetParams,
+      offsetResponse,
+    } from "@centralping/ergo/lib/paginate";
+
+    router.get("/articles", {
+      execute: async (req, res, acc) => {
+        const params = parseOffsetParams(acc.url.query);
+        const items = await db.find(params.offset, params.limit);
+        const total = await db.count();
+        return offsetResponse(items, {
+          baseUrl: acc.url.pathname,
+          ...params,
+          total,
+        });
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Cursor Pagination
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, url } from "@centralping/ergo";
+    import {
+      parseCursorParams,
+      cursorResponse,
+    } from "@centralping/ergo/lib/paginate";
+
+    const pipeline = compose(
+      [url(), "url"],
+      async (req, res, acc) => {
+        const { cursor, limit } = parseCursorParams(acc.url.query);
+        const { items, nextCursor } = await db.findAfter(cursor, limit);
+        return cursorResponse(items, {
+          baseUrl: acc.url.pathname,
+          nextCursor,
+        });
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import {
+      parseCursorParams,
+      cursorResponse,
+    } from "@centralping/ergo/lib/paginate";
+
+    router.get("/events", {
+      execute: async (req, res, acc) => {
+        const { cursor, limit } = parseCursorParams(acc.url.query);
+        const { items, nextCursor } = await db.findAfter(cursor, limit);
+        return cursorResponse(items, {
+          baseUrl: acc.url.pathname,
+          nextCursor,
+        });
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### Offset Pagination Parameters
+
+`parseOffsetParams(query, options?)` extracts `page` and `per_page` from
+the query object, validates and clamps them to safe ranges:
+
+| Parameter | Default | Bound |
+| --------- | ------- | ----- |
+| `page` | `1` | Minimum `1` |
+| `per_page` | `20` | Maximum `100` |
+
+The returned object includes computed `offset` and `limit` values ready
+for SQL-style queries: `offset = (page - 1) * perPage`.
+
+`offsetResponse(items, options)` generates the response with:
+
+- **`Link` header** — RFC 8288 links for `first`, `prev` (when
+  `page > 1`), `next` (when `page < lastPage`), and `last`
+- **`X-Total-Count` header** — total item count
+
+### Cursor Pagination Parameters
+
+`parseCursorParams(query, options?)` extracts an opaque `cursor` string
+and a bounded `limit`:
+
+| Parameter | Default | Bound |
+| --------- | ------- | ----- |
+| `limit` | `20` | Maximum `100` |
+| `cursor` | `undefined` | Opaque string, passed through as-is |
+
+`cursorResponse(items, options)` generates `Link` headers for `first`,
+and optionally `prev`/`next` when cursor tokens are provided. Unlike
+offset pagination, there is no `last` link or `X-Total-Count` because
+the total is unknown in cursor-based schemes.
+
+### Link Header Formatting
+
+Both response builders use `formatLinkHeader()` from
+`@centralping/ergo/lib/link`, which produces RFC 8288-compliant
+`Link` header values. All link parameters are sanitized via
+`sanitizeQuotedString` to prevent header injection.
+
+### Preserving Non-Pagination Query Parameters
+
+Pass additional query parameters as `searchParams` to preserve them in
+Link URLs:
+
+```js
+offsetResponse(items, {
+  baseUrl: "/articles",
+  searchParams: "sort=date&filter=active",
+  ...params,
+  total,
+});
+// Link: </articles?sort=date&filter=active&page=1&per_page=20>; rel="first", ...
+```

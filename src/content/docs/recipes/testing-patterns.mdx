@@ -1,0 +1,182 @@
+---
+title: Testing Patterns
+description: Reliable HTTP testing with ephemeral ports, graceful shutdown, and black-box request assertions.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to write reliable, non-flaky HTTP tests for ergo APIs that
+start and stop servers cleanly, use ephemeral ports to avoid conflicts,
+and test behavior through the full HTTP stack.
+
+## Solution
+
+### Basic Test Setup
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { describe, it, before, after } from "node:test";
+    import assert from "node:assert/strict";
+    import http from "node:http";
+    import { handler, compose, body } from "@centralping/ergo";
+
+    describe("POST /users", () => {
+      let server;
+      let baseUrl;
+
+      before(async () => {
+        const pipeline = compose(
+          [body(), "body"],
+          (req, res, acc) => ({
+            response: {
+              statusCode: 201,
+              body: { name: acc.body.parsed.name },
+            },
+          }),
+        );
+
+        server = http.createServer(handler(pipeline));
+        await new Promise((resolve) => server.listen(0, resolve));
+        const { port } = server.address();
+        baseUrl = `http://localhost:${port}`;
+      });
+
+      after(async () => {
+        server.closeAllConnections();
+        await new Promise((resolve) => server.close(resolve));
+      });
+
+      it("creates a user", async () => {
+        const res = await fetch(`${baseUrl}/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Jane" }),
+        });
+        assert.equal(res.status, 201);
+        const data = await res.json();
+        assert.equal(data.name, "Jane");
+      });
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { describe, it, before, after } from "node:test";
+    import assert from "node:assert/strict";
+    import http from "node:http";
+    import createRouter from "@centralping/ergo-router";
+
+    describe("POST /users", () => {
+      let server;
+      let baseUrl;
+
+      before(async () => {
+        const router = createRouter();
+        router.post("/users", {
+          validate: {
+            body: {
+              type: "object",
+              properties: { name: { type: "string" } },
+              required: ["name"],
+            },
+          },
+          execute: (req, res, acc) => ({
+            response: {
+              statusCode: 201,
+              body: { name: acc.body.parsed.name },
+            },
+          }),
+        });
+
+        server = http.createServer(router.handle());
+        await new Promise((resolve) => server.listen(0, resolve));
+        const { port } = server.address();
+        baseUrl = `http://localhost:${port}`;
+      });
+
+      after(async () => {
+        server.closeAllConnections();
+        await new Promise((resolve) => server.close(resolve));
+      });
+
+      it("creates a user", async () => {
+        const res = await fetch(`${baseUrl}/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Jane" }),
+        });
+        assert.equal(res.status, 201);
+        const data = await res.json();
+        assert.equal(data.name, "Jane");
+      });
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Testing Error Responses
+
+```js
+it("returns 422 for invalid body", async () => {
+  const res = await fetch(`${baseUrl}/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: 42 }),
+  });
+
+  assert.equal(res.status, 422);
+  const problem = await res.json();
+  assert.equal(problem.status, 422);
+  assert.equal(problem.title, "Unprocessable Entity");
+  assert.ok(problem.detail);
+});
+```
+
+### Testing Rate Limiting
+
+```js
+it("enforces rate limit", async () => {
+  const requests = Array.from({ length: 12 }, () =>
+    fetch(`${baseUrl}/limited`),
+  );
+  const responses = await Promise.all(requests);
+  const tooMany = responses.filter((r) => r.status === 429);
+
+  assert.ok(tooMany.length > 0, "Expected at least one 429 response");
+  const problem = await tooMany[0].json();
+  assert.equal(problem.status, 429);
+  assert.ok(problem.retryAfter != null);
+});
+```
+
+## Explanation
+
+### Ephemeral Ports
+
+Passing `0` to `server.listen()` lets the OS assign an unused port.
+This eliminates port conflicts when tests run in parallel or on CI
+servers. Retrieve the assigned port from `server.address().port`.
+
+### Graceful Shutdown
+
+Always call `server.closeAllConnections()` before `server.close()` in
+test teardown. Without `closeAllConnections()`, keep-alive connections
+from `fetch()` can hold the server open, causing test hangs. This
+pattern is used throughout ergo's own functional test suite.
+
+### Black-Box Testing
+
+Test through the HTTP interface using `fetch()` (built into Node.js,
+no polyfill needed). This validates the full middleware pipeline — content negotiation,
+body parsing, validation, and response serialization — without coupling
+tests to internal middleware structure.
+
+### RFC 9457 Problem Details
+
+All ergo error responses follow RFC 9457 format with `type`, `title`,
+`status`, and `detail` fields. Assert on these structured fields rather
+than parsing error message strings — the format is stable across all
+ergo middleware.
