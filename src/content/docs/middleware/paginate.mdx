@@ -1,0 +1,126 @@
+---
+title: paginate
+description: Pagination parameter parsing middleware — offset and cursor strategies with RFC 8288 Link header integration via send().
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Parses pagination query parameters into structured shapes on the domain
+accumulator. Works in concert with `send()`'s `paginate: true` option
+to automatically generate RFC 8288 `Link` headers and `X-Total-Count`
+for paginated responses.
+
+Supports two strategies: **offset** (page/per_page) and **cursor**
+(opaque cursor token + limit).
+
+**Pipeline stage:** Negotiation
+
+## Import
+
+```js
+import { paginate } from "@centralping/ergo";
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `strategy` | `'offset' \| 'cursor'` | `'offset'` | Pagination strategy |
+| `defaultPage` | `number` | `1` | Default page number (offset strategy) |
+| `defaultPerPage` | `number` | `20` | Default items per page (offset strategy) |
+| `maxPerPage` | `number` | `100` | Maximum items per page (offset strategy) |
+| `defaultLimit` | `number` | `20` | Default item limit (cursor strategy) |
+| `maxLimit` | `number` | `100` | Maximum item limit (cursor strategy) |
+
+## Return Value
+
+Returns parsed pagination parameters stored at `acc.paginate`. The shape
+depends on the active strategy:
+
+**Offset strategy:**
+
+```js
+{
+  strategy: "offset",
+  page: 1,        // clamped to ≥ 1
+  perPage: 20,    // clamped to ≤ maxPerPage
+  offset: 0,      // computed: (page - 1) * perPage
+  limit: 20,      // same as perPage
+}
+```
+
+**Cursor strategy:**
+
+```js
+{
+  strategy: "cursor",
+  cursor: undefined,  // opaque string from query, or undefined on first page
+  limit: 20,          // clamped to ≤ maxLimit
+}
+```
+
+## Error Responses
+
+None. Invalid or missing query parameters fall back to defaults silently.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, url, paginate, handler } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [url(), "url"],
+      [paginate(), "paginate"],
+      async (req, res, acc) => {
+        const { offset, limit } = acc.paginate;
+        const items = await db.find(offset, limit);
+        const total = await db.count();
+        return {
+          response: { body: items, paginate: { total } },
+        };
+      },
+    );
+
+    const server = http.createServer(
+      handler(pipeline, { paginate: true }),
+    );
+    ```
+
+    When using standalone `compose()`, you must include `url()` before
+    `paginate()` — the pagination middleware reads parsed query
+    parameters from `acc.url.query`.
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/articles", {
+      paginate: true,
+      execute: async (req, res, acc) => {
+        const { offset, limit } = acc.paginate;
+        const items = await db.find(offset, limit);
+        const total = await db.count();
+        return {
+          response: { body: items, paginate: { total } },
+        };
+      },
+    });
+    ```
+
+    ergo-router automatically includes `url()` parsing and enables
+    `send()`'s `paginate` option when `paginate` is set in the route
+    config.
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 8288 — Web Linking](https://www.rfc-editor.org/rfc/rfc8288)
+
+## Related Recipes
+
+- [Pagination](/recipes/pagination/) — End-to-end offset and cursor pagination with auto-generated Link headers
+
+## API Reference
+
+See the auto-generated [paginate API docs](/api/ergo/@centralping/ergo/variables/paginate/).

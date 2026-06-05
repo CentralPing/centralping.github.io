@@ -1,68 +1,69 @@
 ---
 title: Pagination
-description: Offset and cursor pagination with RFC 8288 Link headers using ergo's built-in pagination utilities.
+description: Offset and cursor pagination with auto-generated RFC 8288 Link headers using ergo's declarative paginate middleware.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
 ## Problem
 
 You need paginated list endpoints that return RFC 8288 `Link` headers
-(`first`, `prev`, `next`, `last`) and respect bounded page sizes to
-prevent unbounded queries.
+(`first`, `prev`, `next`, `last`) and `X-Total-Count`, with bounded
+page sizes to prevent unbounded queries.
 
 ## Solution
 
-ergo ships pagination utilities as pure functions in
-`@centralping/ergo/lib/paginate`. These are not middleware — they are
-called inside your execute handler and return a pipeline-compatible
-response shape.
+ergo's [`paginate`](/middleware/paginate/) middleware parses pagination
+query parameters and stores them at `acc.paginate`. When
+[`send()`](/middleware/send/) has `paginate: true` enabled, it reads
+the parsed parameters and your response metadata to auto-generate the
+Link headers and `X-Total-Count`.
 
 ### Offset Pagination
 
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, url } from "@centralping/ergo";
-    import {
-      parseOffsetParams,
-      offsetResponse,
-    } from "@centralping/ergo/lib/paginate";
+    import { compose, url, paginate, handler } from "@centralping/ergo";
 
     const pipeline = compose(
       [url(), "url"],
+      [paginate(), "paginate"],
       async (req, res, acc) => {
-        const params = parseOffsetParams(acc.url.query);
-        const items = await db.find(params.offset, params.limit);
+        const { offset, limit } = acc.paginate;
+        const items = await db.find(offset, limit);
         const total = await db.count();
-        return offsetResponse(items, {
-          baseUrl: acc.url.pathname,
-          ...params,
-          total,
-        });
+        return {
+          response: { body: items, paginate: { total } },
+        };
       },
     );
+
+    const server = http.createServer(
+      handler(pipeline, { paginate: true }),
+    );
+    // GET /articles?page=2&per_page=10
+    // → Link: </articles?page=1&per_page=10>; rel="first", ...
+    // → X-Total-Count: 42
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import {
-      parseOffsetParams,
-      offsetResponse,
-    } from "@centralping/ergo/lib/paginate";
-
     router.get("/articles", {
+      paginate: true,
       execute: async (req, res, acc) => {
-        const params = parseOffsetParams(acc.url.query);
-        const items = await db.find(params.offset, params.limit);
+        const { offset, limit } = acc.paginate;
+        const items = await db.find(offset, limit);
         const total = await db.count();
-        return offsetResponse(items, {
-          baseUrl: acc.url.pathname,
-          ...params,
-          total,
-        });
+        return {
+          response: { body: items, paginate: { total } },
+        };
       },
     });
+    // GET /articles?page=2&per_page=10
+    // → Link: </articles?page=1&per_page=10>; rel="first", ...
+    // → X-Total-Count: 42
     ```
   </TabItem>
 </Tabs>
@@ -72,100 +73,175 @@ response shape.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, url } from "@centralping/ergo";
-    import {
-      parseCursorParams,
-      cursorResponse,
-    } from "@centralping/ergo/lib/paginate";
+    import { compose, url, paginate, handler } from "@centralping/ergo";
 
     const pipeline = compose(
       [url(), "url"],
+      [paginate({ strategy: "cursor" }), "paginate"],
       async (req, res, acc) => {
-        const { cursor, limit } = parseCursorParams(acc.url.query);
+        const { cursor, limit } = acc.paginate;
         const { items, nextCursor } = await db.findAfter(cursor, limit);
-        return cursorResponse(items, {
-          baseUrl: acc.url.pathname,
-          nextCursor,
-        });
+        return {
+          response: {
+            body: items,
+            paginate: { nextCursor },
+          },
+        };
       },
     );
+
+    const server = http.createServer(
+      handler(pipeline, { paginate: true }),
+    );
+    // GET /events?cursor=abc123&limit=10
+    // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import {
-      parseCursorParams,
-      cursorResponse,
-    } from "@centralping/ergo/lib/paginate";
-
     router.get("/events", {
+      paginate: { strategy: "cursor" },
       execute: async (req, res, acc) => {
-        const { cursor, limit } = parseCursorParams(acc.url.query);
+        const { cursor, limit } = acc.paginate;
         const { items, nextCursor } = await db.findAfter(cursor, limit);
-        return cursorResponse(items, {
-          baseUrl: acc.url.pathname,
-          nextCursor,
-        });
+        return {
+          response: {
+            body: items,
+            paginate: { nextCursor },
+          },
+        };
       },
     });
+    // GET /events?cursor=abc123&limit=10
+    // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
     ```
   </TabItem>
 </Tabs>
 
 ## Explanation
 
-### Offset Pagination Parameters
+### How It Works
 
-`parseOffsetParams(query, options?)` extracts `page` and `per_page` from
-the query object, validates and clamps them to safe ranges:
+The pagination flow has two sides:
 
-| Parameter | Default | Bound |
-| --------- | ------- | ----- |
-| `page` | `1` | Minimum `1` |
-| `per_page` | `20` | Maximum `100` |
+1. **Request parsing** — the `paginate()` middleware reads query
+   parameters from `acc.url.query` and stores structured pagination
+   data at `acc.paginate`.
+2. **Response generation** — `send()` reads `acc.paginate` (parsed
+   params) and `response.paginate` (your response metadata) to
+   auto-generate RFC 8288 Link headers.
 
-The returned object includes computed `offset` and `limit` values ready
-for SQL-style queries: `offset = (page - 1) * perPage`.
+Your `execute` handler bridges the two: read `acc.paginate` for query
+parameters, run your data query, then return `{ response: { body,
+paginate: { total } } }` (offset) or `{ response: { body, paginate:
+{ nextCursor } } }` (cursor).
 
-`offsetResponse(items, options)` generates the response with:
+### The `acc.paginate` Shape
+
+**Offset strategy** (`paginate: true` or `paginate: { strategy: 'offset' }`):
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `strategy` | `'offset'` | Active strategy identifier |
+| `page` | `number` | Current page (clamped to ≥ 1) |
+| `perPage` | `number` | Items per page (clamped to ≤ `maxPerPage`) |
+| `offset` | `number` | Computed: `(page - 1) * perPage` |
+| `limit` | `number` | Same as `perPage` |
+
+**Cursor strategy** (`paginate: { strategy: 'cursor' }`):
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `strategy` | `'cursor'` | Active strategy identifier |
+| `cursor` | `string \| undefined` | Opaque cursor token; `undefined` on first page |
+| `limit` | `number` | Items to fetch (clamped to ≤ `maxLimit`) |
+
+### What `send()` Generates
+
+For **offset** pagination, `send()` generates:
 
 - **`Link` header** — RFC 8288 links for `first`, `prev` (when
   `page > 1`), `next` (when `page < lastPage`), and `last`
 - **`X-Total-Count` header** — total item count
 
-### Cursor Pagination Parameters
+For **cursor** pagination, `send()` generates:
 
-`parseCursorParams(query, options?)` extracts an opaque `cursor` string
-and a bounded `limit`:
+- **`Link` header** — `first` always, plus `prev` and `next` when
+  cursor tokens are provided
 
-| Parameter | Default | Bound |
-| --------- | ------- | ----- |
-| `limit` | `20` | Maximum `100` |
-| `cursor` | `undefined` | Opaque string, passed through as-is |
+Unlike offset pagination, cursor responses do not include
+`X-Total-Count` or a `last` link because the total is typically
+unknown in cursor-based schemes.
 
-`cursorResponse(items, options)` generates `Link` headers for `first`,
-and optionally `prev`/`next` when cursor tokens are provided. Unlike
-offset pagination, there is no `last` link or `X-Total-Count` because
-the total is unknown in cursor-based schemes.
+### Default Bounds
 
-### Link Header Formatting
+| Strategy | Parameter | Default | Maximum |
+| -------- | --------- | ------- | ------- |
+| offset | `page` | `1` | — |
+| offset | `per_page` | `20` | `100` |
+| cursor | `limit` | `20` | `100` |
 
-Both response builders use `formatLinkHeader()` from
-`@centralping/ergo/lib/link`, which produces RFC 8288-compliant
-`Link` header values. All link parameters are sanitized via
-`sanitizeQuotedString` to prevent header injection.
+Override defaults and maximums via the middleware options:
+
+```js
+paginate({
+  defaultPerPage: 50,
+  maxPerPage: 200,
+})
+```
 
 ### Preserving Non-Pagination Query Parameters
 
-Pass additional query parameters as `searchParams` to preserve them in
-Link URLs:
+`send()` automatically strips pagination-specific keys (`page`,
+`per_page` for offset; `cursor`, `limit` for cursor) from the query
+string and preserves all other parameters in the generated Link URLs:
 
-```js
-offsetResponse(items, {
-  baseUrl: "/articles",
-  searchParams: "sort=date&filter=active",
-  ...params,
-  total,
-});
-// Link: </articles?sort=date&filter=active&page=1&per_page=20>; rel="first", ...
 ```
+GET /articles?sort=date&filter=active&page=2&per_page=10
+→ Link: </articles?sort=date&filter=active&page=1&per_page=10>; rel="first", ...
+```
+
+### Edge Cases
+
+- **`total` not a finite number** — `send()` silently skips Link and
+  X-Total-Count headers. This includes `undefined`, `null`, `NaN`,
+  and `Infinity`.
+- **4xx or 5xx status** — pagination headers are skipped entirely
+  (only generated for `statusCode < 400`).
+- **Missing `response.paginate`** — if the execute handler does not
+  return a `paginate` property on the response, `send()` skips
+  pagination headers.
+- **Missing `acc.paginate`** — if the paginate middleware is not in the
+  pipeline, `send()` skips pagination headers even when the option is
+  enabled.
+
+### URL Middleware Dependency
+
+The `paginate()` middleware reads parsed query parameters from
+`acc.url.query`. When using standalone `compose()`, you must include
+`[url(), 'url']` before `[paginate(), 'paginate']`.
+
+ergo-router handles this automatically — setting `paginate` in the
+route config auto-includes `url()` parsing.
+
+<Aside type="note">
+  For cursor pagination with bidirectional navigation, return both
+  `nextCursor` and `prevCursor` from your execute handler. The `prevCursor`
+  is optional — omit it when backward navigation is not supported.
+</Aside>
+
+## Alternative: Utility Functions
+
+For fine-grained control in standalone pipelines, ergo also provides
+pure utility functions in `@centralping/ergo/lib/paginate`:
+
+- `parseOffsetParams(query, options?)` — parse offset parameters
+- `parseCursorParams(query, options?)` — parse cursor parameters
+- `offsetResponse(items, options)` — build response with Link headers
+  and X-Total-Count
+- `cursorResponse(items, options)` — build response with cursor Link
+  headers
+
+These functions handle parameter parsing and response formatting
+directly, without the middleware + send integration. The declarative
+middleware approach shown above is recommended for most use cases.

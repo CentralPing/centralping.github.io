@@ -29,6 +29,7 @@ import { send } from "@centralping/ergo";
 | `vary` | `string[]` | `['Accept']` | Vary header values to append |
 | `etag` | `boolean` | `true` | Generate ETags and evaluate conditional headers |
 | `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation`. When `true`, appends `Prefer` to the `Vary` header |
+| `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate RFC 8288 Link headers and `X-Total-Count` for paginated responses |
 | `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope |
 
 ### Envelope Values
@@ -42,10 +43,12 @@ import { send } from "@centralping/ergo";
 ## Accumulator Inputs
 
 **Response accumulator:** `statusCode`, `body`, `headers`, `detail`,
-`retryAfter`, `instance`, `location`, `lastModified`, `type`
+`retryAfter`, `instance`, `location`, `lastModified`, `type`,
+`paginate` (pagination response metadata: `total`, `nextCursor`,
+`prevCursor`)
 
 **Domain accumulator:** `cookies` (cookie jar → `Set-Cookie`), `prefer`
-(parsed Prefer header)
+(parsed Prefer header), `paginate` (parsed pagination parameters)
 
 ## Body Handling (statusCode < 400)
 
@@ -106,6 +109,10 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
 - [RFC 9110 — HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110)
 - [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
 - [RFC 7240 — Prefer Header for HTTP](https://www.rfc-editor.org/rfc/rfc7240)
+
+## Related Recipes
+
+- [Pagination](/recipes/pagination/) — End-to-end offset and cursor pagination with auto-generated Link headers
 
 ## API Reference
 
