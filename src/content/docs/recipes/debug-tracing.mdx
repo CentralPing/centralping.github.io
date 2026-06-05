@@ -77,8 +77,8 @@ response body includes a `_trace` field:
 
 ### The `_trace` Shape
 
-When `debug` is `true`, the pipeline initializes a trace object on the
-response accumulator before running middleware:
+When [`debug`](/middleware/handler/) is `true`, the pipeline initializes
+a trace object on the response accumulator before running middleware:
 
 ```js
 responseAcc._trace = { steps: [], breakAt: undefined };
