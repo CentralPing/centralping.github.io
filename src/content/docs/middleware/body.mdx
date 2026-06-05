@@ -76,32 +76,15 @@ and `parsed` is an array of part objects — one per form field or file:
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
-| `headers` | `object` | Parsed MIME headers (`content-disposition`, `content-type`) as `{type, parameters}` entries |
+| `headers` | `object` | RFC 7578 §4.8 headers (`content-disposition`, `content-type`, `content-transfer-encoding`) as `{type, parameters}` entries |
 | `name` | `string` | The form field name from `Content-Disposition` |
 | `filename` | `string \| undefined` | The original filename (present only for file fields) |
 | `body` | `Buffer` | The raw binary content of the part |
 
-File fields have a `filename` property; regular form fields do not. Use
-this distinction to separate files from text inputs:
-
-```js
-router.post("/uploads", {
-  body: { limit: 5 * 1024 * 1024 },
-  execute: async (req, res, acc) => {
-    const files = acc.body.parsed.filter((part) => part.filename);
-    const fields = acc.body.parsed.filter((part) => !part.filename);
-    return {
-      response: {
-        statusCode: 201,
-        body: {
-          uploaded: files.map((f) => f.filename),
-          description: fields.find((f) => f.name === "description")?.body.toString(),
-        },
-      },
-    };
-  },
-});
-```
+File fields have a `filename` property; regular form fields do not. See
+the [File Upload](/recipes/file-upload/) recipe for working examples of
+filtering files from text inputs in both standalone and ergo-router
+contexts.
 
 ## Error Responses
 
