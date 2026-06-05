@@ -1,0 +1,105 @@
+---
+title: Error Response Reference
+description: Complete reference for every HTTP error response produced by ergo middleware and ergo-router — organized by pipeline stage with RFC citations.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Every error response in an ergo pipeline uses
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) format
+(`Content-Type: application/problem+json`). This page is the consolidated
+reference for all possible error responses — organized by the pipeline
+stage that produces them.
+
+<Aside type="note">
+  All error responses include a standard RFC 9457 body with `type`,
+  `title`, `status`, and optionally `detail`, `instance`, and extension
+  members. See the [Error Handling recipe](/recipes/error-handling/) for
+  the full format specification and customization options.
+</Aside>
+
+## Transport Layer
+
+<Aside type="caution">
+  This section applies only to
+  [`@centralping/ergo-router`](/packages/ergo-router/). Standalone ergo
+  users handle routing and transport-level concerns themselves.
+</Aside>
+
+The transport layer runs **before** the four-stage pipeline. These
+responses are produced by the router dispatch logic and transport
+middleware (request ID, security headers, rate limiting, CORS preflight).
+
+| Status | Source | Condition | RFC |
+| --- | --- | --- | --- |
+| **404 Not Found** | Router | No route matches the request path | [RFC 9110 §15.5.5](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.5) |
+| **405 Method Not Allowed** | Router | Path exists but method not registered (includes `Allow` header) | [RFC 9110 §15.5.6](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.6) |
+| **415 Unsupported Media Type** | Router (`strictPatch`) | PATCH with Content-Type not in `application/json`, `application/merge-patch+json`, `application/json-patch+json` (includes `Accept-Patch` header) | [RFC 9110 §15.5.16](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.16) |
+| **415 Unsupported Media Type** | Router (`strictBody`) | POST/PUT without `Content-Type` header | [RFC 9110 §15.5.16](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.16) |
+| **429 Too Many Requests** | Transport rate limit | Request count exceeds `transport.rateLimit.max` | [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585#section-4) |
+| **403 Forbidden** | Transport CORS | Preflight `OPTIONS` request with disallowed origin | [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) |
+
+## Stage 1: Negotiation
+
+Content negotiation middleware runs first — there is no point
+authenticating or validating a request the server cannot meaningfully
+respond to.
+
+| Status | Source | Condition | RFC |
+| --- | --- | --- | --- |
+| **403 Forbidden** | [`cors()`](/middleware/cors/) | `Origin` header present but not allowed by policy | [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) |
+| **406 Not Acceptable** | [`accepts()`](/middleware/accepts/) | Any negotiated value is `undefined` and `throwIfFail` is `true` | [RFC 9110 §12.5](https://www.rfc-editor.org/rfc/rfc9110#section-12.5) |
+| **428 Precondition Required** | [`precondition()`](/middleware/precondition/) | Neither `If-Match` nor `If-Unmodified-Since` header present | [RFC 6585 §3](https://www.rfc-editor.org/rfc/rfc6585#section-3) |
+| **429 Too Many Requests** | [`rateLimit()`](/middleware/rate-limit/) | Per-route request count exceeds `max` within `windowMs` | [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585#section-4) |
+
+## Stage 2: Authorization
+
+Authentication and authorization middleware rejects unauthorized callers
+before any request body parsing occurs.
+
+| Status | Source | Condition | RFC |
+| --- | --- | --- | --- |
+| **400 Bad Request** | [`authorization()`](/middleware/authorization/) | Bearer: authorizer returns `info.type: 'invalid_request'` | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) |
+| **401 Unauthorized** | [`authorization()`](/middleware/authorization/) | Missing or invalid credentials (Bearer default; missing header with configured strategies) | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) |
+| **403 Forbidden** | [`authorization()`](/middleware/authorization/) | Basic auth failure; Bearer `insufficient_scope`; no configured strategies; custom scheme rejection | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) / [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) |
+| **403 Forbidden** | [`csrf()`](/middleware/csrf/) | Missing header token, missing UUID cookie, or CSRF token verification fails | [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) |
+
+## Stage 3: Validation
+
+Input validation middleware parses and validates the request body, query
+parameters, and idempotency keys.
+
+| Status | Source | Condition | RFC |
+| --- | --- | --- | --- |
+| **400 Bad Request** | [`body()`](/middleware/body/) | Content-Length mismatch, malformed body, or parse failure | [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) |
+| **400 Bad Request** | [`idempotency()`](/middleware/idempotency/) | `Idempotency-Key` header present but not a valid RFC 8941 sf-string | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) |
+| **400 Bad Request** | [`idempotency()`](/middleware/idempotency/) | `Idempotency-Key` header absent and `required: true` | [IETF draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/) |
+| **400 Bad Request** | [`jsonApiQuery()`](/middleware/json-api-query/) | Query parameters fail JSON:API schema validation | [JSON:API](https://jsonapi.org/format/) |
+| **409 Conflict** | [`idempotency()`](/middleware/idempotency/) | Same key with different request fingerprint, or concurrent request still processing | [IETF draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/) |
+| **411 Length Required** | [`body()`](/middleware/body/) | Neither `Content-Length` nor chunked encoding present | [RFC 9110 §15.5.12](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.12) |
+| **413 Payload Too Large** | [`body()`](/middleware/body/) | Body exceeds `limit` (or decompressed body exceeds `decompressedLimit`) | [RFC 9110 §15.5.14](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.14) |
+| **415 Unsupported Media Type** | [`body()`](/middleware/body/) | Unrecognized content type or unsupported `Content-Encoding` | [RFC 9110 §15.5.16](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.16) |
+| **422 Unprocessable Entity** | [`validate()`](/middleware/validate/) | JSON Schema validation failure — response includes `details` array with per-field errors | [RFC 9110 §15.5.21](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.21) |
+| **500 Internal Server Error** | [`validate()`](/middleware/validate/) | Body schema configured but `acc.body` is missing — `body()` middleware not placed before `validate()` | — |
+
+## Stage 4: Execution / Post-Pipeline
+
+Execution-stage middleware wraps the handler and post-processes the
+response. These responses come from `timeout()`, `send()` conditional
+request evaluation, and uncaught pipeline errors.
+
+| Status | Source | Condition | RFC |
+| --- | --- | --- | --- |
+| **204 No Content** | [`send()`](/middleware/send/) | `Prefer: return=minimal` on 2xx responses (200 → 204) | [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240) |
+| **304 Not Modified** | [`send()`](/middleware/send/) | `If-None-Match` weak-matches the ETag, or `If-Modified-Since` and resource not modified | [RFC 9110 §15.4.5](https://www.rfc-editor.org/rfc/rfc9110#section-15.4.5) |
+| **408 Request Timeout** | [`timeout()`](/middleware/timeout/) | Default — deadline exceeded | [RFC 9110 §15.5.9](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.9) |
+| **412 Precondition Failed** | [`send()`](/middleware/send/) | `If-Match` fails on unsafe methods, or `If-Unmodified-Since` fails | [RFC 9110 §15.5.13](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.13) |
+| **500 Internal Server Error** | [`handler()`](/middleware/handler/) / auto-wrap | Uncaught pipeline error (detail is redacted for security) | — |
+| **504 Gateway Timeout** | [`timeout()`](/middleware/timeout/) | When configured with `statusCode: 504` | [RFC 9110 §15.6.5](https://www.rfc-editor.org/rfc/rfc9110#section-15.6.5) |
+
+## Further Reading
+
+- [Fast Fail Pipeline](/concepts/fast-fail/) — the four-stage ordering model
+- [Architecture](/concepts/architecture/) — the two-accumulator pipeline model
+- [Error Handling recipe](/recipes/error-handling/) — custom error details, extension members, and RFC 9457 format
+- [Accumulator Reference](/concepts/accumulator/) — the companion cross-cutting reference for success-path data flow

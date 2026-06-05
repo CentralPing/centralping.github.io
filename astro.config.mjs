@@ -91,6 +91,10 @@ export default defineConfig({
               label: "Accumulator Reference",
               slug: "concepts/accumulator",
             },
+            {
+              label: "Error Response Reference",
+              slug: "concepts/error-responses",
+            },
             { label: "Fast Fail Pipeline", slug: "concepts/fast-fail" },
             {
               label: "Standards Compliance",
