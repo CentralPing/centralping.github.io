@@ -53,7 +53,55 @@ On success, the middleware returns a body descriptor stored at `acc.body`:
 }
 ```
 
-For multipart bodies the result also includes a `boundary` field.
+### Multipart Parsed Shape
+
+For `multipart/form-data` requests, `acc.body` includes a `boundary` field
+and `parsed` is an array of part objects — one per form field or file:
+
+```js
+{
+  type: "multipart/form-data",
+  charset: "utf-8",
+  encoding: "identity",
+  length: 4096,
+  received: 4096,
+  boundary: "----WebKitFormBoundary7MA4YWxkTrZu0gW",
+  raw: "...",
+  parsed: [
+    { headers: { ... }, name: "avatar", filename: "photo.png", body: Buffer },
+    { headers: { ... }, name: "description", filename: undefined, body: Buffer },
+  ],
+}
+```
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `headers` | `object` | Parsed MIME headers (`content-disposition`, `content-type`) as `{type, parameters}` entries |
+| `name` | `string` | The form field name from `Content-Disposition` |
+| `filename` | `string \| undefined` | The original filename (present only for file fields) |
+| `body` | `Buffer` | The raw binary content of the part |
+
+File fields have a `filename` property; regular form fields do not. Use
+this distinction to separate files from text inputs:
+
+```js
+router.post("/uploads", {
+  body: { limit: 5 * 1024 * 1024 },
+  execute: async (req, res, acc) => {
+    const files = acc.body.parsed.filter((part) => part.filename);
+    const fields = acc.body.parsed.filter((part) => !part.filename);
+    return {
+      response: {
+        statusCode: 201,
+        body: {
+          uploaded: files.map((f) => f.filename),
+          description: fields.find((f) => f.name === "description")?.body.toString(),
+        },
+      },
+    };
+  },
+});
+```
 
 ## Error Responses
 
