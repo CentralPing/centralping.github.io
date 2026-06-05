@@ -3,7 +3,7 @@ title: idempotency
 description: Idempotency-Key middleware — replay stored responses for duplicate requests per IETF draft.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Implements the
 [Idempotency-Key HTTP header](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/)
@@ -99,6 +99,83 @@ Unquoted values (e.g., `Idempotency-Key: my-key`) are rejected with a
     ```
   </TabItem>
 </Tabs>
+
+## Storing Responses for Replay
+
+For new requests, the middleware returns `complete()` and `discard()`
+callbacks. Call `complete(response)` after your execute logic to store
+the response for future replays, or `discard()` to remove the
+idempotency entry (e.g. on failure).
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body, idempotency } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      [idempotency({ required: true }), "idempotency"],
+      async (req, res, acc) => {
+        try {
+          const result = await processPayment(acc.body.parsed);
+          const response = { statusCode: 201, body: result };
+
+          acc.idempotency.complete(response);
+
+          return { response };
+        } catch (err) {
+          acc.idempotency.discard();
+          throw err;
+        }
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/payments", {
+      idempotency: { required: true },
+      validate: {
+        body: paymentSchema,
+      },
+      execute: async (req, res, acc) => {
+        try {
+          const result = await processPayment(acc.body.parsed);
+          const response = { statusCode: 201, body: result };
+
+          acc.idempotency.complete(response);
+
+          return { response };
+        } catch (err) {
+          acc.idempotency.discard();
+          throw err;
+        }
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Lifecycle
+
+1. **New request** — the middleware returns `{ key, fingerprint,
+   complete, discard }` on `acc.idempotency`. The execute handler runs
+   normally.
+2. **`complete(response)`** — stores the response for this key. The
+   argument should be a response accumulator shape (e.g.
+   `{ statusCode, body }`).
+3. **Replay** — a subsequent request with the same key and fingerprint
+   returns the stored response immediately. The execute handler does
+   not run — the middleware handles replay automatically.
+4. **`discard()`** — removes the key entry, allowing the next request
+   with that key to be treated as new.
+
+<Aside type="caution" title="Always call complete() or discard()">
+  If neither `complete()` nor `discard()` is called for a new key, the
+  store entry remains in a `processing` state. Concurrent requests with
+  the same key will receive a `409 Conflict` response until the entry
+  expires or is cleaned up.
+</Aside>
 
 ## RFC References
 

@@ -3,7 +3,7 @@ title: Custom Headers
 description: Adding custom response headers from middleware and execute handlers using the response accumulator.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Problem
 
@@ -53,30 +53,49 @@ array. `send()` applies them to the response before writing the body.
   </TabItem>
 </Tabs>
 
-### Response Time Header
+### Response Time
 
-A middleware that adds an `X-Response-Time` header to the response:
+<Aside type="caution" title="Why X-Response-Time via the accumulator measures ~0.00ms">
+  The response accumulator captures header values when middleware returns —
+  not when `send()` writes the response. A middleware that computes
+  `performance.now() - start` and returns it as a header tuple measures only
+  its own synchronous execution time (~0.00ms), not the full request
+  lifecycle.
+</Aside>
+
+For accurate response time measurement, use the
+[logger middleware's](/middleware/logger/) built-in `duration` field. Logger
+attaches to `res.on('finish')` and records total time from middleware entry
+to response completion:
 
 ```js
-import { compose } from "@centralping/ergo";
-
-const withResponseTime = (req, res, acc) => {
-  const start = performance.now();
-  return {
-    response: {
-      headers: [
-        ["X-Response-Time", `${(performance.now() - start).toFixed(2)}ms`],
-      ],
-    },
-  };
-};
+import { compose, logger } from "@centralping/ergo";
 
 const pipeline = compose(
-  [withResponseTime, "timing"],
-  [(req, res, acc) => ({
-    response: { body: { hello: "world" } },
-  }), "execute"],
+  [logger({
+    log: (info) => console.log(`${info.method} ${info.url} ${info.duration}ms`),
+  }), "log"],
+  // ... remaining middleware
 );
+```
+
+If you need response time logging without the logger middleware, attach a
+`finish` listener before calling the handler:
+
+```js
+import http from "node:http";
+import { handler, compose } from "@centralping/ergo";
+
+const pipeline = compose(/* ... */);
+const app = handler(pipeline);
+
+http.createServer((req, res) => {
+  const start = performance.now();
+  res.on("finish", () => {
+    console.log(`${req.method} ${req.url} ${(performance.now() - start).toFixed(2)}ms`);
+  });
+  app(req, res);
+}).listen(3000);
 ```
 
 ### Removing a Header
