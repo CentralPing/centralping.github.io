@@ -1,0 +1,358 @@
+---
+title: Mixed-Auth CORS & CSRF
+description: Configuring CORS and CSRF together for APIs that serve both browser-based and token-based clients.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+Your API serves two types of clients:
+
+- **Browser clients** — use session cookies, need CSRF protection, and
+  make cross-origin requests subject to CORS policy
+- **Mobile or service clients** — use Bearer tokens in the
+  `Authorization` header, are not vulnerable to CSRF, and do not send
+  cookies
+
+You need to configure CORS and CSRF so that browser routes get
+cross-origin cookie support with CSRF protection, while API-only routes
+skip CSRF entirely.
+
+## Solution
+
+### Transport-Level CORS
+
+CORS is configured at the **transport level** — it applies to every
+request before the route pipeline runs. For mixed-auth APIs, enable
+`credentials` and explicitly list `X-CSRF-TOKEN` in the allowed
+headers so browsers can send the CSRF token on cross-origin requests.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, cors } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [cors({
+        origins: ["https://app.example.com"],
+        allowCredentials: true,
+        allowHeaders: [
+          "Content-Type",
+          "Authorization",
+          "X-CSRF-TOKEN",
+        ],
+      }), "cors"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter from "@centralping/ergo-router";
+
+    const router = createRouter({
+      transport: {
+        cors: {
+          origin: "https://app.example.com",
+          credentials: true,
+          allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-CSRF-TOKEN",
+          ],
+        },
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="caution" title="X-CSRF-TOKEN must be explicitly allowed">
+  The ergo-router transport CORS default `allowedHeaders` is
+  `['Content-Type', 'Authorization']`. If you use CSRF with cross-origin
+  requests, you **must** add `X-CSRF-TOKEN` — otherwise the browser's
+  preflight check blocks the header silently.
+</Aside>
+
+### Per-Route CSRF
+
+CSRF runs in the **pipeline** at Stage 2 (Authorization) — it can be
+enabled or disabled per route. Set `csrf` options on routes that use
+cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, cookie, csrf, authorization } from "@centralping/ergo";
+
+    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+
+    // Browser route — cookie auth with CSRF protection
+    const browserPipeline = compose(
+      [cookie(), "cookies"],
+      [csrfMiddleware.verify, "csrf"],
+      [authorization({
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const session = await verifySessionToken(token);
+            return session
+              ? { authorized: true, info: { user: session.user } }
+              : { authorized: false };
+          },
+        }],
+      }), "auth"],
+    );
+
+    // API route — Bearer auth, no CSRF
+    const apiPipeline = compose(
+      [authorization({
+        strategies: [{
+          type: "Bearer",
+          authorizer: async (attributes, token) => {
+            const user = await verifyJwt(token);
+            return user
+              ? { authorized: true, info: { user } }
+              : { authorized: false };
+          },
+        }],
+      }), "auth"],
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        csrf: { secret: process.env.CSRF_SECRET },
+        authorization: {
+          strategies: [{
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              const user = await verifyJwt(token);
+              return user
+                ? { authorized: true, info: { user } }
+                : { authorized: false };
+            },
+          }],
+        },
+      },
+    });
+
+    // Inherits CSRF from defaults — browser route
+    router.post("/account/settings", {
+      execute: async (req, res, acc) => ({
+        response: { body: { updated: true } },
+      }),
+    });
+
+    // Disables CSRF — API-only route
+    router.post("/api/webhooks", {
+      csrf: false,
+      execute: async (req, res, acc) => ({
+        response: { body: { received: true } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Combined Configuration
+
+A complete router with transport CORS, default CSRF, and per-route
+overrides:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import {
+      compose,
+      cookie,
+      cors,
+      csrf,
+      authorization,
+    } from "@centralping/ergo";
+
+    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+
+    const bearerStrategy = {
+      type: "Bearer",
+      authorizer: async (attributes, token) => {
+        const user = await verifyJwt(token);
+        return user
+          ? { authorized: true, info: { user } }
+          : { authorized: false };
+      },
+    };
+
+    const corsMiddleware = cors({
+      origins: ["https://app.example.com"],
+      allowCredentials: true,
+      allowHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-CSRF-TOKEN",
+      ],
+    });
+
+    // Browser route: CORS + cookies + CSRF + auth
+    const settingsPipeline = compose(
+      [corsMiddleware, "cors"],
+      [cookie(), "cookies"],
+      [csrfMiddleware.verify, "csrf"],
+      [authorization({ strategies: [bearerStrategy] }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { userId: acc.auth.user.id } },
+      }),
+    );
+
+    // API route: CORS + auth (no cookies, no CSRF)
+    const webhookPipeline = compose(
+      [corsMiddleware, "cors"],
+      [authorization({ strategies: [bearerStrategy] }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { received: true } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import http from "node:http";
+    import createRouter from "@centralping/ergo-router";
+
+    const router = createRouter({
+      transport: {
+        requestId: {},
+        security: {},
+        cors: {
+          origin: "https://app.example.com",
+          credentials: true,
+          allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-CSRF-TOKEN",
+          ],
+        },
+      },
+      defaults: {
+        csrf: { secret: process.env.CSRF_SECRET },
+        authorization: {
+          strategies: [{
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              const user = await verifyJwt(token);
+              return user
+                ? { authorized: true, info: { user } }
+                : { authorized: false };
+            },
+          }],
+        },
+      },
+    });
+
+    // Browser route — inherits CSRF + auth from defaults
+    router.get("/account/settings", {
+      execute: (req, res, acc) => ({
+        response: { body: { userId: acc.auth.user.id } },
+      }),
+    });
+
+    router.post("/account/settings", {
+      execute: async (req, res, acc) => ({
+        response: { body: { updated: true } },
+      }),
+    });
+
+    // API route — disables CSRF, inherits auth
+    router.post("/api/webhooks", {
+      csrf: false,
+      execute: async (req, res, acc) => ({
+        response: { body: { received: true } },
+      }),
+    });
+
+    // Public route — disables both CSRF and auth
+    router.get("/health", {
+      csrf: false,
+      authorization: false,
+      execute: () => ({
+        response: { body: { status: "healthy" } },
+      }),
+    });
+
+    const server = http.createServer(router.handle());
+    server.listen(3000);
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### Why CORS Is Transport-Level and CSRF Is Per-Route
+
+CORS and CSRF operate at different layers of the request lifecycle:
+
+- **CORS** validates the **origin** of the request before any route
+  logic runs. It operates on HTTP transport semantics (preflight
+  `OPTIONS` handling, response headers) and applies uniformly to all
+  routes. In ergo-router, CORS is configured in `transport` because it
+  runs before route matching.
+
+- **CSRF** validates **request integrity** — it ensures a browser
+  request was intentionally initiated by the user, not by a malicious
+  cross-site script. It operates at the pipeline level (Stage 2:
+  Authorization) because different routes may need different CSRF
+  policies depending on their auth mechanism.
+
+### When to Enable CSRF
+
+| Auth mechanism | Client type | CSRF needed? | Rationale |
+| -------------- | ----------- | ------------ | --------- |
+| Session cookie | Browser | **Yes** | Browsers auto-attach cookies on every request — CSRF prevents forged submissions |
+| Bearer token | Mobile/service | **No** | Tokens are explicitly attached by the client — not auto-sent by the browser |
+| Cookie + Bearer (mixed) | Both | **Per-route** | Enable CSRF on cookie-auth routes, disable on Bearer-only routes |
+| None (public) | Any | **No** | No credentials to protect |
+
+### `sameSite: 'Strict'` and Cross-Origin Flows
+
+ergo's CSRF middleware locks both cookies to `sameSite: 'Strict'`. This
+means CSRF cookies are **only sent on same-origin requests** — the
+browser will not attach them on cross-origin navigations or
+cross-origin `fetch()` calls.
+
+This has two implications:
+
+1. **Same-origin SPAs** (e.g., `app.example.com` calling
+   `api.example.com` is cross-origin) — CSRF cookies will not be
+   delivered. CSRF protection requires same-origin deployment or
+   sub-domain cookie sharing with appropriate `domain` configuration.
+
+2. **Third-party integrations** — external services calling your API
+   cannot use the double-submit cookie pattern at all. These clients
+   should use Bearer token authentication with `csrf: false`.
+
+<Aside type="tip" title="Same-origin deployment">
+  For browser clients, deploy your SPA and API on the same origin
+  (e.g., `example.com/app` and `example.com/api`) to ensure
+  `sameSite: 'Strict'` cookies are delivered. If you need cross-origin
+  CSRF support, consider configuring cookie `domain` for sub-domain
+  sharing (e.g., `.example.com`).
+</Aside>
+
+### Bearer Clients and Stale CSRF Cookies
+
+When a route has `csrf: false`, the CSRF middleware is removed from
+the pipeline entirely — it does not run. A Bearer client that
+happens to have stale CSRF cookies from a previous browser session is
+unaffected because:
+
+- On `csrf: false` routes, the cookie is ignored — no verification
+  occurs
+- On CSRF-enabled routes, a Bearer client without the `X-CSRF-TOKEN`
+  header would fail CSRF verification with 403 — this is correct
+  behavior, since that route expects cookie-based auth
+
+The `resolve()` function in ergo-router handles each config key
+independently: `csrf: false` disables CSRF regardless of the
+`authorization` setting, and vice versa.
