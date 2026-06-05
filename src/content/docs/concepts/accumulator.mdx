@@ -26,6 +26,7 @@ pipeline-builder key to its accumulator path and typed interface.
 | `preconditionRequired` | `precondition` | — | Negotiation |
 | `cookie` | `cookies` | [`CookieJar`](#acccookies) | Negotiation |
 | `url` | `url` | [`UrlResult`](#accurl) | Negotiation |
+| `paginate` | `paginate` | [`PaginateResult`](#accpaginate) | Negotiation |
 | `jsonApiQuery` | `jsonApiQuery` | — | Negotiation |
 | `prefer` | `prefer` | [`PreferResult`](#accprefer) | Negotiation |
 | `securityHeaders` | `security` | — | Negotiation |
@@ -69,6 +70,37 @@ interface UrlResult {
 | `query` | `Record<string, string \| string[]>` | Parsed query parameters (null-prototype object); multi-value keys become arrays |
 
 [Full documentation →](/middleware/url/)
+
+### `acc.paginate`
+
+Stored by `[paginate(), 'paginate']`. Parsed pagination parameters — a
+discriminated union based on the active strategy.
+
+```ts
+type PaginateResult =
+  | { strategy: 'offset'; page: number; perPage: number; offset: number; limit: number }
+  | { strategy: 'cursor'; cursor: string | undefined; limit: number };
+```
+
+**Offset strategy:**
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `strategy` | `'offset'` | Active strategy identifier |
+| `page` | `number` | Current page number (clamped to ≥ 1) |
+| `perPage` | `number` | Items per page (clamped to ≤ `maxPerPage`) |
+| `offset` | `number` | Computed: `(page - 1) * perPage` |
+| `limit` | `number` | Same as `perPage` |
+
+**Cursor strategy:**
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `strategy` | `'cursor'` | Active strategy identifier |
+| `cursor` | `string \| undefined` | Opaque cursor token from query; `undefined` on first page |
+| `limit` | `number` | Items to fetch (clamped to ≤ `maxLimit`) |
+
+[Full documentation →](/middleware/paginate/)
 
 ### `acc.body`
 
