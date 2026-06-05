@@ -9,6 +9,12 @@ const [routerTypeDoc, routerSidebarGroup] = createStarlightTypeDocPlugin();
 
 export default defineConfig({
   site: "https://centralping.github.io",
+  markdown: {
+    // @astrojs/mdx@5.x reads this from config.markdown (not the processor options).
+    // Astro 6.4 moved the default into unified() internals, leaving this undefined.
+    // Explicit true restores GFM for MDX until Starlight upgrades to @astrojs/mdx@6.x.
+    gfm: true,
+  },
   redirects: {
     "/architecture": "/concepts/architecture/",
   },
