@@ -1,0 +1,326 @@
+---
+title: Custom Middleware
+description: Writing middleware that fits ergo's accumulator-based return-value contract.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to write custom middleware — feature flags, audit logging,
+request enrichment, or third-party integrations — but ergo's
+accumulator-based return-value model differs fundamentally from Express
+or Fastify's event/mutation approach. You need to understand the
+contract to write middleware that composes cleanly with the pipeline.
+
+## Solution
+
+### The Middleware Contract
+
+Every middleware function receives four arguments and returns
+`{value?, response?}`:
+
+```js
+function myMiddleware(options) {
+  // Factory: runs once at startup
+  const precomputed = buildConfig(options);
+
+  // Inner function: runs per-request
+  return (req, res, domainAcc, responseAcc) => {
+    // Return {value?, response?} or undefined
+    return { value: { /* domain data */ } };
+  };
+}
+```
+
+Return value interpretation:
+
+| Return Shape | Behavior |
+| --- | --- |
+| `{value}` | Merged into the domain accumulator |
+| `{response}` | Merged into the response accumulator |
+| `{value, response}` | Both merges applied |
+| `undefined` or `null` | No-op — pipeline continues unchanged |
+| Plain object (no `value`/`response` keys) | Treated as `{value: returnedObject}` |
+
+When `response.statusCode` is set, the pipeline breaks immediately —
+no subsequent middleware executes.
+
+### Domain Accumulator Contribution
+
+Use a `[fn, 'key']` tuple to set a named path on the domain
+accumulator. This is the standard pattern for middleware that produces
+a single named result:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, handler } from "@centralping/ergo";
+
+    function featureFlags(options) {
+      const flagService = createFlagClient(options);
+      return async (req, res, acc) => {
+        const flags = await flagService.evaluate(acc.auth?.sub);
+        return { value: flags };
+      };
+    }
+
+    const pipeline = compose(
+      [featureFlags({ endpoint: "https://flags.internal" }), "flags"],
+      // acc.flags is now available to subsequent middleware
+      (req, res, acc) => ({
+        response: {
+          body: { features: acc.flags, user: acc.auth?.sub },
+        },
+      }),
+    );
+
+    export default handler(pipeline);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    function featureFlags(options) {
+      const flagService = createFlagClient(options);
+      return async (req, res, acc) => {
+        const flags = await flagService.evaluate(acc.auth?.sub);
+        return { value: flags };
+      };
+    }
+
+    router.get("/dashboard", {
+      use: [[featureFlags({ endpoint: "https://flags.internal" }), "flags"]],
+      execute: (req, res, acc) => ({
+        response: {
+          body: { features: acc.flags, user: acc.auth?.sub },
+        },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+Without a `setPath` (bare function, no tuple), the returned value is
+merged via `Object.assign(domainAcc, value)` — use this when
+contributing multiple keys:
+
+```js
+function requestMetadata() {
+  return (req, res, acc) => ({
+    value: {
+      receivedAt: Date.now(),
+      correlationId: req.headers["x-correlation-id"] ?? crypto.randomUUID(),
+    },
+  });
+}
+```
+
+### Response Accumulator Contribution
+
+Return `{response: {...}}` to contribute headers, status codes, or
+other response metadata:
+
+```js
+function apiVersion(version) {
+  const header = ["X-API-Version", version];
+  return () => ({
+    response: { headers: [header] },
+  });
+}
+```
+
+<Aside type="tip">
+  Pre-compute static values (header tuples, directive strings) at
+  factory time — not per-request. The factory runs once; the inner
+  function runs on every request.
+</Aside>
+
+### Fast-Fail Rejection
+
+Set `response.statusCode` to break the pipeline immediately. Use this
+for middleware that rejects requests before they reach the execute
+handler:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, handler } from "@centralping/ergo";
+
+    function requireAuditContext() {
+      return (req, res, acc) => {
+        if (!acc.auth?.sub) {
+          return {
+            response: {
+              statusCode: 401,
+              body: {
+                type: "https://httpstatuses.com/401",
+                title: "Unauthorized",
+                detail: "Audit context requires authenticated identity.",
+              },
+            },
+          };
+        }
+        return { value: { auditActor: acc.auth.sub } };
+      };
+    }
+
+    const pipeline = compose(
+      // ... auth middleware ...
+      [requireAuditContext(), "audit"],
+      // Only reached if auth context exists
+      (req, res, acc) => ({
+        response: { body: { actor: acc.audit.auditActor } },
+      }),
+    );
+
+    export default handler(pipeline);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    function requireAuditContext() {
+      return (req, res, acc) => {
+        if (!acc.auth?.sub) {
+          return {
+            response: {
+              statusCode: 401,
+              body: {
+                type: "https://httpstatuses.com/401",
+                title: "Unauthorized",
+                detail: "Audit context requires authenticated identity.",
+              },
+            },
+          };
+        }
+        return { value: { auditActor: acc.auth.sub } };
+      };
+    }
+
+    router.get("/admin/audit-log", {
+      use: [[requireAuditContext(), "audit"]],
+      execute: (req, res, acc) => ({
+        response: { body: { actor: acc.audit.auditActor } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Adapting Express Middleware
+
+`fromConnect()` wraps Connect/Express-style `(req, res, next)`
+middleware for use in an ergo pipeline:
+
+```js
+import { compose, handler, fromConnect } from "@centralping/ergo";
+import helmet from "helmet";
+
+const pipeline = compose(
+  fromConnect(helmet()),
+  // ... remaining middleware
+);
+
+export default handler(pipeline);
+```
+
+<Aside type="caution" title="fromConnect() limitations">
+  Adapted middleware returns `undefined` — it cannot read or write
+  accumulators. It communicates only through side effects on `res`
+  (setting headers, ending the response). For middleware that needs
+  accumulator access, write a native ergo middleware instead.
+</Aside>
+
+**Hybrid pattern** — use `fromConnect()` for side effects and a native
+middleware for accumulator contribution:
+
+```js
+import { compose, handler, fromConnect } from "@centralping/ergo";
+import someExpressMiddleware from "some-express-middleware";
+
+const pipeline = compose(
+  // Side effects (sets res headers)
+  fromConnect(someExpressMiddleware()),
+  // Native middleware reads/writes accumulators
+  [myNativeMiddleware(), "enrichment"],
+);
+
+export default handler(pipeline);
+```
+
+## Explanation
+
+### Pipeline Placement via `use`
+
+In ergo-router, the `use` config key inserts custom middleware **after
+Stage 3 (Validation) and before Stage 4 (Execution)**. This means
+custom middleware has full access to everything produced by earlier
+stages — URL parsing, body parsing, authentication, cookies, and
+validated parameters:
+
+```js
+router.get("/resource/:id", {
+  validate: { params: paramsSchema },
+  use: [[myMiddleware(), "custom"]],
+  // acc.url, acc.body, acc.auth, acc.cookies, acc.route.params
+  // are all available inside myMiddleware
+  execute: (req, res, acc) => ({ /* ... */ }),
+});
+```
+
+**Concatenation behavior:** `defaults.use` and route-level `use` are
+concatenated — defaults run first, then route-specific middleware:
+
+```js
+const router = createRouter({
+  defaults: {
+    use: [[globalMiddleware(), "global"]],
+  },
+});
+
+router.get("/endpoint", {
+  // Pipeline runs: ...defaults.use → ...route.use → execute
+  use: [[routeMiddleware(), "route"]],
+  execute: (req, res, acc) => ({ /* ... */ }),
+});
+```
+
+**Disabling custom middleware:** Set `use: false` on a route to skip
+all custom middleware (both defaults and route-level):
+
+```js
+router.get("/health", {
+  use: false,
+  execute: () => ({ response: { body: { status: "ok" } } }),
+});
+```
+
+### Accumulator Access
+
+Custom middleware in `use` position receives the full domain
+accumulator built by Stages 1–3. Available keys depend on which
+middleware ran before yours:
+
+| Key | Source Stage | Description |
+| --- | --- | --- |
+| `acc.url` | Stage 1 (URL) | Parsed pathname, query, search |
+| `acc.body` | Stage 2 (Body) | Parsed request body |
+| `acc.auth` | Stage 2 (Auth) | Authentication result |
+| `acc.cookies` | Stage 2 (Cookies) | Parsed cookies |
+| `acc.route.params` | Stage 3 (Validation) | Validated route parameters |
+| `acc.route.query` | Stage 3 (Validation) | Validated query parameters |
+| `acc.route.body` | Stage 3 (Validation) | Validated request body |
+
+The response accumulator (`responseAcc`) contains any headers or
+metadata set by earlier middleware (security headers, CORS, cache
+directives).
+
+### Comparison with Express
+
+| Concern | Express/Connect | ergo |
+| --- | --- | --- |
+| Data passing | `req.user = data` (mutation) | `return {value: {user: data}}` (accumulator) |
+| Pipeline control | `next()` / `next(err)` | Return `undefined` (continue) or `{response: {statusCode}}` (break) |
+| Response headers | `res.setHeader()` (imperative) | `{response: {headers: [...]}}` (declarative) |
+| Error handling | `(err, req, res, next)` | `{response: {statusCode, detail}}` |
+| Side effects | Encouraged (mutate req/res) | Avoided (pure return values) |
+| Testability | Requires mocking req/res/next | Call function, assert return value |
