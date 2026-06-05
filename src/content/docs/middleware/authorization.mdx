@@ -51,6 +51,28 @@ strategy, stored at `acc.auth`:
 { user: { id: "42", role: "admin" } }
 ```
 
+The shape of `acc.auth` is **opaque** — it is entirely determined by
+the `info` value your `authorizer` function returns when
+`authorized: true`. The TypeScript type is `Record<string, unknown>`;
+consumers narrow the type via application-level assertions or generics.
+
+**Multi-scheme examples:**
+
+```js
+// Bearer — authorizer returns decoded JWT claims
+acc.auth  // → { user: { id: "42", role: "admin" } }
+
+// Basic — authorizer returns validated credentials
+acc.auth  // → { username: "jane", permissions: ["read", "write"] }
+
+// API Key — authorizer returns service identity
+acc.auth  // → { service: "billing", scopes: ["invoices:read"] }
+```
+
+Because the middleware stores whatever your authorizer provides, you
+have full control over the shape. Design your `info` object to carry
+exactly what downstream handlers need — no more, no less.
+
 ## Error Responses
 
 | Status | Condition |
