@@ -1,0 +1,123 @@
+---
+title: Debug Tracing
+description: Finding which middleware rejected a request using pipeline debug mode.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+A request returns an unexpected status code and you need to identify
+which middleware in the pipeline rejected it.
+
+## Solution
+
+Enable debug mode to populate a `_trace` object on error responses.
+The trace shows which middleware ran and which one triggered the
+pipeline break.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import {
+      handler, compose, logger, authorization, body,
+    } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [logger(), "log"],
+      [authorization({ strategies }), "auth"],
+      [body(), "body"],
+      (req, res, acc) => ({
+        response: { body: acc.body.parsed, statusCode: 200 },
+      }),
+    );
+
+    const server = http.createServer(
+      handler(pipeline, { debug: true }),
+    );
+    server.listen(3000);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const router = createRouter({ debug: true });
+
+    router.post("/items", {
+      validate: { body: itemSchema },
+      execute: async (req, res, acc) => {
+        const item = await db.create(acc.body.parsed);
+        return { response: { statusCode: 201, body: item } };
+      },
+    });
+
+    await graceful(router.handle(), { port: 3000 });
+    ```
+  </TabItem>
+</Tabs>
+
+When a request is rejected (e.g. missing authorization), the error
+response body includes a `_trace` field:
+
+```json
+{
+  "type": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+  "title": "Unauthorized",
+  "status": 401,
+  "_trace": {
+    "steps": ["log", "auth"],
+    "breakAt": "auth"
+  }
+}
+```
+
+## Explanation
+
+### The `_trace` Shape
+
+When `debug` is `true`, the pipeline initializes a trace object on the
+response accumulator before running middleware:
+
+```js
+responseAcc._trace = { steps: [], breakAt: undefined };
+```
+
+As each middleware executes, its label (the `setPath` from the
+`[fn, setPath]` tuple, or the function name) is pushed onto `steps`.
+When a middleware sets `responseAcc.statusCode` and triggers a pipeline
+break, `breakAt` records that middleware's label.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `steps` | `string[]` | Middleware labels in execution order |
+| `breakAt` | `string \| undefined` | Label of the middleware that caused the pipeline break |
+
+### RFC 9457 Extension Member
+
+`_trace` is not in `send()`'s reserved key set. On error responses
+(statusCode ≥ 400), it appears as an RFC 9457 extension member in the
+response body alongside `type`, `title`, `status`, and `detail`.
+On success responses (2xx), `_trace` is not included in the body.
+
+### Zero Overhead When Disabled
+
+When `debug` is `false` (the default), no trace object is created and
+the pipeline skips all label-tracking logic. There is no performance
+cost in production.
+
+<Aside type="caution" title="Development only">
+  Debug tracing is intended for local development and troubleshooting.
+  Do not enable it in production — the `_trace` field exposes internal
+  middleware structure in error responses.
+</Aside>
+
+### Distinct from OpenTelemetry Tracing
+
+Pipeline debug tracing (`_trace`) is unrelated to the
+[OpenTelemetry tracing middleware](/middleware/tracing/). OTel tracing
+populates `domainAcc.trace` with distributed trace context (trace ID,
+span ID) for production observability. Debug tracing populates
+`responseAcc._trace` with pipeline execution details for local
+debugging. Both can be active simultaneously without conflict.
