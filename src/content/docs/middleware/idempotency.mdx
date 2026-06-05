@@ -115,13 +115,18 @@ idempotency entry (e.g. on failure).
     const pipeline = compose(
       [body(), "body"],
       [idempotency({ required: true }), "idempotency"],
-      (req, res, acc) => {
-        const result = processPayment(acc.body.parsed);
-        const response = { statusCode: 201, body: result };
+      async (req, res, acc) => {
+        try {
+          const result = await processPayment(acc.body.parsed);
+          const response = { statusCode: 201, body: result };
 
-        acc.idempotency.complete(response);
+          acc.idempotency.complete(response);
 
-        return { response };
+          return { response };
+        } catch (err) {
+          acc.idempotency.discard();
+          throw err;
+        }
       },
     );
     ```
@@ -134,12 +139,17 @@ idempotency entry (e.g. on failure).
         body: paymentSchema,
       },
       execute: async (req, res, acc) => {
-        const result = await processPayment(acc.body.parsed);
-        const response = { statusCode: 201, body: result };
+        try {
+          const result = await processPayment(acc.body.parsed);
+          const response = { statusCode: 201, body: result };
 
-        acc.idempotency.complete(response);
+          acc.idempotency.complete(response);
 
-        return { response };
+          return { response };
+        } catch (err) {
+          acc.idempotency.discard();
+          throw err;
+        }
       },
     });
     ```
