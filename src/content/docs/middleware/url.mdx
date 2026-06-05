@@ -37,9 +37,13 @@ Returns a URL descriptor stored at `acc.url`:
 }
 ```
 
+| Property | Type | Description |
+| --- | --- | --- |
+| `pathname` | `string \| undefined` | URL path before the query string |
+| `search` | `string \| undefined` | Raw query string including leading `?`; `undefined` when absent |
+| `query` | `Record<string, string \| string[]>` | Parsed query parameters; multi-value keys become arrays |
+
 - `query` uses a null-prototype object to prevent prototype pollution
-- Multi-value keys become arrays automatically
-- `search` is `undefined` when no query string is present
 - Bounded by `maxPairs: 256` and `maxQueryLength: 8192` defaults
 
 ## Error Responses

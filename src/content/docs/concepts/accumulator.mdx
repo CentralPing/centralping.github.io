@@ -1,0 +1,340 @@
+---
+title: Accumulator Reference
+description: Complete reference for the domain and response accumulators — every middleware's contribution, typed shapes, and access patterns.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The [two-accumulator pipeline model](/concepts/architecture/) passes two
+objects through every middleware in the chain: the **domain accumulator**
+(`acc`) for inter-middleware data, and the **response accumulator** for
+HTTP response properties. This page is the consolidated reference for
+both.
+
+## Domain Accumulator
+
+Each middleware registers its result at a fixed path on the domain
+accumulator via `[fn, setPath]` tuples. The table below maps every
+pipeline-builder key to its accumulator path and typed interface.
+
+| Config Key | setPath (`acc.*`) | Type Interface | Pipeline Stage |
+| --- | --- | --- | --- |
+| `tracing` | `trace` | [`TracingResult`](#acctrace) | Negotiation |
+| `logger` | `log` | [`LogEntry`](#acclog) | Negotiation |
+| `rateLimit` | `rateLimit` | — | Negotiation |
+| `accepts` | `accepts` | [`AcceptsResult`](#accaccepts) | Negotiation |
+| `preconditionRequired` | `precondition` | — | Negotiation |
+| `cookie` | `cookies` | [`CookieJar`](#acccookies) | Negotiation |
+| `url` | `url` | [`UrlResult`](#accurl) | Negotiation |
+| `jsonApiQuery` | `jsonApiQuery` | — | Negotiation |
+| `prefer` | `prefer` | [`PreferResult`](#accprefer) | Negotiation |
+| `securityHeaders` | `security` | — | Negotiation |
+| `cacheControl` | `cache` | — | Negotiation |
+| `csrf` | `csrf` | — | Authorization |
+| `authorization` | `auth` | [`AuthorizationResult`](#accauth) | Authorization |
+| `body` | `body` | [`BodyResult`](#accbody) | Validation |
+| `idempotency` | `idempotency` | [`IdempotencyResult`](#accidempotency) | Validation |
+| `validate` | `validation` | — | Validation |
+
+<Aside type="tip">
+  Config keys marked **—** for Type Interface either produce response
+  headers only (e.g. `securityHeaders`, `cacheControl`) or have
+  minimal/internal accumulator values. See their individual guide pages
+  for details.
+</Aside>
+
+<Aside type="caution">
+  Five config keys diverge from their setPath name: `cookie` →
+  `cookies`, `securityHeaders` → `security`, `cacheControl` → `cache`,
+  `validate` → `validation`, `preconditionRequired` → `precondition`.
+</Aside>
+
+### `acc.url`
+
+Stored by `[url(), 'url']`. Parsed URL components using a fast
+`indexOf` + `slice` parser.
+
+```ts
+interface UrlResult {
+  query: Record<string, string | string[]>;
+  pathname: string | undefined;
+  search: string | undefined;
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `pathname` | `string \| undefined` | URL path before the query string |
+| `search` | `string \| undefined` | Raw query string including leading `?`; `undefined` when absent |
+| `query` | `Record<string, string \| string[]>` | Parsed query parameters (null-prototype object); multi-value keys become arrays |
+
+[Full documentation →](/middleware/url/)
+
+### `acc.body`
+
+Stored by `[body(), 'body']`. Parsed request body with metadata.
+
+```ts
+interface BodyResult {
+  type: string;
+  charset: string;
+  encoding: string;
+  length: number | undefined;
+  received: number;
+  boundary: string | undefined;
+  raw: string;
+  parsed?: unknown;
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `type` | `string` | Content-Type MIME type |
+| `charset` | `string` | Character encoding (e.g. `'utf-8'`) |
+| `encoding` | `string` | Content-Encoding (e.g. `'identity'`, `'gzip'`) |
+| `length` | `number \| undefined` | Content-Length header value; `undefined` for chunked |
+| `received` | `number` | Actual bytes received |
+| `boundary` | `string \| undefined` | Multipart boundary; `undefined` for non-multipart |
+| `raw` | `string` | Raw body string before parsing |
+| `parsed` | `unknown` | Parsed body (JSON object, form data, etc.) |
+
+[Full documentation →](/middleware/body/)
+
+### `acc.cookies`
+
+Stored by `[cookie(), 'cookies']`. Cookie jar with incoming cookies as
+own properties and methods for managing outgoing cookies.
+
+```ts
+interface CookieJar {
+  set(name: string, value: string, options?: Record<string, unknown>): void;
+  get(name: string): unknown;
+  clear(name: string): void;
+  toHeader(): string[];
+  readonly size: number;
+  readonly isJar: true;
+  [name: string]: unknown;
+}
+```
+
+Incoming cookies from the `Cookie` request header are available as own
+properties on the jar (e.g. `acc.cookies.sessionId`). Outgoing cookies
+are managed via `set()`, `get()`, `clear()`, and serialized to
+`Set-Cookie` headers by `toHeader()`.
+
+[Full documentation →](/middleware/cookie/)
+
+### `acc.log`
+
+Stored by `[logger(), 'log']`. Structured request metadata captured at
+pipeline entry.
+
+```ts
+interface LogEntry {
+  requestId: string;
+  timestamp: number;
+  ip: string;
+  method: string;
+  url: string;
+  httpVersion: string;
+  host: Readonly<{
+    hostname: string;
+    arch: string;
+    platform: string;
+    pid: number;
+  }>;
+  request: {
+    headers: Record<string, string | string[] | undefined>;
+    encrypted: boolean;
+    remoteAddress: string;
+    remotePort: number;
+  };
+  traceId?: string;
+  spanId?: string;
+}
+```
+
+<Aside type="note">
+  The `LogEntry` shown above is the **initial** shape available during
+  pipeline execution. After the response `finish` event, `logger`
+  appends response metadata (`statusCode`, `duration`, response
+  headers) and emits the complete log entry.
+</Aside>
+
+[Full documentation →](/middleware/logger/)
+
+### `acc.accepts`
+
+Stored by `[accepts(), 'accepts']`. Content negotiation results.
+
+```ts
+interface AcceptsResult {
+  type: string | false;
+  language: string | false;
+  charset: string | false;
+  encoding: string | false;
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `type` | `string \| false` | Best matching content type, or `false` if unacceptable |
+| `language` | `string \| false` | Best matching language |
+| `charset` | `string \| false` | Best matching charset |
+| `encoding` | `string \| false` | Best matching encoding |
+
+[Full documentation →](/middleware/accepts/)
+
+### `acc.prefer`
+
+Stored by `[prefer(), 'prefer']`. Parsed RFC 7240 Prefer header as a
+flat map.
+
+```ts
+interface PreferResult {
+  [preference: string]: string | true;
+}
+```
+
+Preference names map to their value string, or `true` for bare tokens.
+Example: `{ return: 'minimal', 'respond-async': true }`.
+
+[Full documentation →](/middleware/prefer/)
+
+### `acc.auth`
+
+Stored by `[authorization(), 'auth']`. The authenticated identity
+returned by the matching strategy's authorizer function.
+
+```ts
+type AuthorizationResult = Record<string, unknown>;
+```
+
+The shape is **opaque** — it is entirely determined by the
+user-provided `authorizer` function's `info` return value. The type
+system represents this as `Record<string, unknown>`; consumers narrow
+via application-level type assertions or generics.
+
+**Common patterns:**
+
+```js
+// Bearer — authorizer returns user object
+acc.auth  // → { user: { id: "42", role: "admin" } }
+
+// Basic — authorizer returns credentials metadata
+acc.auth  // → { username: "jane", permissions: ["read", "write"] }
+
+// API Key — authorizer returns service identity
+acc.auth  // → { service: "billing", scopes: ["invoices:read"] }
+```
+
+[Full documentation →](/middleware/authorization/)
+
+### `acc.trace`
+
+Stored by `[tracing(), 'trace']`. OpenTelemetry span and context for
+the current request.
+
+```ts
+interface TracingResult {
+  span: import('@opentelemetry/api').Span;
+  tracer?: import('@opentelemetry/api').Tracer;
+  activeContext?: import('@opentelemetry/api').Context;
+  parentContext: import('@opentelemetry/api').Context;
+  traceId: string;
+  spanId: string;
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `span` | `Span` | Active span for the request pipeline |
+| `tracer` | `Tracer \| undefined` | Only populated when `perStage: true` |
+| `activeContext` | `Context \| undefined` | Only populated when `perStage: true` |
+| `parentContext` | `Context` | Parent context for child span creation |
+| `traceId` | `string` | W3C trace ID (hex string) |
+| `spanId` | `string` | Span ID (hex string) |
+
+[Full documentation →](/middleware/tracing/)
+
+### `acc.idempotency`
+
+Stored by `[idempotency(), 'idempotency']`. Idempotency-Key processing
+result — a discriminated union with three variants.
+
+```ts
+type IdempotencyResult =
+  | Record<string, never>
+  | { key: string; fingerprint: string; complete: (response: unknown) => void; discard: () => void }
+  | { replayed: true };
+```
+
+| Variant | When | Shape |
+| --- | --- | --- |
+| Empty object `{}` | No `Idempotency-Key` header present (and not required) | `Record<string, never>` |
+| Active key | First request with this key — store the response when done | `{ key, fingerprint, complete(), discard() }` |
+| Replayed | Subsequent request with a completed key — response was replayed | `{ replayed: true }` |
+
+[Full documentation →](/middleware/idempotency/)
+
+## ergo-router Seeds
+
+When using `@centralping/ergo-router`, the domain accumulator is seeded
+with route match data **before** the pipeline runs. These values are
+available to all middleware and the `execute` handler.
+
+### `acc.route.params`
+
+Route parameters extracted by the router's path matching (powered by
+`find-my-way`). Available immediately — not produced by a middleware
+tuple.
+
+```js
+// Route: "/users/:id/posts/:postId"
+// Request: GET /users/42/posts/7
+
+acc.route.params  // → { id: "42", postId: "7" }
+```
+
+Parameter values are always strings. Numeric conversion is the
+consumer's responsibility.
+
+## Response Accumulator
+
+The response accumulator collects HTTP response properties set by
+middleware. When any middleware sets `statusCode`, the pipeline breaks
+immediately. After pipeline completion (or break), `send()` reads the
+response accumulator to format the HTTP response.
+
+```ts
+interface ResponseAccumulator {
+  statusCode?: number;
+  headers?: [string, string][];
+  body?: unknown;
+  detail?: string;
+  retryAfter?: number;
+  instance?: string;
+  location?: string;
+  lastModified?: Date;
+  type?: string;
+  [key: string]: unknown;
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `statusCode` | `number` | HTTP status code — setting this breaks the pipeline |
+| `headers` | `[string, string][]` | Response headers as `[name, value]` tuples (appended, not overwritten) |
+| `body` | `unknown` | Response body (serialized by `send()`) |
+| `detail` | `string` | RFC 9457 Problem Details `detail` field |
+| `retryAfter` | `number` | `Retry-After` header value in seconds |
+| `instance` | `string` | RFC 9457 `instance` URI |
+| `location` | `string` | `Location` header value (redirects, 201 Created) |
+| `lastModified` | `Date` | `Last-Modified` header value |
+| `type` | `string` | RFC 9457 `type` URI |
+
+## Further Reading
+
+- [Architecture](/concepts/architecture/) — the two-accumulator pipeline model
+- [Fast Fail Pipeline](/concepts/fast-fail/) — stage-by-stage ordering
+- [send middleware](/middleware/send/) — how the response accumulator is consumed

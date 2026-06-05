@@ -81,6 +81,10 @@ export default defineConfig({
           label: "Concepts",
           items: [
             { label: "Architecture", slug: "concepts/architecture" },
+            {
+              label: "Accumulator Reference",
+              slug: "concepts/accumulator",
+            },
             { label: "Fast Fail Pipeline", slug: "concepts/fast-fail" },
             {
               label: "Standards Compliance",
