@@ -9,8 +9,8 @@ import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Your API serves two types of clients:
 
-- **Browser clients** — use session cookies, need CSRF protection, and
-  make cross-origin requests subject to CORS policy
+- **Browser clients** — use CSRF cookies for request integrity, need
+  CSRF protection, and make cross-origin requests subject to CORS policy
 - **Mobile or service clients** — use Bearer tokens in the
   `Authorization` header, are not vulnerable to CSRF, and do not send
   cookies
@@ -87,7 +87,7 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
 
     const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
 
-    // Browser route — cookie auth with CSRF protection
+    // Browser route — CSRF protection + Bearer auth
     const browserPipeline = compose(
       [cookie(), "cookies"],
       [csrfMiddleware.verify, "csrf"],
@@ -122,6 +122,8 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
+    import createRouter from "@centralping/ergo-router";
+
     const router = createRouter({
       defaults: {
         csrf: { secret: process.env.CSRF_SECRET },
@@ -314,30 +316,37 @@ CORS and CSRF operate at different layers of the request lifecycle:
 | Cookie + Bearer (mixed) | Both | **Per-route** | Enable CSRF on cookie-auth routes, disable on Bearer-only routes |
 | None (public) | Any | **No** | No credentials to protect |
 
-### `sameSite: 'Strict'` and Cross-Origin Flows
+### `sameSite: 'Strict'` and Cross-Site Requests
 
 ergo's CSRF middleware locks both cookies to `sameSite: 'Strict'`. This
-means CSRF cookies are **only sent on same-origin requests** — the
-browser will not attach them on cross-origin navigations or
-cross-origin `fetch()` calls.
+means CSRF cookies are sent on **same-site** requests and withheld on
+**cross-site** requests. The `SameSite` attribute operates on the
+**site** boundary (registrable domain), not the origin boundary — so
+`app.example.com` and `api.example.com` are cross-origin but
+**same-site** (both under `example.com`).
 
 This has two implications:
 
-1. **Same-origin SPAs** (e.g., `app.example.com` calling
-   `api.example.com` is cross-origin) — CSRF cookies will not be
-   delivered. CSRF protection requires same-origin deployment or
-   sub-domain cookie sharing with appropriate `domain` configuration.
+1. **Cross-origin, same-site SPAs** (e.g., `app.example.com` calling
+   `api.example.com`) — `SameSite=Strict` cookies are delivered because
+   the request is same-site. However, the CSRF cookies are host-only by
+   default (scoped to the host that set them). If your API at
+   `api.example.com` sets CSRF cookies, they are sent back to
+   `api.example.com` on same-site requests — no additional `domain`
+   configuration is needed for this topology.
 
-2. **Third-party integrations** — external services calling your API
-   cannot use the double-submit cookie pattern at all. These clients
-   should use Bearer token authentication with `csrf: false`.
+2. **Cross-site integrations** (e.g., `other-domain.com` calling your
+   API) — the browser will not send `SameSite=Strict` cookies on
+   cross-site requests. These clients should use Bearer token
+   authentication with `csrf: false`.
 
-<Aside type="tip" title="Same-origin deployment">
-  For browser clients, deploy your SPA and API on the same origin
-  (e.g., `example.com/app` and `example.com/api`) to ensure
-  `sameSite: 'Strict'` cookies are delivered. If you need cross-origin
-  CSRF support, consider configuring cookie `domain` for sub-domain
-  sharing (e.g., `.example.com`).
+<Aside type="tip" title="Same-site vs cross-site">
+  `SameSite=Strict` cookies work across subdomains of the same
+  registrable domain. `app.example.com` and `api.example.com` are
+  same-site — cookies are delivered. `other-domain.com` calling
+  `api.example.com` is cross-site — cookies are withheld. If your SPA
+  and API share a registrable domain, `sameSite: 'Strict'` works
+  without additional cookie `domain` configuration.
 </Aside>
 
 ### Bearer Clients and Stale CSRF Cookies
