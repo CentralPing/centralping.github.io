@@ -34,7 +34,7 @@ not your API's functionality:
 | Auth mechanism | Client type | CSRF needed? | Rationale |
 | -------------- | ----------- | ------------ | --------- |
 | Session cookie | Browser | **Yes** | Browsers auto-attach cookies — CSRF prevents forged submissions |
-| Bearer token | Mobile/service | **No** | Tokens are explicitly attached by the client, not auto-sent by the browser |
+| Bearer token | Mobile/service | **No** | Tokens are explicitly attached by the client — not auto-sent by the browser |
 | Cookie + Bearer (mixed) | Both | **Per-route** | Enable CSRF on cookie-auth routes, disable on Bearer-only routes |
 | None (public) | Any | **No** | No credentials to protect |
 
