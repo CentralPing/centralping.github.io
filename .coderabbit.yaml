@@ -1,44 +1,226 @@
 language: en-US
+early_access: true
+
 tone_instructions: >
   Focus on content accuracy (ergo/ergo-router API references, RFC citations),
-  accessible Starlight/Astro patterns, and correct Typedoc integration.
+  accessible Starlight/Astro patterns, and correct Typedoc integration. Verify
+  technical descriptions match the current state of the library repos.
+
 reviews:
   profile: chill
   request_changes_workflow: true
   high_level_summary: true
   high_level_summary_in_walkthrough: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
   review_details: true
   poem: false
   review_status: true
   related_issues: true
   related_prs: true
+  assess_linked_issues: true
+  estimate_code_review_effort: true
+  prompt_for_ai_agents: true
+  abort_on_close: true
+
   path_filters:
     - "!public/**"
     - "!dist/**"
+    - "!.ergo-source/**"
+    - "!.ergo-router-source/**"
+
   path_instructions:
     - path: "src/content/**"
       instructions: >
         Documentation content (MDX). Verify technical accuracy of ergo/ergo-router
         API descriptions, correct RFC references, and consistent terminology with
-        the library READMEs and JSDoc.
+        the library READMEs and JSDoc. Code examples must match current API
+        signatures. Dual JS/TS examples use Starlight Tabs/TabItem components.
+
     - path: "src/components/**"
       instructions: >
-        Astro components. Verify accessibility, responsive design, and correct
-        data binding from benchmark JSON data.
+        Astro components. Verify accessibility (ARIA attributes, semantic HTML,
+        keyboard navigation), responsive design, and correct data binding from
+        benchmark JSON data. Follow Astro component conventions.
+
+    - path: "astro.config.mjs"
+      instructions: >
+        Site configuration including starlight-typedoc plugin instances for ergo
+        and ergo-router API docs. Verify sidebar configuration, plugin entry
+        points, and output directories match the expected structure.
+
   auto_review:
     enabled: true
+    auto_incremental_review: true
     drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "[skip review]"
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: "warning"
+      requirements: |
+        PR title must follow conventional commit format: `{type}: {description} (#{issue-number})`
+        where type is one of: feat, fix, refactor, docs, chore, test, spike.
+        Description should be lowercase, imperative mood, concise.
+    description:
+      mode: "off"
+    issue_assessment:
+      mode: "warning"
+    custom_checks:
+      - name: "Content Accuracy"
+        mode: "warning"
+        instructions: |
+          Pass/fail criteria for changed files in src/content/:
+          - FAIL if API descriptions, function signatures, or option defaults do not
+            match the current state of ergo or ergo-router source code and JSDoc.
+          - FAIL if RFC citations reference incorrect section numbers or outdated
+            RFC versions (e.g., citing RFC 7231 when RFC 9110 supersedes it).
+          - FAIL if code examples use deprecated API patterns or incorrect import paths.
+          - PASS if content is technically accurate, or if no content files changed.
+          The library JSDoc is the single source of truth for API documentation.
+
+      - name: "Zero Tech Debt"
+        mode: "warning"
+        instructions: |
+          Pass/fail criteria for all changed files:
+          - FAIL if new lines (added in this PR, not pre-existing) contain TODO, FIXME,
+            HACK, or XXX comments.
+          - PASS if no such patterns are found in newly added lines.
+
+  tools:
+    github-checks:
+      enabled: true
+      timeout_ms: 300000
+    markdownlint:
+      enabled: true
+    languagetool:
+      enabled: true
+      level: "default"
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    ast-grep:
+      essential_rules: true
+    biome:
+      enabled: false
+    eslint:
+      enabled: false
+    oxc:
+      enabled: false
+    ruff:
+      enabled: false
+    pylint:
+      enabled: false
+    flake8:
+      enabled: false
+    golangci-lint:
+      enabled: false
+    clippy:
+      enabled: false
+    phpstan:
+      enabled: false
+    phpmd:
+      enabled: false
+    phpcs:
+      enabled: false
+    swiftlint:
+      enabled: false
+    rubocop:
+      enabled: false
+    detekt:
+      enabled: false
+    buf:
+      enabled: false
+    regal:
+      enabled: false
+    pmd:
+      enabled: false
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: false
+    fortitude:
+      enabled: false
+    fbinfer:
+      enabled: false
+    sqlfluff:
+      enabled: false
+    hadolint:
+      enabled: false
+    shellcheck:
+      enabled: false
+    circleci:
+      enabled: false
+    prisma-lint:
+      enabled: false
+    luacheck:
+      enabled: false
+    brakeman:
+      enabled: false
+    dotenv-lint:
+      enabled: false
+    htmlhint:
+      enabled: false
+    stylelint:
+      enabled: false
+    checkmake:
+      enabled: false
+    osv-scanner:
+      enabled: false
+    blinter:
+      enabled: false
+    smarty-lint:
+      enabled: false
+    ember-template-lint:
+      enabled: false
+    psscriptanalyzer:
+      enabled: false
+
 chat:
   auto_reply: true
+
 knowledge_base:
   learnings:
     scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
   linked_repositories:
     - repository: "CentralPing/ergo"
       instructions: >
         Core middleware toolkit. API reference docs are generated from ergo's JSDoc
-        via starlight-typedoc. Content pages reference ergo's architecture and middleware.
+        via starlight-typedoc. Content pages reference ergo's architecture, middleware
+        factories, shared primitives, and pipeline model. JSDoc is the single source
+        of truth for API documentation.
     - repository: "CentralPing/ergo-router"
       instructions: >
-        REST-compliant router. API reference docs will be generated from ergo-router's
-        JSDoc. Content pages reference routing and transport features.
+        REST-compliant router. API reference docs are generated from ergo-router's
+        JSDoc via starlight-typedoc. Content pages reference routing, transport
+        concerns, declarative config, and pipeline builder. Route config documentation
+        must match the current pipeline-builder.js config keys.
