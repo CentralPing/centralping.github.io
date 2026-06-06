@@ -76,8 +76,8 @@ Unquoted values (e.g., `Idempotency-Key: my-key`) are rejected with a
     import { compose, body, idempotency } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
-      [idempotency({ required: true }), "idempotency"],
+      {fn: body(), setPath: "body"},
+      {fn: idempotency({ required: true }), setPath: "idempotency"},
       (req, res, acc) => ({
         response: { statusCode: 201, body: { created: true } },
       }),
@@ -113,8 +113,8 @@ idempotency entry (e.g. on failure).
     import { compose, body, idempotency } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
-      [idempotency({ required: true }), "idempotency"],
+      {fn: body(), setPath: "body"},
+      {fn: idempotency({ required: true }), setPath: "idempotency"},
       async (req, res, acc) => {
         try {
           const result = await processPayment(acc.body.parsed);

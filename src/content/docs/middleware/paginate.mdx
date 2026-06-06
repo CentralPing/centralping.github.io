@@ -71,8 +71,8 @@ None. Invalid or missing query parameters fall back to defaults silently.
     import { compose, url, paginate, handler } from "@centralping/ergo";
 
     const pipeline = compose(
-      [url(), "url"],
-      [paginate(), "paginate"],
+      {fn: url(), setPath: "url"},
+      {fn: paginate(), setPath: "paginate"},
       async (req, res, acc) => {
         const { offset, limit } = acc.paginate;
         const items = await db.find(offset, limit);

@@ -65,8 +65,8 @@ None. Tracing is observability-only.
     } from "@centralping/ergo";
 
     const pipeline = compose(
-      [tracing(), "trace"],
-      [logger(), "log"],
+      {fn: tracing(), setPath: "trace"},
+      {fn: logger(), setPath: "log"},
       // ... remaining middleware
     );
 
@@ -76,11 +76,13 @@ None. Tracing is observability-only.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { tracing } from "@centralping/ergo";
     import createRouter, { graceful } from "@centralping/ergo-router";
 
-    const router = createRouter();
-    router.use([tracing({ perStage: true }), "trace"]);
+    const router = createRouter({
+      defaults: {
+        tracing: { perStage: true },
+      },
+    });
 
     router.get("/health", {
       execute: () => ({ response: { body: { ok: true } } }),

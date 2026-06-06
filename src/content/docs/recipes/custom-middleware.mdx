@@ -48,7 +48,7 @@ no subsequent middleware executes.
 
 ### Domain Accumulator Contribution
 
-Use a `[fn, 'key']` tuple to set a named path on the domain
+Use a `{fn, setPath}` config object to set a named path on the domain
 accumulator. This is the standard pattern for middleware that produces
 a single named result:
 
@@ -66,7 +66,7 @@ a single named result:
     }
 
     const pipeline = compose(
-      [featureFlags({ endpoint: "https://flags.internal" }), "flags"],
+      {fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"},
       // acc.flags is now available to subsequent middleware
       (req, res, acc) => ({
         response: {
@@ -89,7 +89,7 @@ a single named result:
     }
 
     router.get("/dashboard", {
-      use: [[featureFlags({ endpoint: "https://flags.internal" }), "flags"]],
+      use: [{fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"}],
       execute: (req, res, acc) => ({
         response: {
           body: { features: acc.flags, user: acc.auth?.sub },
@@ -100,7 +100,7 @@ a single named result:
   </TabItem>
 </Tabs>
 
-Without a `setPath` (bare function, no tuple), the returned value is
+Without a `setPath` (bare function, no config object), the returned value is
 merged via `Object.assign(domainAcc, value)` — use this when
 contributing multiple keys:
 
@@ -166,7 +166,7 @@ handler:
 
     const pipeline = compose(
       // ... auth middleware ...
-      [requireAuditContext(), "audit"],
+      {fn: requireAuditContext(), setPath: "audit"},
       // Only reached if auth context exists
       (req, res, acc) => ({
         response: { body: { actor: acc.audit.auditActor } },
@@ -197,7 +197,7 @@ handler:
     }
 
     router.get("/admin/audit-log", {
-      use: [[requireAuditContext(), "audit"]],
+      use: [{fn: requireAuditContext(), setPath: "audit"}],
       execute: (req, res, acc) => ({
         response: { body: { actor: acc.audit.auditActor } },
       }),
@@ -241,7 +241,7 @@ const pipeline = compose(
   // Side effects (sets res headers)
   fromConnect(someExpressMiddleware()),
   // Native middleware reads/writes accumulators
-  [myNativeMiddleware(), "enrichment"],
+  {fn: myNativeMiddleware(), setPath: "enrichment"},
 );
 
 export default handler(pipeline);
@@ -260,7 +260,7 @@ validated parameters:
 ```js
 router.get("/resource/:id", {
   validate: { params: paramsSchema },
-  use: [[myMiddleware(), "custom"]],
+  use: [{fn: myMiddleware(), setPath: "custom"}],
   // acc.url, acc.body, acc.auth, acc.cookies, acc.route.params
   // are all available inside myMiddleware
   execute: (req, res, acc) => ({ /* ... */ }),
@@ -273,13 +273,13 @@ concatenated — defaults run first, then route-specific middleware:
 ```js
 const router = createRouter({
   defaults: {
-    use: [[globalMiddleware(), "global"]],
+    use: [{fn: globalMiddleware(), setPath: "global"}],
   },
 });
 
 router.get("/endpoint", {
   // Pipeline runs: ...defaults.use → ...route.use → execute
-  use: [[routeMiddleware(), "route"]],
+  use: [{fn: routeMiddleware(), setPath: "route"}],
   execute: (req, res, acc) => ({ /* ... */ }),
 });
 ```

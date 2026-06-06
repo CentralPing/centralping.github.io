@@ -105,14 +105,14 @@ The factory returns `{ issue, verify }`:
 
     // Issue tokens on GET
     const issuePipeline = compose(
-      [cookie(), "cookies"],
-      [csrfMiddleware.issue, "csrf"],
+      {fn: cookie(), setPath: "cookies"},
+      {fn: csrfMiddleware.issue, setPath: "csrf"},
     );
 
     // Verify tokens on POST
     const verifyPipeline = compose(
-      [cookie(), "cookies"],
-      [csrfMiddleware.verify, "csrf"],
+      {fn: cookie(), setPath: "cookies"},
+      {fn: csrfMiddleware.verify, setPath: "csrf"},
     );
     ```
   </TabItem>

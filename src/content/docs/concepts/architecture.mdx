@@ -57,24 +57,25 @@ Every ergo pipeline uses a **two-accumulator** composition model powered by
 Every middleware function returns `{value?, response?}`:
 
 - `value` merges into the domain accumulator at the path specified by the
-  tuple's second element
+  config object's `setPath` property
 - `response` merges into the response accumulator (headers append, scalar
   properties overwrite)
 - A `response` with `statusCode` breaks the pipeline immediately — no
   further middleware executes
 
-### Tuple Format
+### Composition Format
 
-Middleware are registered as `[fn, setPath]` tuples that pair the middleware
-function with its domain accumulator key:
+Middleware are registered as `{fn, setPath}` config objects that pair the middleware
+function with its domain accumulator key. Response-only middleware (those that
+contribute only headers, not domain data) are plain functions — no wrapper needed:
 
 ```js
 const pipeline = compose(
-  [logger(), 'log'],
-  [cors(), 'cors'],
-  [accepts({types: ['application/json']}), 'accepts'],
-  [authorization({strategies: [...]}), 'auth'],
-  [body(), 'body'],
+  {fn: logger(), setPath: 'log'},
+  cors(),
+  {fn: accepts({types: ['application/json']}), setPath: 'accepts'},
+  {fn: authorization({strategies: [...]}), setPath: 'auth'},
+  {fn: body(), setPath: 'body'},
   (req, res, acc) => ({response: {body: acc.body.parsed}})
 );
 ```
@@ -197,7 +198,7 @@ middleware to include and their options:
 
 The builder resolves route-level overrides against router-level defaults,
 auto-includes method-appropriate middleware (`url` for GET/DELETE, `body` for
-POST/PUT/PATCH), and produces a `[fn, setPath]` tuple array ready for
+POST/PUT/PATCH), and produces a `{fn, setPath}` config object array ready for
 `compose-with`.
 
 ## Further Reading

@@ -103,7 +103,7 @@ contexts.
     import { compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body({ limit: 2 * 1024 * 1024 }), "body"],
+      {fn: body({ limit: 2 * 1024 * 1024 }), setPath: "body"},
       // acc.body.parsed === { name: "Jane" }
     );
     ```

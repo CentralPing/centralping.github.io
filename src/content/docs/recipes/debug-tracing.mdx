@@ -25,9 +25,9 @@ pipeline break.
     } from "@centralping/ergo";
 
     const pipeline = compose(
-      [logger(), "log"],
-      [authorization({ strategies }), "auth"],
-      [body(), "body"],
+      {fn: logger(), setPath: "log"},
+      {fn: authorization({ strategies }), setPath: "auth"},
+      {fn: body(), setPath: "body"},
       (req, res, acc) => ({
         response: { body: acc.body.parsed, statusCode: 200 },
       }),
@@ -85,7 +85,7 @@ responseAcc._trace = { steps: [], breakAt: undefined };
 ```
 
 As each middleware executes, its label (the `setPath` from the
-`[fn, setPath]` tuple, or the function name) is pushed onto `steps`.
+`{fn, setPath}` config object, or the function name) is pushed onto `steps`.
 When a middleware sets `responseAcc.statusCode` and triggers a pipeline
 break, `breakAt` records that middleware's label.
 

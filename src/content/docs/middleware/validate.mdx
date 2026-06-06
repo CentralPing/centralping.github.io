@@ -81,9 +81,9 @@ a data producer.
     import { compose, body, url, validate } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
-      [url(), "url"],
-      [validate({
+      {fn: body(), setPath: "body"},
+      {fn: url(), setPath: "url"},
+      validate({
         body: {
           type: "object",
           properties: { name: { type: "string" } },
@@ -95,7 +95,7 @@ a data producer.
             page: { type: "string", pattern: "^[0-9]+$" },
           },
         },
-      }), "validation"],
+      }),
     );
     ```
   </TabItem>

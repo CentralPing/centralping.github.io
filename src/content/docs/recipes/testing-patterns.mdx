@@ -29,7 +29,7 @@ and test behavior through the full HTTP stack.
 
       before(async () => {
         const pipeline = compose(
-          [body(), "body"],
+          {fn: body(), setPath: "body"},
           (req, res, acc) => ({
             response: {
               statusCode: 201,
