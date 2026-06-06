@@ -47,11 +47,11 @@ The error `detail` is: `Request timed out after ${ms}ms`.
     import { compose, timeout } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: timeout({ ms: 10_000, statusCode: 504 }), setPath: "timeout"},
+      timeout({ ms: 10_000, statusCode: 504 }),
       async (req, res, acc) => ({
         response: { body: await slowOperation(), statusCode: 200 },
       }),
-    );
+
     ```
   </TabItem>
   <TabItem label="ergo-router">
