@@ -3,7 +3,7 @@ title: send
 description: Response serialization — JSON, streams, ETags, conditional requests, RFC 9457 errors, and Prefer header support.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 The terminal response writer in ergo's two-accumulator model. Called once
 by `handler()` (or ergo-router's `auto-wrap`) after the pipeline
@@ -74,6 +74,137 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
 | **304 Not Modified** | `If-None-Match` weak-matches the ETag, or `If-Modified-Since` and resource not modified |
 | **412 Precondition Failed** | `If-Match` fails on unsafe methods, or `If-Unmodified-Since` fails |
 | **204 No Content** | `Prefer: return=minimal` on 2xx responses (200 → 204) |
+
+### Setting `lastModified`
+
+Return `lastModified` on the response accumulator to set the
+`Last-Modified` header and enable date-based conditional request
+evaluation. The value can be a `Date` or a date string — unparseable
+values are silently ignored (no header set, no conditional evaluation).
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { handler, compose } from "@centralping/ergo";
+
+    const pipeline = compose(
+      async (req, res, acc) => {
+        const todo = await db.findById("42");
+        return {
+          response: {
+            statusCode: 200,
+            body: todo,
+            lastModified: todo.updatedAt,
+          },
+        };
+      },
+    );
+
+    const server = http.createServer(handler(pipeline));
+    // GET /todos/42
+    // → 200 OK
+    // → Last-Modified: Thu, 05 Jun 2025 12:00:00 GMT
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/todos/:id", {
+      execute: async (req, res, acc) => {
+        const todo = await db.findById(acc.route.params.id);
+        return {
+          response: {
+            statusCode: 200,
+            body: todo,
+            lastModified: todo.updatedAt,
+          },
+        };
+      },
+    });
+    // GET /todos/42
+    // → 200 OK
+    // → Last-Modified: Thu, 05 Jun 2025 12:00:00 GMT
+    ```
+  </TabItem>
+</Tabs>
+
+When a client sends the `Last-Modified` value back in an
+`If-Modified-Since` header, `send()` automatically returns
+`304 Not Modified` with no body if the resource has not changed.
+Dates are compared at second granularity.
+
+```text
+GET /todos/42
+If-Modified-Since: Thu, 05 Jun 2025 12:00:00 GMT
+
+→ 304 Not Modified (no body)
+```
+
+### Write Protection with `If-Unmodified-Since`
+
+For unsafe methods (PUT, PATCH, DELETE), `send()` evaluates
+`If-Unmodified-Since` as a write-protection guard. If the resource was
+modified after the condition date, the request is rejected with
+`412 Precondition Failed`.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { handler, compose, body } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [body(), "body"],
+      async (req, res, acc) => {
+        const todo = await db.findAndUpdate("42", acc.body.parsed);
+        return {
+          response: {
+            statusCode: 200,
+            body: todo,
+            lastModified: todo.updatedAt,
+          },
+        };
+      },
+    );
+
+    const server = http.createServer(handler(pipeline));
+    // PUT /todos/42
+    // If-Unmodified-Since: Thu, 05 Jun 2025 11:00:00 GMT
+    // (resource modified at 12:00:00 — after the condition date)
+    // → 412 Precondition Failed
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.put("/todos/:id", {
+      execute: async (req, res, acc) => {
+        const todo = await db.findAndUpdate(
+          acc.route.params.id,
+          acc.body.parsed,
+        );
+        return {
+          response: {
+            statusCode: 200,
+            body: todo,
+            lastModified: todo.updatedAt,
+          },
+        };
+      },
+    });
+    // PUT /todos/42
+    // If-Unmodified-Since: Thu, 05 Jun 2025 11:00:00 GMT
+    // (resource modified at 12:00:00 — after the condition date)
+    // → 412 Precondition Failed
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="note">
+  When both `If-None-Match` and `If-Modified-Since` are present,
+  `send()` evaluates only the ETag conditional — the date-based check
+  is skipped entirely per
+  [RFC 9110 §13.1.3](https://www.rfc-editor.org/rfc/rfc9110#section-13.1.3).
+  The same precedence applies to `If-Match` over `If-Unmodified-Since`
+  per [RFC 9110 §13.1.4](https://www.rfc-editor.org/rfc/rfc9110#section-13.1.4).
+</Aside>
 
 ## Usage
 
