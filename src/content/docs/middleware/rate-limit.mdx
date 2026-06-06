@@ -74,7 +74,7 @@ RFC 9457 error body.
     import { compose, rateLimit } from "@centralping/ergo";
 
     const pipeline = compose(
-      [rateLimit({ max: 100, windowMs: 60_000 }), "rateLimit"],
+      rateLimit({ max: 100, windowMs: 60_000 }),
       (req, res, acc) => ({
         response: { statusCode: 200, body: { ok: true } },
       }),

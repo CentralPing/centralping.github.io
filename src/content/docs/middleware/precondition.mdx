@@ -42,12 +42,12 @@ Returns `undefined` on success — the middleware is a gate.
 
     // Enforce on all methods
     const pipeline = compose(
-      [precondition(), "precondition"],
+      precondition(),
     );
 
     // Enforce only on PUT and PATCH
     const pipeline = compose(
-      [precondition({ methods: ["PUT", "PATCH"] }), "precondition"],
+      precondition({ methods: ["PUT", "PATCH"] }),
     );
     ```
   </TabItem>

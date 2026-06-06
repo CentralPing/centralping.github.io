@@ -58,16 +58,16 @@ None. This middleware always injects headers.
 
     // String shorthand
     const pipeline = compose(
-      [cacheControl({ directives: "public, max-age=3600" }), "cache"],
+      cacheControl({ directives: "public, max-age=3600" }),
     );
 
     // Structured options
     const pipeline = compose(
-      [cacheControl({
+      cacheControl({
         private: true,
         maxAge: 0,
         mustRevalidate: true,
-      }), "cache"],
+      }),
     );
     ```
   </TabItem>

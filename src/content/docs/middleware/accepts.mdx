@@ -62,7 +62,7 @@ failed: `Failed to negotiate content for: [Accept].`
     import { compose, accepts } from "@centralping/ergo";
 
     const pipeline = compose(
-      [accepts({ types: ["application/json"] }), "accepts"],
+      {fn: accepts({ types: ["application/json"] }), setPath: "accepts"},
       // acc.accepts.type === "application/json"
     );
     ```

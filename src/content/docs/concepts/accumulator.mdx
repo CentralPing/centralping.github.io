@@ -14,7 +14,7 @@ both.
 ## Domain Accumulator
 
 Each middleware registers its result at a fixed path on the domain
-accumulator via `[fn, setPath]` tuples. The table below maps every
+accumulator via `{fn, setPath}` config objects. The table below maps every
 pipeline-builder key to its accumulator path and typed interface.
 
 | Config Key | setPath (`acc.*`) | Type Interface | Pipeline Stage |
@@ -52,7 +52,7 @@ pipeline-builder key to its accumulator path and typed interface.
 
 ### `acc.url`
 
-Stored by `[url(), 'url']`. Parsed URL components using a fast
+Stored at `acc.url` by the `url()` middleware. Parsed URL components using a fast
 `indexOf` + `slice` parser.
 
 ```ts
@@ -73,7 +73,7 @@ interface UrlResult {
 
 ### `acc.paginate`
 
-Stored by `[paginate(), 'paginate']`. Parsed pagination parameters — a
+Stored at `acc.paginate` by the `paginate()` middleware. Parsed pagination parameters — a
 discriminated union based on the active strategy.
 
 ```ts
@@ -104,7 +104,7 @@ type PaginateResult =
 
 ### `acc.body`
 
-Stored by `[body(), 'body']`. Parsed request body with metadata.
+Stored at `acc.body` by the `body()` middleware. Parsed request body with metadata.
 
 ```ts
 interface BodyResult {
@@ -134,7 +134,7 @@ interface BodyResult {
 
 ### `acc.cookies`
 
-Stored by `[cookie(), 'cookies']`. Cookie jar with incoming cookies as
+Stored at `acc.cookies` by the `cookie()` middleware. Cookie jar with incoming cookies as
 own properties and methods for managing outgoing cookies.
 
 ```ts
@@ -158,7 +158,7 @@ are managed via `set()`, `get()`, `clear()`, and serialized to
 
 ### `acc.log`
 
-Stored by `[logger(), 'log']`. Structured request metadata captured at
+Stored at `acc.log` by the `logger()` middleware. Structured request metadata captured at
 pipeline entry.
 
 ```ts
@@ -197,7 +197,7 @@ interface LogEntry {
 
 ### `acc.accepts`
 
-Stored by `[accepts(), 'accepts']`. Content negotiation results.
+Stored at `acc.accepts` by the `accepts()` middleware. Content negotiation results.
 
 ```ts
 interface AcceptsResult {
@@ -219,7 +219,7 @@ interface AcceptsResult {
 
 ### `acc.prefer`
 
-Stored by `[prefer(), 'prefer']`. Parsed RFC 7240 Prefer header as a
+Stored at `acc.prefer` by the `prefer()` middleware. Parsed RFC 7240 Prefer header as a
 flat map.
 
 ```ts
@@ -235,7 +235,7 @@ Example: `{ return: 'minimal', 'respond-async': true }`.
 
 ### `acc.auth`
 
-Stored by `[authorization(), 'auth']`. The authenticated identity
+Stored at `acc.auth` by the `authorization()` middleware. The authenticated identity
 returned by the matching strategy's authorizer function.
 
 ```ts
@@ -264,7 +264,7 @@ acc.auth  // → { service: "billing", scopes: ["invoices:read"] }
 
 ### `acc.trace`
 
-Stored by `[tracing(), 'trace']`. OpenTelemetry span and context for
+Stored at `acc.trace` by the `tracing()` middleware. OpenTelemetry span and context for
 the current request.
 
 ```ts
@@ -291,7 +291,7 @@ interface TracingResult {
 
 ### `acc.idempotency`
 
-Stored by `[idempotency(), 'idempotency']`. Idempotency-Key processing
+Stored at `acc.idempotency` by the `idempotency()` middleware. Idempotency-Key processing
 result — a discriminated union with three variants.
 
 ```ts
@@ -319,7 +319,7 @@ available to all middleware and the `execute` handler.
 
 Route parameters extracted by the router's path matching (powered by
 `find-my-way`). Available immediately — not produced by a middleware
-tuple.
+config object.
 
 ```js
 // Route: "/users/:id/posts/:postId"

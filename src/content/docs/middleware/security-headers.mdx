@@ -73,16 +73,16 @@ None.
     import { compose, securityHeaders } from "@centralping/ergo";
 
     const pipeline = compose(
-      [securityHeaders(), "security"],
+      securityHeaders(),
     );
 
     // Custom configuration
     const pipeline = compose(
-      [securityHeaders({
+      securityHeaders({
         xFrameOptions: "SAMEORIGIN",
         permissionsPolicy: "camera=(), microphone=()",
         xXssProtection: false,
-      }), "security"],
+      }),
     );
     ```
   </TabItem>

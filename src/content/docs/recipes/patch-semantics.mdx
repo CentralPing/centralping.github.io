@@ -25,8 +25,8 @@ the patch overwrite the target; properties set to `null` are removed.
     import { compose, body, validate } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
-      [validate({
+      {fn: body(), setPath: "body"},
+      validate({
         body: {
           type: "object",
           minProperties: 1,
@@ -37,7 +37,7 @@ the patch overwrite the target; properties set to `null` are removed.
           },
           additionalProperties: false,
         },
-      }), "validation"],
+      }),
       async (req, res, acc) => {
         const updated = await db.merge(acc.route.params.id, acc.body.parsed);
         return { response: { body: updated } };
@@ -81,8 +81,8 @@ path in the document.
     import { compose, body, validate } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
-      [validate({
+      {fn: body(), setPath: "body"},
+      validate({
         body: {
           type: "array",
           minItems: 1,
@@ -98,7 +98,7 @@ path in the document.
             additionalProperties: false,
           },
         },
-      }), "validation"],
+      }),
       async (req, res, acc) => {
         const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
         return { response: { body: updated } };
@@ -146,7 +146,7 @@ inspect `acc.body.type` to determine which format was sent:
     import { compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
+      {fn: body(), setPath: "body"},
       async (req, res, acc) => {
         const { type, parsed } = acc.body;
         const id = acc.route.params.id;

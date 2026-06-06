@@ -31,6 +31,7 @@ import { send } from "@centralping/ergo";
 | `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation`. When `true`, appends `Prefer` to the `Vary` header |
 | `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate RFC 8288 Link headers and `X-Total-Count` for paginated responses |
 | `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope |
+| `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the RFC 9457 Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json` |
 
 ### Envelope Values
 
@@ -152,7 +153,7 @@ modified after the condition date, the request is rejected with
     import { handler, compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      [body(), "body"],
+      {fn: body(), setPath: "body"},
       async (req, res, acc) => {
         const todo = await db.findAndUpdate("42", acc.body.parsed);
         return {

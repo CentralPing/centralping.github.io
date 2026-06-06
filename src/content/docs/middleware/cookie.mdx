@@ -62,7 +62,7 @@ None.
     import { compose, cookie } from "@centralping/ergo";
 
     const pipeline = compose(
-      [cookie(), "cookies"],
+      {fn: cookie(), setPath: "cookies"},
       (req, res, acc) => {
         const session = acc.cookies.session;
         acc.cookies.set("visited", "true", {

@@ -266,9 +266,9 @@ import http from "node:http";
 import { compose, handler, logger, url, accepts } from "@centralping/ergo";
 
 const pipeline = compose(
-  [logger(), "log"],
-  [accepts({ types: ["application/json"] }), "accepts"],
-  [url(), "url"],
+  {fn: logger(), setPath: "log"},
+  {fn: accepts({ types: ["application/json"] }), setPath: "accepts"},
+  {fn: url(), setPath: "url"},
   (req, res, acc) => ({
     response: {
       body: { path: acc.url.pathname, query: acc.url.query },
@@ -281,7 +281,7 @@ const server = http.createServer(handler(pipeline));
 server.listen(3000, () => console.log("Listening on :3000"));
 ```
 
-Each middleware is registered as a `[fn, setPath]` tuple — the function and the
+Each middleware is registered as a `{fn, setPath}` config object — the function and the
 key under which its result is stored on the domain accumulator. The final
 function in the pipeline is the execute step: it reads accumulated values and
 returns a `{response}` object.
