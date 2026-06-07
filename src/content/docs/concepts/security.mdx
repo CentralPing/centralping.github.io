@@ -305,6 +305,15 @@ that require no configuration to be secure:
 | `Permissions-Policy` | Restrictive defaults | [W3C Permissions Policy](https://www.w3.org/TR/permissions-policy/) |
 | `Strict-Transport-Security` | Via ergo-router (HTTPS only) | [RFC 6797](https://www.rfc-editor.org/rfc/rfc6797) |
 
+<Aside type="tip" title="Serving HTML alongside your API?">
+  The `default-src 'none'` CSP is designed for JSON API endpoints. If
+  your server also serves HTML content (dashboards, documentation, health
+  check pages), the restrictive default will block styles, scripts, and
+  images from rendering. See
+  [CSP Implications](/middleware/security-headers/#csp-implications) for
+  per-route and transport-level override patterns.
+</Aside>
+
 Additional structural protections:
 
 - **Null-prototype objects** for all user-input-derived data (query params,
