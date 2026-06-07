@@ -199,6 +199,14 @@ stages:
   Setting the key to `false` disables auto-inclusion for that route.
 </Aside>
 
+<Aside type="tip" title="The execute function">
+  The third argument (`acc`) is the **domain accumulator** — it carries parsed
+  body, auth identity, route params, and other middleware outputs accumulated
+  through the pipeline. A fourth argument (response accumulator) is available
+  for advanced use but rarely needed. See the
+  [Accumulator Reference](/concepts/accumulator/) for the complete shape.
+</Aside>
+
 <Aside type="tip" title="The accumulator body object">
   The POST route above reads `acc.body.parsed` — the decoded JavaScript value
   from the request body. The full body result also includes `acc.body.raw` (the
@@ -265,7 +273,7 @@ server.listen(3000, () => console.log("Listening on :3000"));
 ```
 
 Each middleware is registered as a `{fn, setPath}` config object — the function and the
-key under which its result is stored on the domain accumulator. The final
+key under which its result is stored on the [domain accumulator](/concepts/accumulator/). The final
 function in the pipeline is the execute step: it reads accumulated values and
 returns a `{response}` object.
 
