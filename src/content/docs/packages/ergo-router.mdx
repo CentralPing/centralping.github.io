@@ -141,6 +141,98 @@ router.get("/admin", {
   URL parsing.
 </Aside>
 
+### Application Middleware
+
+`router.use(...fns)` registers middleware that runs before every route
+pipeline. Application middleware is prepended to each route's pipeline
+array, executing before all four stages (Negotiation, Authorization,
+Validation, Execution):
+
+```js
+router.use((req, res, acc) => {
+  res.on("finish", () => {
+    console.log(`${req.method} ${req.url} ${res.statusCode}`);
+  });
+});
+```
+
+`use()` returns the router, so calls can be chained:
+
+```js
+router
+  .use(requestLogger)
+  .use(requestMetrics)
+  .get("/users", { execute: listUsers });
+```
+
+<Aside type="caution" title="Array pipelines only">
+  Application middleware applies to routes registered with declarative
+  config objects or pipeline arrays. Routes registered as a single handler
+  function bypass the pipeline entirely — application middleware does not
+  run for them.
+</Aside>
+
+<Aside type="tip" title="Per-route vs. application middleware">
+  `router.use()` is **application-level** — it runs before all four
+  pipeline stages on every request. The `use` config key is
+  **per-route** — it inserts middleware after Stage 3 (Validation) and
+  before Stage 4 (Execution). See the
+  [Custom Middleware recipe](/recipes/custom-middleware/) for the
+  per-route `use` key.
+</Aside>
+
+### Route Options
+
+Declarative route configs accept per-route options that control pipeline
+behavior. These options are extracted from the config object and passed
+to the auto-wrap layer — they do not correspond to pipeline middleware.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `noSend` | `boolean` | `false` | Skip the automatic `send()` call after the pipeline completes. The handler is responsible for writing the full HTTP response. |
+| `send` | `object` | — | Per-route options passed to `send()`. Overrides router-level `send` defaults. |
+| `catchHandler` | `function` | — | Per-route error handler. Receives `(req, res, err)` when the pipeline throws. Overrides router-level `catchHandler`. |
+
+#### `noSend` — Manual Response Control
+
+When `noSend: true`, ergo-router runs the full pipeline (including OTEL
+tracing if configured) but does not call `send()` after the pipeline
+completes. The handler must write headers, the status code, and the
+response body directly via Node.js `res` methods.
+
+Use cases: streaming responses, Server-Sent Events, file downloads, or
+any response format that `send()` does not support.
+
+```js
+router.get("/events", {
+  noSend: true,
+  authorization: { strategies: [bearerStrategy] },
+  execute: (req, res, acc) => {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    const interval = setInterval(() => {
+      res.write(`data: ${JSON.stringify({ ts: Date.now() })}\n\n`);
+    }, 1000);
+
+    req.on("close", () => {
+      clearInterval(interval);
+      res.end();
+    });
+  },
+});
+```
+
+<Aside type="caution" title="Full response responsibility">
+  With `noSend: true`, the pipeline and OTEL spans still run, but the
+  framework does not write any HTTP response. Your handler must call
+  `res.writeHead()`, `res.write()`, and `res.end()` — if you don't,
+  the client connection will hang.
+</Aside>
+
 ### Graceful Shutdown
 
 `graceful(handler, options?)` creates an HTTP server with full lifecycle
