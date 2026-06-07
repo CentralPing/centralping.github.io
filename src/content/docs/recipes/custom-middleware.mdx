@@ -294,6 +294,14 @@ router.get("/health", {
 });
 ```
 
+<Aside type="note" title="Application-level middleware">
+  The `use` config key documented here is **per-route** — it runs after
+  validation, before execution. For middleware that should run before all
+  four pipeline stages on every request, use
+  [`router.use()`](/packages/ergo-router/#application-middleware)
+  instead.
+</Aside>
+
 ### Accumulator Access
 
 Custom middleware in `use` position receives the full domain
