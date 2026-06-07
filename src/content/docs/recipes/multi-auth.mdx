@@ -259,13 +259,14 @@ anonymous access.
 ### Route-Level Resolution
 
 In ergo-router, each route config key is resolved against router-level
-defaults:
-
-- **`undefined`** (not specified) — inherits the router default
-- **`false`** — explicitly disables, regardless of default
-- **`true`** — uses empty options `{}` (default behavior)
-- **`{ ... }`** — overrides the default with custom options
+defaults. A route value **replaces** the default entirely — setting
+`authorization: { strategies: [basicStrategy] }` on a route discards
+any strategies defined in `defaults.authorization`.
 
 This allows a single `defaults.authorization` to protect the entire
-router while individual routes opt out or override with different
-strategies.
+router while individual routes opt out (`false`) or override with
+different strategies.
+
+See [Config Resolution](/packages/ergo-router/#config-resolution) for
+the full resolution rules, value table, and how to extend defaults
+with spread.
