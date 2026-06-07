@@ -66,6 +66,15 @@ router.post("/users", {
 });
 ```
 
+The `execute` function is the route handler — most handlers use
+`(req, res, acc)`, and advanced handlers can also read a fourth argument
+`responseAcc`. `acc` is the domain accumulator carrying middleware outputs
+(auth identity, parsed body, etc.) plus router-seeded route params
+(`acc.route.params`). See the
+[Accumulator Reference](/concepts/accumulator/) for the complete shape, or the
+[Architecture](/concepts/architecture/) page for the two-accumulator pipeline
+model.
+
 ### Config Resolution
 
 When a route registers a config key that also appears in `defaults`, the
