@@ -149,6 +149,33 @@ health check dashboards, or documentation endpoints), override
   </TabItem>
 </Tabs>
 
+### Transport-Level CSP
+
+ergo-router's transport layer applies security headers to **every
+response** — including 404, 405, and 429 short-circuits that bypass the
+route pipeline. By default, transport-level CSP is **off** (`undefined`),
+so only matched routes receive a CSP header via the route-level
+middleware.
+
+To set a CSP policy at the transport level:
+
+```js
+const router = createRouter({
+  transport: {
+    security: {
+      csp: "default-src 'self'",
+    },
+  },
+});
+```
+
+<Aside type="note" title="Config key difference">
+  The transport config uses `csp`, while the route-level middleware uses
+  `contentSecurityPolicy`. For matched routes, route-level headers
+  overwrite transport-level headers of the same name — so the route-level
+  CSP wins when both are set.
+</Aside>
+
 To disable CSP entirely for a route:
 
 ```js

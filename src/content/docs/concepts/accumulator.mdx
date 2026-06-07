@@ -102,6 +102,15 @@ type PaginateResult =
 
 [Full documentation →](/middleware/paginate/)
 
+<Aside type="note" title="Response-side contract">
+  For `send()` to generate Link headers, your execute handler must return
+  pagination metadata on the response: `{response: {body, paginate: {total}}}`
+  for offset, or `{response: {body, paginate: {nextCursor}}}` for cursor.
+  See [Pagination on the ergo-router page](/packages/ergo-router/#pagination)
+  for the full two-sided contract, or the
+  [Pagination recipe](/recipes/pagination/) for end-to-end examples.
+</Aside>
+
 ### `acc.body`
 
 Stored at `acc.body` by the `body()` middleware. Parsed request body with metadata.

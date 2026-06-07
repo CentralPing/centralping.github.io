@@ -242,6 +242,67 @@ router.get("/events", {
   the client connection will hang.
 </Aside>
 
+### Pagination
+
+The `paginate` config key wires a two-sided contract: **request parsing**
+(the `paginate()` middleware stores structured query parameters at
+`acc.paginate`) and **response metadata** (`send()` reads your handler's
+`response.paginate` to auto-generate RFC 8288 Link headers and
+`X-Total-Count`).
+
+#### Offset Pagination
+
+```js
+router.get("/articles", {
+  paginate: true,
+  execute: async (req, res, acc) => {
+    const { offset, limit } = acc.paginate;
+    const items = await db.find(offset, limit);
+    const total = await db.count();
+    return {
+      response: { body: items, paginate: { total } },
+    };
+  },
+});
+// GET /articles?page=2&per_page=10
+// → Link: </articles?page=1&per_page=10>; rel="first", ...
+// → X-Total-Count: 42
+```
+
+#### Cursor Pagination
+
+```js
+router.get("/events", {
+  paginate: { strategy: "cursor" },
+  execute: async (req, res, acc) => {
+    const { cursor, limit } = acc.paginate;
+    const { items, nextCursor } = await db.findAfter(cursor, limit);
+    return {
+      response: {
+        body: items,
+        paginate: { nextCursor },
+      },
+    };
+  },
+});
+// GET /events?cursor=abc123&limit=10
+// → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
+```
+
+<Aside type="tip" title="Automatic URL parsing">
+  When `paginate` is set in the route config, ergo-router automatically
+  includes `url()` parsing — you do not need to add `url: true`
+  separately. The pipeline builder also auto-enables `send()`'s
+  `paginate: true` option so Link headers are generated without
+  additional configuration.
+</Aside>
+
+For pagination options (custom page sizes, maximum bounds) and the full
+`acc.paginate` shape, see the
+[paginate middleware guide](/middleware/paginate/). For end-to-end
+examples including edge cases, see the
+[Pagination recipe](/recipes/pagination/).
+
 ### Graceful Shutdown
 
 `graceful(handler, options?)` creates an HTTP server with full lifecycle
