@@ -155,35 +155,29 @@ execution.
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import type { IncomingMessage, ServerResponse } from "node:http";
+    import { definePost } from "@centralping/ergo-router";
 
-    interface UserUpdate {
-      name: string;
-      email: string;
-    }
-
-    const updateUser = (
-      req: IncomingMessage,
-      res: ServerResponse,
-      acc: { body: { parsed: UserUpdate }; route: { params: { id: string } } },
-    ) => ({
-      response: { body: updateUserById(acc.route.params.id, acc.body.parsed) },
-    });
-
-    router.put("/users/:id", {
-      validate: {
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", maxLength: 100 },
-            email: { type: "string", format: "email" },
+    router.put(
+      "/users/:id",
+      definePost(
+        {
+          validate: {
+            body: {
+              type: "object",
+              properties: {
+                name: { type: "string", maxLength: 100 },
+                email: { type: "string", format: "email" },
+              },
+              required: ["name", "email"],
+              additionalProperties: false,
+            },
           },
-          required: ["name", "email"],
-          additionalProperties: false,
         },
-      },
-      execute: updateUser,
-    });
+        (req, res, acc) => ({
+          response: { body: updateUserById(acc.route.params.id, acc.body.parsed) },
+        }),
+      ),
+    );
     ```
   </TabItem>
 </Tabs>
