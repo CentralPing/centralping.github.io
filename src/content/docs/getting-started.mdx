@@ -118,13 +118,19 @@ stages:
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import type { IncomingMessage, ServerResponse } from "node:http";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {
+      defineGet,
+      definePost,
+      graceful,
+    } from "@centralping/ergo-router";
 
-    interface AuthInfo {
-      authorized: boolean;
-      info?: { userId?: string };
-    }
+    const bearerStrategy = {
+      type: "Bearer" as const,
+      authorizer: async (_: Record<string, string>, token: string) => {
+        if (!token) return { authorized: false };
+        return { authorized: true, info: { userId: token } };
+      },
+    };
 
     const router = createRouter({
       defaults: {
@@ -132,87 +138,55 @@ stages:
       },
     });
 
-    router.get("/users/:id", {
-      authorization: {
-        strategies: [
-          {
-            type: "Bearer" as const,
-            authorizer: async (
-              attributes: Record<string, string>,
-              token: string,
-            ): Promise<AuthInfo> => {
-              if (!token) return { authorized: false };
-              return { authorized: true, info: { userId: token } };
+    router.get(
+      "/users/:id",
+      defineGet(
+        {
+          authorization: { strategies: [bearerStrategy] },
+          validate: {
+            params: {
+              type: "object",
+              properties: { id: { type: "string", minLength: 1 } },
+              required: ["id"],
             },
           },
-        ],
-      },
-      validate: {
-        params: {
-          type: "object",
-          properties: { id: { type: "string", minLength: 1 } },
-          required: ["id"],
         },
-      },
-      execute: (
-        req: IncomingMessage,
-        res: ServerResponse,
-        acc: { route: { params: { id: string } }; auth: { userId: string } },
-      ) => ({
-        response: {
-          body: {
-            id: acc.route.params.id,
-            name: "Jane Doe",
-            requestedBy: acc.auth.userId,
+        (req, res, acc) => ({
+          response: {
+            body: {
+              id: acc.route.params.id,
+              name: "Jane Doe",
+              requestedBy: acc.auth.userId,
+            },
           },
-        },
-      }),
-    });
+        }),
+      ),
+    );
 
-    router.post("/users", {
-      authorization: {
-        strategies: [
-          {
-            type: "Bearer" as const,
-            authorizer: async (
-              attributes: Record<string, string>,
-              token: string,
-            ): Promise<AuthInfo> => {
-              if (!token) return { authorized: false };
-              return { authorized: true, info: { userId: token } };
+    router.post(
+      "/users",
+      definePost(
+        {
+          authorization: { strategies: [bearerStrategy] },
+          validate: {
+            body: {
+              type: "object",
+              properties: { name: { type: "string", minLength: 1 } },
+              required: ["name"],
             },
           },
-        ],
-      },
-      validate: {
-        body: {
-          type: "object",
-          properties: { name: { type: "string", minLength: 1 } },
-          required: ["name"],
         },
-      },
-      execute: (
-        req: IncomingMessage,
-        res: ServerResponse,
-        acc: {
-          body: { parsed: { name: string } };
-          auth: { userId: string };
-        },
-      ) => ({
-        response: {
-          statusCode: 201,
-          body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
-        },
-      }),
-    });
+        (req, res, acc) => ({
+          response: {
+            statusCode: 201,
+            body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
+          },
+        }),
+      ),
+    );
 
     await graceful(router.handle(), { port: 3000 });
     ```
-
-    > **Note:** The type annotations above represent the expected types for the
-    > accumulator properties. As ergo's `.d.ts` type declarations improve, these
-    > types will be inferred automatically — removing the need for explicit
-    > annotations.
   </TabItem>
 </Tabs>
 

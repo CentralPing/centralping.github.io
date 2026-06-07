@@ -59,46 +59,37 @@ Pluggable strategies support Bearer, Basic, and custom schemes.
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import type { IncomingMessage, ServerResponse } from "node:http";
+    import { defineGet } from "@centralping/ergo-router";
 
-    interface User {
-      id: string;
-      name: string;
-    }
-
-    router.get("/accounts/:id", {
-      authorization: {
-        strategies: [
-          {
-            type: "Bearer" as const,
-            authorizer: async (
-              attributes: Record<string, string>,
-              token: string,
-            ): Promise<
-              { authorized: true; info: User } | { authorized: false }
-            > => {
-              const user = await verifyToken(token);
-              return user
-                ? { authorized: true, info: user }
-                : { authorized: false };
-            },
+    router.get(
+      "/accounts/:id",
+      defineGet(
+        {
+          authorization: {
+            strategies: [
+              {
+                type: "Bearer" as const,
+                authorizer: async (
+                  attributes: Record<string, string>,
+                  token: string,
+                ) => {
+                  const user = await verifyToken(token);
+                  return user
+                    ? { authorized: true, info: user }
+                    : { authorized: false };
+                },
+              },
+            ],
           },
-        ],
-      },
-      execute: (
-        req: IncomingMessage,
-        res: ServerResponse,
-        acc: {
-          auth: { id: string };
-          route: { params: { id: string } };
         },
-      ) => {
-        if (acc.auth.id !== acc.route.params.id) {
-          return { response: { statusCode: 403, detail: "Access denied" } };
-        }
-        return { response: { body: getAccount(acc.route.params.id) } };
-      },
-    });
+        (req, res, acc) => {
+          if (acc.auth.id !== acc.route.params.id) {
+            return { response: { statusCode: 403, detail: "Access denied" } };
+          }
+          return { response: { body: getAccount(acc.route.params.id) } };
+        },
+      ),
+    );
     ```
   </TabItem>
 </Tabs>
@@ -164,35 +155,29 @@ execution.
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import type { IncomingMessage, ServerResponse } from "node:http";
+    import { definePost } from "@centralping/ergo-router";
 
-    interface UserUpdate {
-      name: string;
-      email: string;
-    }
-
-    const updateUser = (
-      req: IncomingMessage,
-      res: ServerResponse,
-      acc: { body: { parsed: UserUpdate }; route: { params: { id: string } } },
-    ) => ({
-      response: { body: updateUserById(acc.route.params.id, acc.body.parsed) },
-    });
-
-    router.put("/users/:id", {
-      validate: {
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", maxLength: 100 },
-            email: { type: "string", format: "email" },
+    router.put(
+      "/users/:id",
+      definePost(
+        {
+          validate: {
+            body: {
+              type: "object",
+              properties: {
+                name: { type: "string", maxLength: 100 },
+                email: { type: "string", format: "email" },
+              },
+              required: ["name", "email"],
+              additionalProperties: false,
+            },
           },
-          required: ["name", "email"],
-          additionalProperties: false,
         },
-      },
-      execute: updateUser,
-    });
+        (req, res, acc) => ({
+          response: { body: updateUserById(acc.route.params.id, acc.body.parsed) },
+        }),
+      ),
+    );
     ```
   </TabItem>
 </Tabs>
