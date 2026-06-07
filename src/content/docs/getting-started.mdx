@@ -216,6 +216,15 @@ stages:
   for more detail.
 </Aside>
 
+<Aside type="caution" title="Route config replaces defaults">
+  When a route sets a config key that also appears in `defaults`, the route
+  value **replaces** the default entirely — it does not merge. For example,
+  setting `authorization: { strategies: [basicStrategy] }` on a route discards
+  any strategies defined in `defaults.authorization`. See
+  [Config Resolution](/packages/ergo-router/#config-resolution) for the full
+  resolution rules and how to extend defaults with spread.
+</Aside>
+
 ### What Happens
 
 | Request | Result |

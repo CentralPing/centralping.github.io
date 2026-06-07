@@ -3,7 +3,7 @@ title: ergo-router
 description: REST-compliant router with strict Fast Fail semantics and declarative pipeline builder.
 ---
 
-import { Badge } from "@astrojs/starlight/components";
+import { Aside, Badge } from "@astrojs/starlight/components";
 
 <div class="package-logo">
   <img class="light" src="/assets/router-wordmark-light.svg" alt="ergo-router" width="340" />
@@ -65,6 +65,81 @@ router.post("/users", {
   execute: createUser,
 });
 ```
+
+### Config Resolution
+
+When a route registers a config key that also appears in `defaults`, the
+route value **replaces** the default entirely — it does not merge.
+
+#### Resolution Order
+
+For each config key, the pipeline builder resolves the effective value
+using route config first, then defaults:
+
+| Route value | Default value | Resolved value | Effect |
+| --- | --- | --- | --- |
+| `undefined` (omitted) | `{...}` | `{...}` | Inherits default |
+| `false` | any | disabled | Explicitly disables — removes from pipeline |
+| `true` | any | `{}` | Enables with empty options |
+| `{...}` (object) | `{...}` | route `{...}` | Route **replaces** default entirely |
+
+#### Replace vs. Extend
+
+Setting a config key on a route **replaces** the default — properties are
+not deep-merged:
+
+```js
+const router = createRouter({
+  defaults: {
+    authorization: {
+      strategies: [bearerStrategy, apiKeyStrategy],
+    },
+  },
+});
+
+// ⚠️ This route loses bearerStrategy and apiKeyStrategy —
+// the route value replaces the default entirely
+router.get("/admin", {
+  authorization: { strategies: [basicStrategy] },
+  execute: adminHandler,
+});
+```
+
+To **extend** defaults rather than replace them, spread the default values
+into the route config manually:
+
+```js
+const authDefaults = {
+  strategies: [bearerStrategy, apiKeyStrategy],
+};
+
+const router = createRouter({
+  defaults: { authorization: authDefaults },
+});
+
+// ✓ This route has all three strategies
+router.get("/admin", {
+  authorization: {
+    strategies: [...authDefaults.strategies, basicStrategy],
+  },
+  execute: adminHandler,
+});
+```
+
+<Aside type="tip" title="The use key is an exception">
+  The `use` key follows **concatenation** semantics instead of replacement —
+  `defaults.use` entries run first, then route-level `use` entries. Setting
+  `use: false` on a route disables all custom middleware (both defaults and
+  route-level). See the
+  [Custom Middleware recipe](/recipes/custom-middleware/) for details.
+</Aside>
+
+<Aside type="note" title="Auto-inclusion and false">
+  Setting a key to `false` disables it even when the pipeline builder would
+  auto-include it based on HTTP method. For example, `body: false` on a
+  POST route prevents body parsing, and `url: false` on a GET route prevents
+  URL parsing.
+</Aside>
 
 ### Graceful Shutdown
 
