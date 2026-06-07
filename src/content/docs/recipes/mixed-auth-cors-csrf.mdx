@@ -126,6 +126,7 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
 
     const router = createRouter({
       defaults: {
+        cookie: true,
         csrf: { secret: process.env.CSRF_SECRET },
         authorization: {
           strategies: [{
@@ -238,6 +239,7 @@ overrides:
         },
       },
       defaults: {
+        cookie: true,
         csrf: { secret: process.env.CSRF_SECRET },
         authorization: {
           strategies: [{
