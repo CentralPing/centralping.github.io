@@ -38,8 +38,6 @@ Both routes should be publicly accessible without authentication.
       },
     };
 
-    const specJson = JSON.stringify(spec);
-
     const pipeline = compose(
       (req, res) => ({ response: { body: spec } }),
     );
@@ -111,7 +109,6 @@ Both routes should be publicly accessible without authentication.
         <script
           id="api-reference"
           data-url="/openapi.json"
-          data-configuration='${JSON.stringify({ spec })}'
         ></script>
         <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
       </body>
