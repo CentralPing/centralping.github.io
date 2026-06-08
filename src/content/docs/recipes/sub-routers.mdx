@@ -272,7 +272,7 @@ const router = createRouter({
   transport: {
     requestId: true,
     security: { hsts: { maxAge: 31_536_000 } },
-    cors: { origins: ["https://app.example.com"] },
+    cors: { origin: "https://app.example.com" },
     rateLimit: { max: 10_000, window: 60_000 },
   },
   strictPatch: true,
