@@ -39,6 +39,16 @@ both standalone composition and declarative ergo-router configuration.
 | [timeout](/middleware/timeout/) | Configurable request deadline (setTimeout + close listener) |
 | [tracing](/middleware/tracing/) | OpenTelemetry distributed tracing |
 
+## Custom Middleware
+
+Need to write your own middleware? ergo's accumulator-based return-value
+contract lets you build middleware that composes cleanly with the
+pipeline — feature flags, audit logging, request enrichment, or
+third-party integrations.
+
+See the [Custom Middleware recipe](/recipes/custom-middleware/) for the
+full contract, working examples, and anti-patterns to avoid.
+
 ## Two-Layer Documentation
 
 Each middleware has two documentation surfaces:
