@@ -64,6 +64,15 @@ import { csrf } from "@centralping/ergo";
 | `encoding` | `string` | `'base64'` | Token encoding |
 | `cookieOptions` | `object` | `{}` | Cookie directives (note: `httpOnly` and `sameSite` are locked) |
 
+<Aside type="caution" title="Cookie middleware is required">
+  Both `issue` and `verify` read from `acc.cookies` — the cookie jar
+  populated by the [cookie](/middleware/cookie/) middleware. Cookie
+  middleware must run before CSRF in the pipeline. In ergo-router, set
+  `cookie: true` (or a cookie options object) in `defaults` or per-route
+  config alongside `csrf`. In standalone `compose()`, place `cookie()`
+  before the CSRF middleware in the pipeline array.
+</Aside>
+
 ### Cookie Security
 
 - Token cookie: `httpOnly: false` (locked — client JS must read it), `sameSite: 'Strict'` (locked)
@@ -118,13 +127,46 @@ The factory returns `{ issue, verify }`:
   </TabItem>
   <TabItem label="ergo-router">
     ```js
+    import createRouter from "@centralping/ergo-router";
+
     const router = createRouter({
       defaults: {
+        cookie: true,
         csrf: { secret: process.env.CSRF_SECRET },
       },
     });
-    // ergo-router auto-dispatches issue/verify by HTTP method
+
+    // Browser route — inherits cookie + CSRF from defaults.
+    // GET/HEAD/OPTIONS → issue (sets token cookies)
+    // POST/PUT/PATCH/DELETE → verify (checks X-CSRF-TOKEN header)
+    router.get("/account/settings", {
+      execute: (req, res, acc) => ({
+        response: { body: { settings: { theme: "dark" } } },
+      }),
+    });
+
+    router.post("/account/settings", {
+      execute: async (req, res, acc) => ({
+        response: { body: { updated: true } },
+      }),
+    });
+
+    // Bearer-only route — disables CSRF (token clients are not
+    // vulnerable). cookie: false is optional since cookie middleware
+    // has no effect without CSRF, but makes intent explicit.
+    router.post("/api/webhooks", {
+      csrf: false,
+      cookie: false,
+      execute: async (req, res, acc) => ({
+        response: { body: { received: true } },
+      }),
+    });
     ```
+
+    `cookie: true` is required alongside `csrf` — cookie middleware
+    populates `acc.cookies`, which both `issue` and `verify` depend on.
+    See [Config Resolution](/packages/ergo-router/#config-resolution)
+    for how `defaults`, `true`, `false`, and per-route overrides interact.
   </TabItem>
 </Tabs>
 
