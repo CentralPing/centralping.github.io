@@ -398,6 +398,67 @@ For serving the generated spec from a route and mounting an interactive
 API explorer, see the
 [OpenAPI Serving recipe](/recipes/openapi-serving/).
 
+### Sub-Routers
+
+Sub-routers let you organize routes into groups with independent
+defaults, middleware, and auth strategies. Create a sub-router with
+`createRouter()`, register routes on it, then mount it at a prefix
+path on the parent router.
+
+#### mount()
+
+```js
+router.mount(prefix, subRouter)
+```
+
+Mounts all routes from `subRouter` at the given prefix path. Returns
+the parent router for chaining.
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const usersRouter = createRouter({
+  defaults: {
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+
+usersRouter.get("/", { execute: listUsers });
+usersRouter.get("/:id", { execute: getUser });
+usersRouter.post("/", {
+  validate: { body: userSchema },
+  execute: createUser,
+});
+
+const router = createRouter({ transport: { /* ... */ } });
+router.mount("/users", usersRouter);
+// Registers: GET /users, GET /users/:id, POST /users
+```
+
+#### Behavioral Rules
+
+| Aspect | Behavior | Explanation |
+| --- | --- | --- |
+| Copy semantics | Routes are copied at mount time | Adding routes to the child after `mount()` has no effect on the parent |
+| Defaults isolation | Child defaults stay with the child | Parent defaults do not merge into child routes; child routes use the defaults they were registered with |
+| Transport | Parent-governed | Transport middleware (CORS, rate limiting, security headers, request ID) runs at the parent dispatch level only; child `transport` config is not used |
+| `router.use()` | Per-router scoping | Parent `router.use()` does not apply to mounted routes; child `router.use()` is baked into child pipelines at registration time |
+| `strictPatch` / `strictBody` | Parent-governed | Content-Type enforcement is applied at parent dispatch, before route matching |
+| Ordering | Register routes before mounting | Routes must be added to the child router before calling `parent.mount()` |
+| Chainable | `mount()` returns the parent | Allows `router.mount("/a", a).mount("/b", b)` |
+
+<Aside type="caution" title="Register routes before mounting">
+  `mount()` copies the child's routes at call time. Routes added to the
+  child router after mounting are not visible to the parent. Always
+  register all child routes before calling `parent.mount()`.
+</Aside>
+
+<Aside type="tip" title="Practical patterns">
+  For per-group auth, shared defaults, rate limiting, and complete
+  multi-resource API examples, see the
+  [Sub-Routers recipe](/recipes/sub-routers/).
+</Aside>
+
 ### Graceful Shutdown
 
 `graceful(handler, options?)` creates an HTTP server with full lifecycle

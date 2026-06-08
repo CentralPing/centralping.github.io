@@ -1,0 +1,325 @@
+---
+title: Sub-Routers
+description: Organizing routes into sub-routers with per-group middleware, auth strategies, and rate limits.
+---
+
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
+
+## Problem
+
+You are building a multi-resource API where different route groups need
+different auth strategies, middleware defaults, or rate limits. Putting
+everything on a single router forces you to override config on every
+route — violating DRY and obscuring the group-level intent.
+
+## Solution
+
+### Basic Mounting
+
+Create a sub-router with its own defaults and mount it at a prefix:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    // Each group composes its own pipeline independently
+    const adminPipeline = compose(
+      [authorization({
+        strategies: [{ type: "Basic", authorizer: verifyAdmin }],
+      }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { admin: true } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter from "@centralping/ergo-router";
+
+    const adminRouter = createRouter({
+      defaults: {
+        authorization: {
+          strategies: [{ type: "Basic", authorizer: verifyAdmin }],
+        },
+      },
+    });
+
+    adminRouter.get("/dashboard", { execute: getDashboard });
+    adminRouter.get("/users", { execute: listAllUsers });
+
+    const router = createRouter({ transport: { /* ... */ } });
+    router.mount("/admin", adminRouter);
+    // GET /admin/dashboard, GET /admin/users — both require Basic auth
+    ```
+  </TabItem>
+</Tabs>
+
+### Per-Group Auth
+
+Different route groups use different authentication — admin routes
+require Basic, user routes require Bearer, and public routes skip auth
+entirely:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, authorization } from "@centralping/ergo";
+
+    const adminPipeline = compose(
+      [authorization({
+        strategies: [{ type: "Basic", authorizer: verifyAdmin }],
+      }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { role: "admin" } },
+      }),
+    );
+
+    const userPipeline = compose(
+      [authorization({
+        strategies: [{ type: "Bearer", authorizer: verifyJwt }],
+      }), "auth"],
+      (req, res, acc) => ({
+        response: { body: { userId: acc.auth.user.id } },
+      }),
+    );
+
+    const publicPipeline = compose(
+      (req, res, acc) => ({
+        response: { body: { status: "healthy" } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter from "@centralping/ergo-router";
+
+    const adminRouter = createRouter({
+      defaults: {
+        authorization: {
+          strategies: [{ type: "Basic", authorizer: verifyAdmin }],
+        },
+      },
+    });
+    adminRouter.get("/stats", { execute: getStats });
+
+    const usersRouter = createRouter({
+      defaults: {
+        authorization: {
+          strategies: [{ type: "Bearer", authorizer: verifyJwt }],
+        },
+      },
+    });
+    usersRouter.get("/me", { execute: getMe });
+    usersRouter.patch("/me", {
+      validate: { body: updateUserSchema },
+      execute: updateMe,
+    });
+
+    const publicRouter = createRouter();
+    publicRouter.get("/health", {
+      authorization: false,
+      execute: (req, res, acc) => ({
+        response: { body: { status: "ok" } },
+      }),
+    });
+
+    const router = createRouter({ transport: { /* ... */ } });
+    router
+      .mount("/admin", adminRouter)
+      .mount("/users", usersRouter)
+      .mount("/public", publicRouter);
+    ```
+  </TabItem>
+</Tabs>
+
+### Shared Defaults vs. Isolation
+
+Child router defaults do **not** merge with parent defaults. Each
+sub-router's routes use only the defaults they were registered with:
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const parent = createRouter({
+  defaults: {
+    accepts: { types: ["application/json"] },
+    timeout: { ms: 5000 },
+  },
+});
+
+const child = createRouter({
+  defaults: {
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+
+child.get("/items", { execute: listItems });
+parent.mount("/api", child);
+// GET /api/items has authorization (from child defaults)
+// but does NOT have accepts or timeout (from parent defaults)
+```
+
+To intentionally share defaults between parent and child, spread them:
+
+```js
+const sharedDefaults = {
+  accepts: { types: ["application/json"] },
+  timeout: { ms: 5000 },
+};
+
+const parent = createRouter({
+  defaults: sharedDefaults,
+  transport: { /* ... */ },
+});
+
+const child = createRouter({
+  defaults: {
+    ...sharedDefaults,
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+```
+
+### Per-Group Rate Limiting
+
+Different sub-routers can set different `rateLimit` defaults to enforce
+per-group limits at the pipeline level:
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const publicRouter = createRouter({
+  defaults: {
+    rateLimit: { max: 100, window: 60_000 },
+  },
+});
+publicRouter.get("/search", { execute: search });
+
+const premiumRouter = createRouter({
+  defaults: {
+    authorization: { strategies: [apiKeyStrategy] },
+    rateLimit: { max: 1000, window: 60_000 },
+  },
+});
+premiumRouter.get("/search", { execute: search });
+
+const router = createRouter({
+  transport: {
+    rateLimit: { max: 10_000, window: 60_000 },
+  },
+});
+router
+  .mount("/v1", publicRouter)
+  .mount("/premium", premiumRouter);
+```
+
+<Aside type="caution" title="Transport vs. pipeline rate limiting">
+  Transport-level `rateLimit` (in the parent's `transport` config) is a
+  global limit applied to every request before routing. Pipeline-level
+  `rateLimit` (in `defaults`) is per-route and runs inside the pipeline
+  after routing. They serve different purposes — transport protects the
+  server; pipeline protects individual resources.
+</Aside>
+
+### Complete Multi-Resource API
+
+A practical example combining transport on the parent, per-group
+defaults on children, and mount chaining:
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+// --- Sub-routers with per-group concerns ---
+
+const projectsRouter = createRouter({
+  defaults: {
+    authorization: { strategies: [bearerStrategy] },
+    accepts: { types: ["application/json"] },
+  },
+});
+projectsRouter.get("/", { execute: listProjects });
+projectsRouter.post("/", {
+  validate: { body: projectSchema },
+  execute: createProject,
+});
+projectsRouter.get("/:id", { execute: getProject });
+
+const adminRouter = createRouter({
+  defaults: {
+    authorization: {
+      strategies: [{ type: "Basic", authorizer: verifyAdmin }],
+    },
+    accepts: { types: ["application/json"] },
+  },
+});
+adminRouter.get("/users", { execute: listAllUsers });
+adminRouter.delete("/users/:id", { execute: deleteUser });
+
+const healthRouter = createRouter();
+healthRouter.get("/", {
+  authorization: false,
+  execute: (req, res, acc) => ({
+    response: { body: { status: "ok", ts: Date.now() } },
+  }),
+});
+
+// --- Parent router with transport ---
+
+const router = createRouter({
+  transport: {
+    requestId: true,
+    security: { hsts: { maxAge: 31_536_000 } },
+    cors: { origins: ["https://app.example.com"] },
+    rateLimit: { max: 10_000, window: 60_000 },
+  },
+  strictPatch: true,
+  strictBody: true,
+});
+
+router
+  .mount("/projects", projectsRouter)
+  .mount("/admin", adminRouter)
+  .mount("/health", healthRouter);
+```
+
+## Explanation
+
+### Copy Semantics
+
+`router.mount(prefix, subRouter)` copies all currently registered
+routes from the child into the parent's dispatcher with the prefix
+prepended to each path. This is a **one-time copy**, not a live
+delegation — the parent and child are independent after mounting.
+
+This means:
+
+1. **Order matters** — register all routes on the child before
+   calling `mount()` on the parent
+2. **No runtime delegation** — the parent's `find-my-way` dispatcher
+   handles all matching directly (no double-dispatch overhead)
+3. **Pipelines are frozen** — each child route's pipeline was built
+   at `addRoute()` time using the child's defaults; mounting does not
+   re-resolve
+
+### Isolation Summary
+
+| Aspect | Scope | Who Controls It |
+| --- | --- | --- |
+| `defaults` (accepts, authorization, validate, etc.) | Child | Each sub-router's routes use the defaults they were registered with |
+| `router.use()` middleware | Child | Baked into child pipelines at registration time |
+| `send` / `catchHandler` | Child | Route options from child's config |
+| Transport (CORS, security headers, rate limit, request ID) | Parent | Runs before routing at parent dispatch level |
+| `strictPatch` / `strictBody` | Parent | Content-Type enforcement at parent dispatch |
+| REST compliance (405, HEAD, OPTIONS) | Parent | Applied to the merged route table |
+
+### Related
+
+- [Config Resolution](/packages/ergo-router/#config-resolution) —
+  how route values override defaults
+- [Application Middleware](/packages/ergo-router/#application-middleware) —
+  `router.use()` scoping
+- [Multi-Auth Strategies](/recipes/multi-auth/) — per-route auth
+  overrides within a single router
