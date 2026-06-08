@@ -3,22 +3,24 @@ title: Testing Patterns
 description: Reliable HTTP testing with ephemeral ports, graceful shutdown, and black-box request assertions.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Problem
 
 You need to write reliable, non-flaky HTTP tests for ergo APIs that
 start and stop servers cleanly, use ephemeral ports to avoid conflicts,
-and test behavior through the full HTTP stack.
+and test behavior through the full HTTP stack — including auth,
+validation, error responses, conditional requests, rate limiting, and
+graceful shutdown.
 
 ## Solution
 
-### Basic Test Setup
+### Server Setup with `graceful()`
 
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { describe, it, before, after } from "node:test";
+    import { describe, it, after } from "node:test";
     import assert from "node:assert/strict";
     import http from "node:http";
     import { handler, compose, body } from "@centralping/ergo";
@@ -27,9 +29,14 @@ and test behavior through the full HTTP stack.
       let server;
       let baseUrl;
 
-      before(async () => {
+      after(async () => {
+        server.closeAllConnections();
+        await new Promise((resolve) => server.close(resolve));
+      });
+
+      it("creates a user", async () => {
         const pipeline = compose(
-          {fn: body(), setPath: "body"},
+          { fn: body(), setPath: "body" },
           (req, res, acc) => ({
             response: {
               statusCode: 201,
@@ -42,14 +49,7 @@ and test behavior through the full HTTP stack.
         await new Promise((resolve) => server.listen(0, resolve));
         const { port } = server.address();
         baseUrl = `http://localhost:${port}`;
-      });
 
-      after(async () => {
-        server.closeAllConnections();
-        await new Promise((resolve) => server.close(resolve));
-      });
-
-      it("creates a user", async () => {
         const res = await fetch(`${baseUrl}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -64,16 +64,18 @@ and test behavior through the full HTTP stack.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, before, after } from "node:test";
+    import { describe, it, after } from "node:test";
     import assert from "node:assert/strict";
-    import http from "node:http";
-    import createRouter from "@centralping/ergo-router";
+    import createRouter, { graceful } from "@centralping/ergo-router";
 
     describe("POST /users", () => {
-      let server;
-      let baseUrl;
+      let shutdown;
 
-      before(async () => {
+      after(async () => {
+        if (shutdown) await shutdown("test-cleanup");
+      });
+
+      it("creates a user", async () => {
         const router = createRouter();
         router.post("/users", {
           validate: {
@@ -91,18 +93,15 @@ and test behavior through the full HTTP stack.
           }),
         });
 
-        server = http.createServer(router.handle());
-        await new Promise((resolve) => server.listen(0, resolve));
-        const { port } = server.address();
-        baseUrl = `http://localhost:${port}`;
-      });
+        const result = await graceful(router.handle(), {
+          port: 0,
+          exit() {},
+        });
+        shutdown = result.shutdown;
 
-      after(async () => {
-        server.closeAllConnections();
-        await new Promise((resolve) => server.close(resolve));
-      });
+        const { port } = result.server.address();
+        const baseUrl = `http://localhost:${port}`;
 
-      it("creates a user", async () => {
         const res = await fetch(`${baseUrl}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -111,6 +110,371 @@ and test behavior through the full HTTP stack.
         assert.equal(res.status, 201);
         const data = await res.json();
         assert.equal(data.name, "Jane");
+      });
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip" title="Why port: 0?">
+  Passing `0` to `listen()` (or `graceful()`) lets the OS assign an unused
+  port. This eliminates port conflicts when tests run in parallel or on CI.
+  Retrieve the assigned port from `server.address().port`.
+</Aside>
+
+<Aside type="caution" title="Preventing process.exit in tests">
+  `graceful()` calls `process.exit()` by default on shutdown signals. In
+  tests, pass `exit() {}` (a no-op) to prevent the test runner from being
+  killed. Without it, the first `after()` cleanup terminates the entire
+  process.
+</Aside>
+
+### Testing Authorization
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import http from "node:http";
+    import {
+      handler,
+      compose,
+      authorization,
+    } from "@centralping/ergo";
+
+    describe("authorization", () => {
+      let server;
+      let baseUrl;
+
+      after(async () => {
+        server.closeAllConnections();
+        await new Promise((resolve) => server.close(resolve));
+      });
+
+      it("accepts valid Bearer token", async () => {
+        const pipeline = compose(
+          {
+            fn: authorization({
+              strategies: [
+                {
+                  type: "Bearer",
+                  attributes: { realm: "API" },
+                  authorizer: async (_attrs, token) =>
+                    token === "valid-token"
+                      ? { authorized: true, info: { userId: "u1" } }
+                      : { authorized: false },
+                },
+              ],
+            }),
+            setPath: "auth",
+          },
+          (req, res, acc) => ({ response: { body: acc.auth } }),
+        );
+
+        server = http.createServer(handler(pipeline));
+        await new Promise((resolve) => server.listen(0, resolve));
+        const { port } = server.address();
+        baseUrl = `http://localhost:${port}`;
+
+        const res = await fetch(baseUrl, {
+          headers: { Authorization: "Bearer valid-token" },
+        });
+        assert.equal(res.status, 200);
+        const data = await res.json();
+        assert.equal(data.userId, "u1");
+      });
+
+      it("rejects invalid token with 401 + WWW-Authenticate", async () => {
+        const res = await fetch(baseUrl, {
+          headers: { Authorization: "Bearer wrong-token" },
+        });
+        assert.equal(res.status, 401);
+        assert.ok(
+          res.headers.get("www-authenticate"),
+          "should include WWW-Authenticate header",
+        );
+      });
+
+      it("rejects missing Authorization with 401", async () => {
+        const res = await fetch(baseUrl);
+        assert.ok(res.status === 401 || res.status === 403);
+      });
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    describe("authorization", () => {
+      let shutdown;
+      let baseUrl;
+
+      after(async () => {
+        if (shutdown) await shutdown("test-cleanup");
+      });
+
+      it("accepts valid Bearer token", async () => {
+        const router = createRouter();
+        router.get("/protected", {
+          authorization: {
+            strategies: [
+              {
+                type: "Bearer",
+                attributes: { realm: "API" },
+                authorizer: async (_attrs, token) =>
+                  token === "valid-token"
+                    ? { authorized: true, info: { userId: "u1" } }
+                    : { authorized: false },
+              },
+            ],
+          },
+          execute: (req, res, acc) => ({ response: { body: acc.auth } }),
+        });
+
+        const result = await graceful(router.handle(), {
+          port: 0,
+          exit() {},
+        });
+        shutdown = result.shutdown;
+
+        const { port } = result.server.address();
+        baseUrl = `http://localhost:${port}`;
+
+        const res = await fetch(`${baseUrl}/protected`, {
+          headers: { Authorization: "Bearer valid-token" },
+        });
+        assert.equal(res.status, 200);
+        const data = await res.json();
+        assert.equal(data.userId, "u1");
+      });
+
+      it("rejects invalid token with 401 + WWW-Authenticate", async () => {
+        const res = await fetch(`${baseUrl}/protected`, {
+          headers: { Authorization: "Bearer wrong-token" },
+        });
+        assert.equal(res.status, 401);
+        assert.ok(
+          res.headers.get("www-authenticate"),
+          "should include WWW-Authenticate header",
+        );
+      });
+
+      it("rejects missing Authorization with 401", async () => {
+        const res = await fetch(`${baseUrl}/protected`);
+        assert.ok(res.status === 401 || res.status === 403);
+      });
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Testing Validation
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import http from "node:http";
+    import { handler, compose, body, validate } from "@centralping/ergo";
+
+    describe("body validation", () => {
+      let server;
+      let baseUrl;
+
+      after(async () => {
+        server.closeAllConnections();
+        await new Promise((resolve) => server.close(resolve));
+      });
+
+      it("returns 422 for invalid body", async () => {
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+          required: ["name"],
+        };
+
+        const pipeline = compose(
+          { fn: body(), setPath: "body" },
+          { fn: validate({ body: schema }), setPath: "validate" },
+          (req, res, acc) => ({
+            response: { body: { name: acc.body.parsed.name } },
+          }),
+        );
+
+        server = http.createServer(handler(pipeline));
+        await new Promise((resolve) => server.listen(0, resolve));
+        const { port } = server.address();
+        baseUrl = `http://localhost:${port}`;
+
+        const res = await fetch(baseUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: 42 }),
+        });
+        assert.equal(res.status, 422);
+        const problem = await res.json();
+        assert.equal(problem.status, 422);
+        assert.equal(problem.title, "Unprocessable Entity");
+        assert.ok(problem.detail);
+      });
+
+      it("passes valid body through pipeline", async () => {
+        const res = await fetch(baseUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Jane" }),
+        });
+        assert.equal(res.status, 200);
+        const data = await res.json();
+        assert.equal(data.name, "Jane");
+      });
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    describe("body validation", () => {
+      let shutdown;
+      let baseUrl;
+
+      after(async () => {
+        if (shutdown) await shutdown("test-cleanup");
+      });
+
+      it("returns 422 for invalid body", async () => {
+        const router = createRouter();
+        router.post("/users", {
+          validate: {
+            body: {
+              type: "object",
+              properties: { name: { type: "string" } },
+              required: ["name"],
+            },
+          },
+          execute: (req, res, acc) => ({
+            response: { body: { name: acc.body.parsed.name } },
+          }),
+        });
+
+        const result = await graceful(router.handle(), {
+          port: 0,
+          exit() {},
+        });
+        shutdown = result.shutdown;
+
+        const { port } = result.server.address();
+        baseUrl = `http://localhost:${port}`;
+
+        const res = await fetch(`${baseUrl}/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: 42 }),
+        });
+        assert.equal(res.status, 422);
+        const problem = await res.json();
+        assert.equal(problem.status, 422);
+        assert.equal(problem.title, "Unprocessable Entity");
+        assert.ok(problem.detail);
+      });
+
+      it("passes valid body through pipeline", async () => {
+        const res = await fetch(`${baseUrl}/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Jane" }),
+        });
+        assert.equal(res.status, 201);
+        const data = await res.json();
+        assert.equal(data.name, "Jane");
+      });
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Testing Rate Limiting
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    it("enforces rate limit", async () => {
+      const requests = Array.from({ length: 12 }, () =>
+        fetch(`${baseUrl}/limited`),
+      );
+      const responses = await Promise.all(requests);
+      const tooMany = responses.filter((r) => r.status === 429);
+
+      assert.ok(tooMany.length > 0, "Expected at least one 429 response");
+      const problem = await tooMany[0].json();
+      assert.equal(problem.status, 429);
+      assert.ok(problem.retryAfter != null);
+    });
+
+    it("includes rate-limit headers on every response", async () => {
+      const res = await fetch(`${baseUrl}/limited`);
+      assert.ok(res.headers.get("x-ratelimit-limit"));
+      assert.ok(res.headers.get("x-ratelimit-remaining"));
+      assert.ok(res.headers.get("x-ratelimit-reset"));
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    describe("rate limiting", () => {
+      let shutdown;
+      let baseUrl;
+
+      after(async () => {
+        if (shutdown) await shutdown("test-cleanup");
+      });
+
+      it("enforces rate limit", async () => {
+        const router = createRouter({
+          transport: { rateLimit: { max: 5, windowMs: 60_000 } },
+        });
+        router.get("/limited", {
+          execute: () => ({ response: { body: { ok: true } } }),
+        });
+
+        const result = await graceful(router.handle(), {
+          port: 0,
+          exit() {},
+        });
+        shutdown = result.shutdown;
+
+        const { port } = result.server.address();
+        baseUrl = `http://localhost:${port}`;
+
+        const requests = Array.from({ length: 8 }, () =>
+          fetch(`${baseUrl}/limited`),
+        );
+        const responses = await Promise.all(requests);
+        const tooMany = responses.filter((r) => r.status === 429);
+
+        assert.ok(tooMany.length > 0, "Expected at least one 429");
+        const problem = await tooMany[0].json();
+        assert.equal(problem.status, 429);
+        assert.ok(problem.retryAfter != null);
+      });
+
+      it("includes rate-limit headers on every response", async () => {
+        const res = await fetch(`${baseUrl}/limited`);
+        assert.ok(res.headers.get("x-ratelimit-limit"));
+        assert.ok(res.headers.get("x-ratelimit-remaining"));
+        assert.ok(res.headers.get("x-ratelimit-reset"));
       });
     });
     ```
@@ -133,46 +497,243 @@ it("returns 422 for invalid body", async () => {
   assert.equal(problem.title, "Unprocessable Entity");
   assert.ok(problem.detail);
 });
+
+it("includes request ID in error response", async () => {
+  const res = await fetch(`${baseUrl}/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: 42 }),
+  });
+
+  const problem = await res.json();
+  assert.ok(problem.instance, "should include request ID as instance");
+});
 ```
 
-### Testing Rate Limiting
+<Aside type="tip" title="RFC 9457 Problem Details">
+  All ergo error responses follow
+  [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) format with `type`,
+  `title`, `status`, and `detail` fields. When ergo-router's request ID
+  transport is active, errors include an `instance` field set to the request
+  ID. Assert on these structured fields rather than parsing error message
+  strings — the format is stable across all ergo middleware.
+</Aside>
+
+### Testing Graceful Shutdown
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import http from "node:http";
+    import { handler } from "@centralping/ergo";
+
+    describe("shutdown", () => {
+      it("stops accepting connections after close", async () => {
+        const pipeline = () => ({ response: { body: { ok: true } } });
+        const server = http.createServer(handler(pipeline));
+        await new Promise((resolve) => server.listen(0, resolve));
+        const { port } = server.address();
+        const baseUrl = `http://localhost:${port}`;
+
+        const res = await fetch(baseUrl);
+        assert.equal(res.status, 200);
+
+        server.closeAllConnections();
+        await new Promise((resolve) => server.close(resolve));
+
+        await assert.rejects(
+          () => fetch(baseUrl),
+          "should reject after server close",
+        );
+      });
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { describe, it, after } from "node:test";
+    import assert from "node:assert/strict";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    describe("graceful shutdown", () => {
+      it("stops accepting connections after shutdown", async () => {
+        const router = createRouter();
+        router.get("/health", {
+          execute: () => ({ response: { body: { ok: true } } }),
+        });
+
+        const result = await graceful(router.handle(), {
+          port: 0,
+          signals: [],
+          exit() {},
+        });
+
+        const { port } = result.server.address();
+        const baseUrl = `http://localhost:${port}`;
+
+        const res = await fetch(baseUrl + "/health");
+        assert.equal(res.status, 200);
+
+        await result.shutdown("test-cleanup");
+
+        await assert.rejects(
+          () => fetch(baseUrl + "/health"),
+          "should reject after shutdown",
+        );
+      });
+
+      it("runs onShutdown callback during teardown", async () => {
+        let cleanedUp = false;
+
+        const router = createRouter();
+        router.get("/", {
+          execute: () => ({ response: { body: { ok: true } } }),
+        });
+
+        const result = await graceful(router.handle(), {
+          port: 0,
+          signals: [],
+          exit() {},
+          onShutdown: async () => {
+            cleanedUp = true;
+          },
+        });
+
+        await result.shutdown("test-cleanup");
+        assert.ok(cleanedUp, "onShutdown should have been called");
+      });
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Testing Conditional Requests (ETag / 304)
 
 ```js
-it("enforces rate limit", async () => {
-  const requests = Array.from({ length: 12 }, () =>
-    fetch(`${baseUrl}/limited`),
-  );
-  const responses = await Promise.all(requests);
-  const tooMany = responses.filter((r) => r.status === 429);
+import { describe, it, after } from "node:test";
+import assert from "node:assert/strict";
+import http from "node:http";
+import { handler } from "@centralping/ergo";
 
-  assert.ok(tooMany.length > 0, "Expected at least one 429 response");
-  const problem = await tooMany[0].json();
-  assert.equal(problem.status, 429);
-  assert.ok(problem.retryAfter != null);
+describe("ETag conditional requests", () => {
+  let server;
+  let baseUrl;
+
+  after(async () => {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  it("generates ETag and returns 304 on match", async () => {
+    const pipeline = () => ({
+      response: { body: { message: "hello", value: 42 } },
+    });
+
+    server = http.createServer(handler(pipeline));
+    await new Promise((resolve) => server.listen(0, resolve));
+    const { port } = server.address();
+    baseUrl = `http://localhost:${port}`;
+
+    const res1 = await fetch(baseUrl);
+    assert.equal(res1.status, 200);
+    const etag = res1.headers.get("etag");
+    assert.ok(etag, "should include ETag header");
+
+    const res2 = await fetch(baseUrl, {
+      headers: { "If-None-Match": etag },
+    });
+    assert.equal(res2.status, 304);
+    const body = await res2.text();
+    assert.equal(body, "");
+  });
+});
+```
+
+<Aside type="note">
+  `send()` generates ETags by default (`etag: true`). The comparison uses
+  [weak validation](https://www.rfc-editor.org/rfc/rfc9110#section-8.8.1) —
+  a `W/` prefix on the ETag value indicates the entity-tag is semantically
+  equivalent, not byte-for-byte identical.
+</Aside>
+
+### Test Isolation Tips
+
+```js
+import { describe, it, after } from "node:test";
+import assert from "node:assert/strict";
+import createRouter, { graceful } from "@centralping/ergo-router";
+
+describe("isolated test suites", () => {
+  let shutdown;
+
+  after(async () => {
+    if (shutdown) await shutdown("test-cleanup");
+  });
+
+  it("each suite gets its own server and state", async () => {
+    const router = createRouter({
+      transport: { rateLimit: { max: 100, windowMs: 60_000 } },
+    });
+    router.get("/", {
+      execute: () => ({ response: { body: { ok: true } } }),
+    });
+
+    const result = await graceful(router.handle(), {
+      port: 0,
+      exit() {},
+    });
+    shutdown = result.shutdown;
+
+    const { port } = result.server.address();
+    const res = await fetch(`http://localhost:${port}/`);
+    assert.equal(res.status, 200);
+  });
 });
 ```
 
 ## Explanation
 
+### Server Lifecycle in Tests
+
+The two tabs above illustrate the two server lifecycle strategies:
+
+- **Standalone** — create an `http.Server` with `handler()`, listen on
+  port `0`, and tear down with `closeAllConnections()` + `close()` in
+  `after()`.
+- **ergo-router** — use `graceful()` with `port: 0` and `exit() {}`.
+  `graceful()` returns `{ server, shutdown }`. Call `shutdown()` in
+  `after()` to trigger the same drain sequence the production server
+  uses.
+
+Both approaches produce an ephemeral `baseUrl` for `fetch()` requests
+and clean up connections in test teardown.
+
 ### Ephemeral Ports
 
-Passing `0` to `server.listen()` lets the OS assign an unused port.
-This eliminates port conflicts when tests run in parallel or on CI
-servers. Retrieve the assigned port from `server.address().port`.
+Passing `0` to `server.listen()` or `graceful()` lets the OS assign an
+unused port. This eliminates port conflicts when tests run in parallel
+or on CI servers. Retrieve the assigned port from
+`server.address().port`.
 
-### Graceful Shutdown
+### Graceful Shutdown in Tests
 
 Always call `server.closeAllConnections()` before `server.close()` in
 test teardown. Without `closeAllConnections()`, keep-alive connections
 from `fetch()` can hold the server open, causing test hangs. This
 pattern is used throughout ergo's own functional test suite.
 
+When using `graceful()`, pass `exit() {}` to prevent `process.exit()`
+from killing the test runner. Pass `signals: []` if you do not want
+signal handlers registered during tests.
+
 ### Black-Box Testing
 
-Test through the HTTP interface using `fetch()` (built into Node.js,
-no polyfill needed). This validates the full middleware pipeline — content negotiation,
-body parsing, validation, and response serialization — without coupling
-tests to internal middleware structure.
+Test through the HTTP interface using `fetch()` (built into Node.js 22+,
+no polyfill needed). This validates the full middleware pipeline —
+content negotiation, body parsing, validation, auth, and response
+serialization — without coupling tests to internal middleware structure.
 
 ### RFC 9457 Problem Details
 
@@ -180,3 +741,30 @@ All ergo error responses follow RFC 9457 format with `type`, `title`,
 `status`, and `detail` fields. Assert on these structured fields rather
 than parsing error message strings — the format is stable across all
 ergo middleware.
+
+### Rate-Limit Isolation
+
+Each `createRouter()` creates a fresh transport stack with its own
+`MemoryStore` for rate limiting. No explicit store reset is needed
+between test suites — just create a new router per suite.
+
+### Conditional Request Round-Trip
+
+`send()` generates ETags by default. To test conditional requests:
+
+1. Send an initial request and capture the `ETag` header
+2. Send a second request with `If-None-Match: <etag>`
+3. Assert the response is `304 Not Modified` with an empty body
+
+This pattern also works with `Last-Modified` / `If-Modified-Since` for
+date-based conditional responses.
+
+### Test File Naming
+
+ergo uses a two-tier test naming convention:
+
+- `*.spec.unit.js` — unit/boundary tests (no HTTP server)
+- `*.spec.func.js` — functional/contract tests (real HTTP server + fetch)
+
+Follow the same convention for application tests to keep the test
+surface organized.
