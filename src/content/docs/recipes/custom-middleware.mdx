@@ -20,18 +20,49 @@ contract to write middleware that composes cleanly with the pipeline.
 Every middleware function receives four arguments and returns
 `{value?, response?}`:
 
-```js
-function myMiddleware(options) {
-  // Factory: runs once at startup
-  const precomputed = buildConfig(options);
+<Tabs>
+  <TabItem label="JavaScript">
+    ```js
+    function myMiddleware(options) {
+      // Factory: runs once at startup
+      const precomputed = buildConfig(options);
 
-  // Inner function: runs per-request
-  return (req, res, domainAcc, responseAcc) => {
-    // Return {value?, response?} or undefined
-    return { value: { /* domain data */ } };
-  };
-}
-```
+      // Inner function: runs per-request
+      return (req, res, domainAcc, responseAcc) => {
+        // Return {value?, response?} or undefined
+        return { value: { /* domain data */ } };
+      };
+    }
+    ```
+  </TabItem>
+  <TabItem label="TypeScript">
+    ```ts
+    import type { IncomingMessage, ServerResponse } from "node:http";
+
+    interface MiddlewareResult {
+      value?: Record<string, unknown>;
+      response?: {
+        statusCode?: number;
+        headers?: [string, string | undefined][];
+        body?: unknown;
+      };
+    }
+
+    function myMiddleware(options: MyOptions) {
+      const precomputed = buildConfig(options);
+
+      return (
+        req: IncomingMessage,
+        res: ServerResponse,
+        domainAcc: Record<string, unknown>,
+        responseAcc: Record<string, unknown>,
+      ): MiddlewareResult => {
+        return { value: { /* domain data */ } };
+      };
+    }
+    ```
+  </TabItem>
+</Tabs>
 
 Return value interpretation:
 
@@ -53,7 +84,7 @@ accumulator. This is the standard pattern for middleware that produces
 a single named result:
 
 <Tabs>
-  <TabItem label="Standalone">
+  <TabItem label="Standalone (JS)">
     ```js
     import { compose, handler } from "@centralping/ergo";
 
@@ -69,6 +100,37 @@ a single named result:
       {fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"},
       // acc.flags is now available to subsequent middleware
       (req, res, acc) => ({
+        response: {
+          body: { features: acc.flags, user: acc.auth?.sub },
+        },
+      }),
+    );
+
+    export default handler(pipeline);
+    ```
+  </TabItem>
+  <TabItem label="Standalone (TS)">
+    ```ts
+    import { compose, handler } from "@centralping/ergo";
+    import type { IncomingMessage, ServerResponse } from "node:http";
+
+    interface Flags { [flag: string]: boolean }
+
+    function featureFlags(options: { endpoint: string }) {
+      const flagService = createFlagClient(options);
+      return async (
+        req: IncomingMessage,
+        res: ServerResponse,
+        acc: { auth?: { sub?: string } },
+      ): Promise<{ value: Flags }> => {
+        const flags = await flagService.evaluate(acc.auth?.sub);
+        return { value: flags };
+      };
+    }
+
+    const pipeline = compose(
+      {fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"},
+      (req: IncomingMessage, res: ServerResponse, acc: { flags: Flags; auth?: { sub?: string } }) => ({
         response: {
           body: { features: acc.flags, user: acc.auth?.sub },
         },
@@ -133,6 +195,194 @@ function apiVersion(version) {
   Pre-compute static values (header tuples, directive strings) at
   factory time — not per-request. The factory runs once; the inner
   function runs on every request.
+</Aside>
+
+### Response Timing
+
+Measuring response time via the accumulator requires a two-step pattern
+because middleware return values are captured *before* `send()` writes
+the response:
+
+```js
+function responseTimer() {
+  return (req, res, acc) => {
+    return { value: { startedAt: performance.now() } };
+  };
+}
+
+// In the execute handler, compute elapsed time relative to the start
+function computeTiming(req, res, acc) {
+  const elapsed = (performance.now() - acc.timing.startedAt).toFixed(2);
+  return {
+    response: {
+      headers: [["X-Response-Time", `${elapsed}ms`]],
+      body: acc.result,
+    },
+  };
+}
+```
+
+<Aside type="caution" title="What this measures">
+  This captures middleware-to-execute elapsed time — not the full
+  request lifecycle (which includes TCP, TLS, and `send()` serialization).
+  For total request duration, use the
+  [logger middleware's](/middleware/logger/) built-in `duration` field or
+  a `res.on('finish')` listener. See the
+  [Custom Headers recipe](/recipes/custom-headers/#response-time) for
+  details on this limitation.
+</Aside>
+
+### Shared Computation
+
+When multiple middleware or your execute handler need the same expensive
+lookup, use a factory that creates a memoized resolver. The first
+middleware to call it performs the fetch; subsequent accesses return the
+cached result. Store the resolver on the domain accumulator so it lives
+only for the current request:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, handler } from "@centralping/ergo";
+
+    function tenantResolver(options) {
+      const db = createDbClient(options);
+      return (req, res, acc) => {
+        let cached;
+        const resolve = async () => {
+          if (!cached) cached = db.tenants.findById(acc.auth?.tenantId);
+          return cached;
+        };
+        return { value: { resolve } };
+      };
+    }
+
+    const pipeline = compose(
+      // ... auth middleware populates acc.auth ...
+      {fn: tenantResolver({ connectionString: DB_URL }), setPath: "tenant"},
+      // Both permissions check and execute can call acc.tenant.resolve()
+      // without redundant DB queries
+      async (req, res, acc) => {
+        const tenant = await acc.tenant.resolve();
+        return {
+          response: { body: { name: tenant.name, plan: tenant.plan } },
+        };
+      },
+    );
+
+    export default handler(pipeline);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    function tenantResolver(options) {
+      const db = createDbClient(options);
+      return (req, res, acc) => {
+        let cached;
+        const resolve = async () => {
+          if (!cached) cached = db.tenants.findById(acc.auth?.tenantId);
+          return cached;
+        };
+        return { value: { resolve } };
+      };
+    }
+
+    router.get("/tenant/profile", {
+      use: [{fn: tenantResolver({ connectionString: DB_URL }), setPath: "tenant"}],
+      execute: async (req, res, acc) => {
+        const tenant = await acc.tenant.resolve();
+        return {
+          response: { body: { name: tenant.name, plan: tenant.plan } },
+        };
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  The closure-scoped `cached` variable lives only for the duration of one
+  request — no module-level `Map` or cleanup logic needed. Each invocation
+  of the factory's inner function creates a fresh closure.
+</Aside>
+
+### Audit Logging
+
+Record request context for compliance or analytics without affecting
+the response. An audit middleware stores structured entries on the
+accumulator; the execute handler (or a downstream logger) flushes them:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, handler } from "@centralping/ergo";
+
+    function auditLog(options) {
+      const sink = createAuditSink(options);
+      return (req, res, acc) => {
+        const entry = {
+          actor: acc.auth?.sub,
+          action: `${req.method} ${acc.url?.pathname}`,
+          timestamp: Date.now(),
+          ip: req.socket.remoteAddress,
+        };
+        sink.record(entry);
+        return { value: entry };
+      };
+    }
+
+    const pipeline = compose(
+      // ... auth + url middleware ...
+      {fn: auditLog({ stream: "api-audit" }), setPath: "audit"},
+      (req, res, acc) => ({
+        response: {
+          body: { result: "ok", auditId: acc.audit.timestamp },
+        },
+      }),
+    );
+
+    export default handler(pipeline);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    function auditLog(options) {
+      const sink = createAuditSink(options);
+      return (req, res, acc) => {
+        const entry = {
+          actor: acc.auth?.sub,
+          action: `${req.method} ${acc.url?.pathname}`,
+          timestamp: Date.now(),
+          ip: req.socket.remoteAddress,
+        };
+        sink.record(entry);
+        return { value: entry };
+      };
+    }
+
+    const router = createRouter({
+      defaults: {
+        use: [{fn: auditLog({ stream: "api-audit" }), setPath: "audit"}],
+      },
+    });
+
+    router.post("/accounts", {
+      execute: (req, res, acc) => ({
+        response: {
+          statusCode: 201,
+          body: { created: true, auditId: acc.audit.timestamp },
+        },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="note">
+  The audit middleware uses `sink.record(entry)` as a fire-and-forget
+  side effect — acceptable because audit delivery is eventually consistent.
+  The returned `{value: entry}` makes audit metadata available to
+  downstream middleware (e.g., including an audit ID in the response).
 </Aside>
 
 ### Fast-Fail Rejection
@@ -330,3 +580,116 @@ directives).
 | Error handling | `(err, req, res, next)` | `{response: {statusCode, detail}}` |
 | Side effects | Encouraged (mutate req/res) | Avoided (pure return values) |
 | Testability | Requires mocking req/res/next | Call function, assert return value |
+
+## Anti-Patterns
+
+### Mutating `req` or `res` Directly
+
+```js
+// ❌ Express habit — mutates shared state
+function bad(req, res, acc) {
+  req.user = acc.auth?.sub;
+  res.setHeader("X-Custom", "value");
+}
+
+// ✅ Return values — composable and testable
+function good(req, res, acc) {
+  return {
+    value: { user: acc.auth?.sub },
+    response: { headers: [["X-Custom", "value"]] },
+  };
+}
+```
+
+### Returning a Plain Object When You Mean Response Metadata
+
+A plain object (without explicit `value` or `response` keys) is treated
+as `{value: returnedObject}` and merged into the *domain* accumulator.
+If you intend to contribute headers or a status code, wrap in `response`:
+
+```js
+// ❌ This merges {headers: [...]} into the DOMAIN accumulator
+function bad() {
+  return { headers: [["X-Timing", "42ms"]] };
+}
+
+// ✅ Explicit response — headers go to the response accumulator
+function good() {
+  return { response: { headers: [["X-Timing", "42ms"]] } };
+}
+```
+
+### Ignoring the Pipeline Break Signal
+
+When `responseAcc.statusCode` is set by an earlier middleware, the
+pipeline breaks and your middleware will not execute. Do not design
+middleware that depends on running "cleanup" after a rejection — use
+the response accumulator or `res` event listeners instead:
+
+```js
+// ❌ Assumes this always runs — it won't after a 4xx/5xx break
+function bad() {
+  return (req, res, acc) => {
+    doSetup();
+    // If earlier middleware set statusCode, this never executes
+    return { value: { ready: true } };
+  };
+}
+
+// ✅ If cleanup is needed, attach to res events at factory time
+function good() {
+  return (req, res) => {
+    res.on("close", () => releaseResources());
+    return undefined;
+  };
+}
+```
+
+### Using `fromConnect()` When You Need Accumulator Access
+
+`fromConnect()` always returns `undefined` — it cannot read the domain
+accumulator or contribute data to it. If your middleware needs `acc`,
+write a native ergo middleware:
+
+```js
+// ❌ Cannot access acc.auth inside helmet()
+compose(fromConnect(helmet()), /* ... */);
+
+// ✅ Native middleware with full accumulator access
+function rateLimitByUser() {
+  return (req, res, acc) => {
+    const key = acc.auth?.sub ?? req.socket.remoteAddress;
+    // ... rate limit logic using the accumulator ...
+    return undefined;
+  };
+}
+```
+
+### Module-Level Mutable State
+
+Avoid storing per-request data in module-level variables. Each request
+must be independent — use factory closures or the domain accumulator:
+
+```js
+// ❌ Shared mutable state — race conditions, memory leaks
+const requestCache = new Map();
+function bad() {
+  return (req, res, acc) => {
+    requestCache.set(req, { /* data */ });
+    // Who deletes this entry? When?
+  };
+}
+
+// ✅ Closure-scoped per invocation — no shared state
+function good(options) {
+  const db = createClient(options);
+  return (req, res, acc) => {
+    let cached;
+    const resolve = async () => {
+      if (!cached) cached = db.find(acc.auth?.tenantId);
+      return cached;
+    };
+    return { value: { resolve } };
+  };
+}
+```
