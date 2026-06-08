@@ -303,6 +303,101 @@ For pagination options (custom page sizes, maximum bounds) and the full
 examples including edge cases, see the
 [Pagination recipe](/recipes/pagination/).
 
+### OpenAPI Generation
+
+`generateOpenAPI(router, options?)` produces an
+[OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.0) specification
+document from the router's registered routes. It auto-extracts path
+parameters, query parameters, request body schemas, security schemes,
+and content types from route configs and defaults.
+
+```js
+import createRouter from "@centralping/ergo-router";
+import generateOpenAPI from "@centralping/ergo-router/openapi";
+
+const router = createRouter({
+  defaults: {
+    accepts: { types: ["application/json"] },
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+
+router.get("/users/:id", {
+  validate: {
+    params: {
+      type: "object",
+      properties: { id: { type: "string" } },
+    },
+  },
+  openapi: { summary: "Get user by ID", tags: ["Users"] },
+  execute: getUser,
+});
+
+const spec = generateOpenAPI(router, {
+  title: "My API",
+  version: "1.0.0",
+  description: "User management service",
+});
+```
+
+#### Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `title` | `string` | `'API'` | API title for the `info` object |
+| `version` | `string` | `'1.0.0'` | API version for the `info` object |
+| `description` | `string` | — | API description |
+| `servers` | `object[]` | — | Server objects for the `servers` array |
+| `info` | `object` | — | Additional `info` properties merged after title/version/description |
+
+#### Auto-Extraction
+
+`generateOpenAPI` derives spec content from route configs without
+manual annotation:
+
+- **Path parameters** — extracted from find-my-way route patterns (`:id`, `:id(^\d+)`)
+- **Query parameters** — from `validate.query` schemas
+- **Request body** — from `validate.body` on POST/PUT/PATCH routes
+- **Security schemes** — from `authorization.strategies` (Bearer, Basic, API key)
+- **Content types** — from `accepts.types`
+
+Config resolution follows the same precedence as the pipeline builder —
+route values override defaults, `false` disables, `true` enables with
+empty options.
+
+#### The `openapi` Annotation Key
+
+The `openapi` key on route configs adds or overrides properties on the
+generated operation object. Annotations merge on top of auto-derived
+values, so you can enrich the spec with summaries, tags, custom
+responses, and descriptions:
+
+```js
+router.post("/users", {
+  validate: { body: userSchema },
+  openapi: {
+    summary: "Create a new user",
+    tags: ["Users"],
+    responses: {
+      201: { description: "User created" },
+      409: { description: "Email already exists" },
+    },
+  },
+  execute: createUser,
+});
+```
+
+<Aside type="caution" title="openapi is not valid in defaults">
+  The `openapi` annotation key is a pass-through — it is not resolved
+  through the pipeline builder's config resolution. Setting it in
+  `defaults` has no effect. Annotations must be placed on individual
+  route configs.
+</Aside>
+
+For serving the generated spec from a route and mounting an interactive
+API explorer, see the
+[OpenAPI Serving recipe](/recipes/openapi-serving/).
+
 ### Graceful Shutdown
 
 `graceful(handler, options?)` creates an HTTP server with full lifecycle
