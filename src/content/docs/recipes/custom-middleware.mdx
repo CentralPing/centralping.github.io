@@ -313,8 +313,8 @@ only for the current request:
 </Tabs>
 
 <Aside type="tip">
-  The closure-scoped `cached` variable lives only for the duration of one
-  request — no module-level `Map` or cleanup logic needed. Each invocation
+  The closure-scoped `result`/`resolved` state lives only for the duration of
+  one request — no module-level `Map` or cleanup logic needed. Each invocation
   of the factory's inner function creates a fresh closure.
 </Aside>
 
@@ -648,7 +648,7 @@ function bad() {
   };
 }
 
-// ✅ If cleanup is needed, attach to res events at factory time
+// ✅ If cleanup is needed, attach to res events at request time
 function good() {
   return (req, res) => {
     res.on("close", () => releaseResources());
