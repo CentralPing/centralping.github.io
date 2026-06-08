@@ -201,7 +201,8 @@ function apiVersion(version) {
 
 Measuring response time via the accumulator requires a two-step pattern
 because middleware return values are captured *before* `send()` writes
-the response:
+the response. Register the timer with `setPath: "timing"` so downstream
+middleware reads `acc.timing.startedAt`:
 
 ```js
 function responseTimer() {
@@ -210,16 +211,19 @@ function responseTimer() {
   };
 }
 
-// In the execute handler, compute elapsed time relative to the start
-function computeTiming(req, res, acc) {
-  const elapsed = (performance.now() - acc.timing.startedAt).toFixed(2);
-  return {
-    response: {
-      headers: [["X-Response-Time", `${elapsed}ms`]],
-      body: acc.result,
-    },
-  };
-}
+const pipeline = compose(
+  {fn: responseTimer(), setPath: "timing"},
+  // ... other middleware ...
+  (req, res, acc) => {
+    const elapsed = (performance.now() - acc.timing.startedAt).toFixed(2);
+    return {
+      response: {
+        headers: [["X-Response-Time", `${elapsed}ms`]],
+        body: { result: "ok" },
+      },
+    };
+  },
+);
 ```
 
 <Aside type="caution" title="What this measures">
@@ -248,10 +252,14 @@ only for the current request:
     function tenantResolver(options) {
       const db = createDbClient(options);
       return (req, res, acc) => {
-        let cached;
+        let result;
+        let resolved = false;
         const resolve = async () => {
-          if (!cached) cached = db.tenants.findById(acc.auth?.tenantId);
-          return cached;
+          if (!resolved) {
+            result = await db.tenants.findById(acc.auth?.tenantId);
+            resolved = true;
+          }
+          return result;
         };
         return { value: { resolve } };
       };
@@ -278,10 +286,14 @@ only for the current request:
     function tenantResolver(options) {
       const db = createDbClient(options);
       return (req, res, acc) => {
-        let cached;
+        let result;
+        let resolved = false;
         const resolve = async () => {
-          if (!cached) cached = db.tenants.findById(acc.auth?.tenantId);
-          return cached;
+          if (!resolved) {
+            result = await db.tenants.findById(acc.auth?.tenantId);
+            resolved = true;
+          }
+          return result;
         };
         return { value: { resolve } };
       };
@@ -684,10 +696,14 @@ function bad() {
 function good(options) {
   const db = createClient(options);
   return (req, res, acc) => {
-    let cached;
+    let result;
+    let resolved = false;
     const resolve = async () => {
-      if (!cached) cached = db.find(acc.auth?.tenantId);
-      return cached;
+      if (!resolved) {
+        result = await db.find(acc.auth?.tenantId);
+        resolved = true;
+      }
+      return result;
     };
     return { value: { resolve } };
   };
