@@ -196,14 +196,9 @@ available for log enrichment:
     );
     ```
 
-    The `info` object passed to `log` does not automatically include
-    trace context. Enrich it in the callback:
-
-    ```js
-    {fn: logger({
-      log: (info) => log.info({ ...info, traceId: info.traceId }),
-    }), setPath: "log"},
-    ```
+    When `tracing()` is placed before `logger()` as shown above, the
+    `info` object passed to `log` automatically includes `traceId` and
+    `spanId` from `acc.trace` — no manual enrichment is needed.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
