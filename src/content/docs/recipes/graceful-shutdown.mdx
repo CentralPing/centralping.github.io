@@ -229,6 +229,13 @@ shutdown or integration tests.
 For test-specific lifecycle patterns (ephemeral ports, preventing
 `process.exit`), see [Testing Patterns](/recipes/testing-patterns/).
 
+### Custom Logger Integration
+
+The `log` option accepts any object with `.info()`, `.warn()`, and
+`.error()` methods — a pino or winston instance works directly. For
+complete integration patterns including request ID correlation and trace
+enrichment, see [Structured Logging](/recipes/structured-logging/).
+
 ### Multiple Resource Cleanup
 
 Chain cleanup operations in `onShutdown`. Errors in `onShutdown` are

@@ -1,0 +1,288 @@
+---
+title: Structured Logging
+description: Integrating pino or winston with ergo's logger() middleware and ergo-router's graceful() lifecycle logger.
+---
+
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
+
+## Problem
+
+You want to send structured JSON logs to a production logging pipeline but
+ergo exposes two distinct logging integration surfaces:
+
+1. **`logger()` middleware** — accepts a `log` callback function
+   `(info) => void` called on response finish with the full structured
+   log entry
+2. **`graceful()` utility** — accepts a `log` object with `.info()`,
+   `.warn()`, `.error()` methods for lifecycle events
+
+You need to wire a real structured logger (pino or winston) to both
+surfaces, correlate request IDs across application logs, and enrich log
+output with OpenTelemetry trace context.
+
+## Solution
+
+### Pino Integration
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import pino from "pino";
+    import { handler, compose, logger } from "@centralping/ergo";
+
+    const log = pino({ level: "info" });
+
+    const pipeline = compose(
+      {fn: logger({
+        log: (info) => log.info(info),
+        error: (info) => log.error(info),
+      }), setPath: "log"},
+      // ... remaining middleware
+    );
+
+    const server = http.createServer(handler(pipeline));
+    server.listen(3000);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import pino from "pino";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const log = pino({ level: "info" });
+
+    const router = createRouter({
+      defaults: {
+        logger: {
+          log: (info) => log.info(info),
+          error: (info) => log.error(info),
+        },
+      },
+    });
+
+    router.get("/users", {
+      execute: () => ({ response: { body: [] } }),
+    });
+
+    await graceful(router.handle(), { port: 3000, log });
+    ```
+
+    The same pino instance satisfies both surfaces — `logger()` receives
+    it as callbacks while `graceful()` receives it as an object (pino
+    instances have `.info()`, `.warn()`, `.error()` methods natively).
+  </TabItem>
+</Tabs>
+
+### Winston Integration
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import winston from "winston";
+    import { handler, compose, logger } from "@centralping/ergo";
+
+    const log = winston.createLogger({
+      level: "info",
+      format: winston.format.json(),
+      transports: [new winston.transports.Console()],
+    });
+
+    const pipeline = compose(
+      {fn: logger({
+        log: (info) => log.info({ message: "request completed", ...info }),
+        error: (info) => log.error({ message: "request error", ...info }),
+      }), setPath: "log"},
+      // ... remaining middleware
+    );
+
+    const server = http.createServer(handler(pipeline));
+    server.listen(3000);
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import winston from "winston";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const log = winston.createLogger({
+      level: "info",
+      format: winston.format.json(),
+      transports: [new winston.transports.Console()],
+    });
+
+    const router = createRouter({
+      defaults: {
+        logger: {
+          log: (info) => log.info({ message: "request completed", ...info }),
+          error: (info) => log.error({ message: "request error", ...info }),
+        },
+      },
+    });
+
+    router.get("/users", {
+      execute: () => ({ response: { body: [] } }),
+    });
+
+    await graceful(router.handle(), { port: 3000, log });
+    ```
+
+    Winston instances also have `.info()`, `.warn()`, `.error()` methods,
+    so the same instance satisfies `graceful()` directly.
+  </TabItem>
+</Tabs>
+
+### Request ID Correlation
+
+Access the request ID from `acc.log.requestId` in your execute handler
+to correlate application-level logs with the HTTP request:
+
+```js
+router.get("/users", {
+  execute: async (req, res, acc) => {
+    const { requestId } = acc.log;
+
+    log.info({ requestId, msg: "fetching users from database" });
+    const users = await db.query("SELECT * FROM users");
+    log.info({ requestId, msg: "query complete", count: users.length });
+
+    return { response: { body: users } };
+  },
+});
+```
+
+For high-volume services, create a child logger scoped to the request:
+
+```js
+router.get("/users", {
+  execute: async (req, res, acc) => {
+    const reqLog = log.child({ requestId: acc.log.requestId });
+
+    reqLog.info("fetching users from database");
+    const users = await db.query("SELECT * FROM users");
+    reqLog.info({ msg: "query complete", count: users.length });
+
+    return { response: { body: users } };
+  },
+});
+```
+
+<Aside type="caution">
+  `acc.log` is a **data snapshot** — it contains request metadata
+  (`requestId`, `method`, `url`, `ip`, etc.) but does NOT have
+  `.info()`, `.warn()`, or `.error()` methods. It is not a logger
+  instance. Use your own logger instance for application logging;
+  use `acc.log.requestId` for correlation only.
+</Aside>
+
+### Trace Context Enrichment
+
+When OpenTelemetry is configured, place `tracing()` before `logger()`
+in the pipeline so that `acc.trace.traceId` and `acc.trace.spanId` are
+available for log enrichment:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { handler, compose, tracing, logger } from "@centralping/ergo";
+
+    const pipeline = compose(
+      {fn: tracing(), setPath: "trace"},
+      {fn: logger({
+        log: (info) => log.info(info),
+      }), setPath: "log"},
+      // ... remaining middleware
+    );
+    ```
+
+    When `tracing()` is placed before `logger()` as shown above, the
+    `info` object passed to `log` automatically includes `traceId` and
+    `spanId` from `acc.trace` — no manual enrichment is needed.
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const router = createRouter({
+      defaults: {
+        tracing: { perStage: true },
+        logger: {
+          log: (info) => log.info(info),
+        },
+      },
+    });
+
+    await graceful(router.handle(), { port: 3000, log });
+    ```
+
+    ergo-router automatically places `tracing()` before `logger()` in
+    the pipeline, so trace context fields (`traceId`, `spanId`) are
+    included in the structured log entry when an OTEL SDK is registered.
+  </TabItem>
+</Tabs>
+
+<Aside type="caution">
+  Pipeline ordering matters. If `logger()` runs before `tracing()`, the
+  trace context will not be available in the log entry. In standalone
+  composition, always place `tracing()` first. In ergo-router, this
+  ordering is handled automatically.
+</Aside>
+
+## Explanation
+
+### Two Integration Surfaces
+
+| Surface | Option key | Type | Called with | Use case |
+| ------- | ---------- | ---- | ----------- | -------- |
+| `logger()` middleware | `log` / `error` | `(info) => void` | Full structured log entry on response finish | Per-request HTTP logging |
+| `graceful()` utility | `log` | `{info, warn, error}` | String messages during lifecycle events | Server startup/shutdown logging |
+
+Both surfaces accept the same logger instance in ergo-router — a pino
+or winston logger satisfies both because it has method-based `.info()`,
+`.warn()`, `.error()` (for `graceful()`) and can be wrapped in a
+callback `(info) => logger.info(info)` (for `logger()`).
+
+### acc.log Is Data, Not a Logger
+
+The `logger()` middleware stores a **data snapshot** at `acc.log`
+containing request metadata (requestId, method, URL, IP, host info).
+This is the accumulated domain value — the same pattern as `acc.url`,
+`acc.cookies`, or `acc.route`. It does not have logging methods.
+
+To log from an execute handler, use your own logger instance and
+reference `acc.log.requestId` for correlation.
+
+### Request ID Flow
+
+```
+Incoming request
+    │
+    ▼
+logger() middleware
+    ├── Resolves requestId (res header → req header → uuid())
+    ├── Stores metadata at acc.log
+    └── Registers response-finish callback
+    │
+    ▼
+execute handler
+    ├── Reads acc.log.requestId
+    └── Uses own logger instance with requestId for correlation
+    │
+    ▼
+Response finish
+    └── logger() calls log(info) with full entry including duration
+```
+
+### Production Tips
+
+- **JSON output**: Use `pino()` (JSON by default) or
+  `winston.format.json()` for machine-parseable log output
+- **Log levels**: Set `level: "info"` in production; use `"debug"` in
+  development for verbose output
+- **Transport separation**: Use pino transports or winston transports to
+  route logs to files, external services, or stdout for container
+  environments
+- **Sensitive data**: The `logger()` middleware automatically redacts
+  `authorization`, `proxy-authorization`, `cookie`, and `set-cookie`
+  headers — no additional configuration needed

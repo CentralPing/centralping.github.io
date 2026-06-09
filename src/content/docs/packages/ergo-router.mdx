@@ -508,7 +508,10 @@ Returns `Promise<{server, shutdown}>`:
 ##### Custom Logger
 
 Replace the default `console` with any object that provides `.info()`,
-`.warn()`, and `.error()` methods — for example, a structured JSON logger:
+`.warn()`, and `.error()` methods — for example, a structured JSON logger.
+For production integrations with pino or winston (including request ID
+correlation and trace enrichment), see the
+[Structured Logging recipe](/recipes/structured-logging/).
 
 ```js
 import createRouter, { graceful } from "@centralping/ergo-router";
