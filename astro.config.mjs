@@ -135,6 +135,11 @@ export default defineConfig({
             { label: "ergo-router", link: "/changelog/ergo-router/" },
           ],
         },
+        {
+          label: "Migration Guides",
+          collapsed: true,
+          items: [{ autogenerate: { directory: "migration" } }],
+        },
       ],
       customCss: ["./src/styles/packages.css", "./src/styles/benchmarks.css"],
     }),

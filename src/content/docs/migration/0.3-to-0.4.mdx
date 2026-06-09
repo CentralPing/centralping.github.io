@@ -1,0 +1,182 @@
+---
+title: Migrating to 0.4
+description: Step-by-step migration guide for upgrading @centralping/ergo and @centralping/ergo-router from 0.3.x to 0.4.x.
+---
+
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
+
+This guide covers the breaking changes introduced in **ergo 0.4.0** and
+**ergo-router 0.4.0**, released together on 2026-06-06. Both packages must
+be upgraded in lockstep — ergo-router 0.4.x requires `@centralping/ergo >=0.4.0 <0.5.0`.
+
+<Aside type="tip">
+  If you are upgrading from **0.2.x or earlier**, also review the
+  [cumulative changes](#cumulative-changes-from-earlier-versions) at the
+  bottom of this page.
+</Aside>
+
+## Prerequisites
+
+```bash
+npm install @centralping/ergo@^0.4.0 @centralping/ergo-router@^0.4.0
+```
+
+Verify versions after install:
+
+```bash
+npm ls @centralping/ergo @centralping/ergo-router
+```
+
+## Breaking: Composition Format (ergo + ergo-router)
+
+Middleware composition changed from `[fn, setPath]` tuples to `{fn, setPath}`
+config objects. This affects both standalone `compose()` pipelines and
+ergo-router declarative configs that use the `use` key.
+
+### Before (0.3.x)
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, logger, url, accepts } from "@centralping/ergo";
+
+    const pipeline = compose(
+      [logger(), "log"],
+      [accepts({ types: ["application/json"] }), "accepts"],
+      [url(), "url"],
+      (req, res, acc) => ({
+        response: { body: { path: acc.url.pathname } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/items", {
+      use: [
+        [customAudit(), "audit"],
+      ],
+      execute: (req, res, acc) => ({
+        response: { body: acc.audit },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### After (0.4.x)
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, logger, url, accepts } from "@centralping/ergo";
+
+    const pipeline = compose(
+      { fn: logger(), setPath: "log" },
+      { fn: accepts({ types: ["application/json"] }), setPath: "accepts" },
+      { fn: url(), setPath: "url" },
+      (req, res, acc) => ({
+        response: { body: { path: acc.url.pathname } },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.get("/items", {
+      use: [
+        { fn: customAudit(), setPath: "audit" },
+      ],
+      execute: (req, res, acc) => ({
+        response: { body: acc.audit },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+**What changed:** `normalizeOp()` now discriminates via `typeof op === 'function'`
+instead of `Array.isArray`. Response-only middleware (cors, securityHeaders,
+cacheControl, rateLimit, precondition, validate, jsonApiQuery) remain plain
+functions — no wrapper needed.
+
+### Migration Steps
+
+1. **Find all tuple usages** — search for `[` followed by a function call and a
+   string literal in your pipeline compositions.
+2. **Replace each tuple** — `[myFn(), 'key']` becomes `{fn: myFn(), setPath: 'key'}`.
+3. **Leave response-only middleware unchanged** — middleware that does not write
+   to the domain accumulator (e.g., `validate(...)`, `rateLimit(...)`) stays as
+   a plain function call.
+
+## Cumulative Changes from Earlier Versions
+
+If you are upgrading from a version earlier than 0.3.x, the following breaking
+changes also apply. Apply them in order.
+
+### From 0.2.x: Paginate Export Shape (ergo 0.3.0)
+
+The `paginate` export from `@centralping/ergo` changed from the
+`lib/paginate.js` utility namespace to the `http/paginate.js` factory function.
+
+**Before (0.2.x):**
+
+```js
+import { paginate } from "@centralping/ergo";
+
+const { offset, limit } = paginate.parseOffsetParams(query);
+```
+
+**After (0.3.x+):**
+
+```js
+import { parseOffsetParams } from "@centralping/ergo/lib/paginate";
+
+const { offset, limit } = parseOffsetParams(query);
+```
+
+The `paginate` name on the main export is now the pipeline middleware factory.
+Low-level helpers (`parseOffsetParams`, `parseCursorParams`, `offsetResponse`,
+`cursorResponse`) moved to the deep import path.
+
+### From 0.1.x: Config Key Rename (ergo-router 0.2.0)
+
+The `auth` config key was renamed to `authorization` for consistency with the
+`authorization()` middleware factory name.
+
+**Before (0.1.x):**
+
+```js
+router.get("/users", {
+  auth: { strategies: [bearerStrategy] },
+  execute: handler,
+});
+```
+
+**After (0.2.x+):**
+
+```js
+router.get("/users", {
+  authorization: { strategies: [bearerStrategy] },
+  execute: handler,
+});
+```
+
+<Aside type="note">
+  The accumulator path remains `acc.auth` — only the config key changed.
+</Aside>
+
+## Verification
+
+After migrating, confirm everything works:
+
+1. **Build passes** — `npm run build` (or your project's build command) exits
+   without errors.
+2. **Tests pass** — `npm test` exits without failures.
+3. **No runtime warnings** — ergo 0.4.1+ validates option keys at factory time
+   and emits `process.emitWarning` for unknown keys. Check for warnings during
+   startup.
+4. **Review changelog** — see the full
+   [ergo changelog](/changelog/ergo/) and
+   [ergo-router changelog](/changelog/ergo-router/) for non-breaking additions
+   you may want to adopt.
