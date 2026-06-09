@@ -110,9 +110,13 @@ attackers to assume other users' identities.
   `error` attributes formatted per the RFCs.
 - CSRF protection uses `crypto.timingSafeEqual()` for token comparison,
   preventing timing attacks that could reveal token values.
-- CSRF cookies are locked to `httpOnly: true` and `sameSite: 'Strict'` by
-  default. These attributes cannot be overridden by consumer configuration,
-  preventing accidental weakening.
+- CSRF cookie attributes are locked per cookie: the token cookie is
+  `httpOnly: false` (locked — client JavaScript must read it for the
+  double-submit header) with `sameSite: 'Strict'`; the UUID cookie defaults
+  to `httpOnly: true` (from the cookie module) with `sameSite: 'Strict'`.
+  `sameSite` cannot be overridden via `cookieOptions` on either cookie, and
+  the token cookie's `httpOnly: false` cannot be overridden (set after the
+  `cookieOptions` spread).
 - `WWW-Authenticate` header values pass through `sanitizeQuotedString` to
   prevent header injection via challenge attributes.
 
@@ -319,8 +323,11 @@ Additional structural protections:
 - **Null-prototype objects** for all user-input-derived data (query params,
   cookies, Prefer headers). Keys like `__proto__`, `constructor`, and
   `toString` cannot pollute the prototype chain.
-- **CSRF cookie attributes are locked.** `httpOnly` and `sameSite` cannot be
-  overridden via `cookieOptions`, preventing accidental weakening.
+- **CSRF cookie attributes are locked.** `sameSite: 'Strict'` is enforced on
+  both cookies and cannot be overridden via `cookieOptions`. The token
+  cookie's `httpOnly: false` is also locked (set after the `cookieOptions`
+  spread) because client JavaScript must read it for the double-submit
+  header.
 - **Cookie-octet grammar enforcement.** Cookie values and names are validated
   against RFC 6265 §4.1.1, preventing `Set-Cookie` attribute injection via
   semicolons or other special characters in values.
