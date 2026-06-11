@@ -168,7 +168,7 @@ config object that contributes to the domain accumulator.
 | `logger` | `acc.log` | Negotiation | Structured request metadata |
 | `rateLimit` | `acc.rateLimit` | Negotiation | Circuit breaker — response headers only |
 | `accepts` | `acc.accepts` | Negotiation | Content negotiation |
-| `preconditionRequired` | `acc.precondition` | Negotiation | Gate — enforces conditional headers (428); auto-included for PUT/PATCH |
+| `preconditionRequired` | `acc.precondition` | Negotiation | Gate — enforces conditional headers (428); PUT/PATCH only when enabled |
 | `cookie` | `acc.cookies` | Negotiation | Cookie jar (parse + set) |
 | `url` | `acc.url` | Negotiation | Fast URL parser; auto-included for GET/DELETE |
 | `paginate` | `acc.paginate` | Negotiation | Parsed pagination params; auto-includes `url` |
