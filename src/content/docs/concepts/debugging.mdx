@@ -1,0 +1,275 @@
+---
+title: Debugging & Diagnostics
+description: Startup errors, runtime warnings, warning code reference, and troubleshooting FAQ for ergo and ergo-router.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+ergo and ergo-router surface errors and warnings at three points in the
+request lifecycle: **registration time** (when routes are registered),
+**factory time** (when middleware is instantiated), and **runtime** (during
+request handling). This page documents each diagnostic mechanism and
+provides a reference for all warning codes.
+
+## Startup-Time Errors
+
+### Registration-Time Validation (ergo-router)
+
+When you register a route with `router.get()`, `router.post()`, etc.,
+ergo-router validates the config object immediately — before any
+requests arrive.
+
+**Unknown config keys** are caught with Levenshtein-distance suggestions:
+
+```text
+Error: Unknown config key "authorisation" in POST /users (did you mean "authorization"?)
+```
+
+ergo-router validates in **strict mode** by default — unknown keys throw
+an `Error` that prevents server startup. This catches typos before a
+single request is processed.
+
+**Type validation** ensures every config key has the correct value type
+(`object`, `boolean`, `function`, or `Array` depending on the key):
+
+```text
+Error: Invalid "authorization" in POST /users: expected object or boolean, got string.
+```
+
+**Missing `execute` function** — every declarative route config must
+include an `execute` function:
+
+```text
+Error: Route config for POST /users is missing the required "execute" function.
+```
+
+**Semantic contradictions** are detected across resolved config. For
+example, `body: false` combined with `validate.body` is caught at
+registration time:
+
+```text
+Error: Route config for POST /users has body: false but validate.body is configured.
+Body parsing must be enabled for body validation to work.
+```
+
+<Aside type="tip">
+  Registration-time errors are the most actionable — they appear in
+  your terminal before the server starts and include the route path,
+  HTTP method, and a "did you mean?" suggestion when applicable.
+</Aside>
+
+### Factory-Time Validation (ergo)
+
+Each ergo middleware factory validates its options object when called.
+Unknown options produce a `process.emitWarning()` with a Levenshtein
+suggestion (distance ≤ 3):
+
+```text
+(node:12345) [ERGO_AUTHORIZATION_UNKNOWN_OPTION] ErgoWarning:
+authorization() received unknown option: "stratagies" (did you mean "strategies"?).
+Valid options are: authorizer, challenge, realm, strategies.
+```
+
+Factory-time warnings use `process.emitWarning()` rather than `throw`
+so that a typo in an optional field does not prevent startup. The
+middleware still functions — only the unrecognized option is ignored.
+
+<Aside type="note">
+  Factory-time warnings are deduplicated per code + key combination.
+  The same warning will not fire twice for the same unknown option,
+  even if the factory is called multiple times.
+</Aside>
+
+## Runtime Warnings
+
+ergo uses Node.js `process.emitWarning()` with
+`{type: 'ErgoWarning', code}` for runtime diagnostic messages. These
+warnings fire during request handling when the pipeline encounters a
+configuration issue that does not warrant a thrown error.
+
+### Listening for Warnings
+
+```js
+process.on('warning', (warning) => {
+  if (warning.type === 'ErgoWarning') {
+    console.error(`[${warning.code}] ${warning.message}`);
+  }
+});
+```
+
+### Stack Traces
+
+To see where a warning originates, start Node.js with the
+`--trace-warnings` flag:
+
+```bash
+node --trace-warnings server.js
+```
+
+This prints a full stack trace for each `process.emitWarning()` call,
+making it straightforward to trace the warning back to the specific
+middleware factory or pipeline step.
+
+## Warning Code Reference
+
+### Fixed Codes (ergo)
+
+| Code | Source | Condition | Action |
+| --- | --- | --- | --- |
+| `ERGO_VALIDATE_NO_BODY` | `validate()` | `validate.body` schema is configured but `acc.body` is missing — `body()` middleware did not run before `validate()` | Ensure `body` is in the pipeline before `validate`, or let ergo-router auto-include it |
+| `ERGO_VALIDATE_UNKNOWN_KEY` | `validate()` | Schema object contains keys other than `body`, `query`, `params` | Check for typos; valid keys are `body`, `query`, `params` |
+
+### Dynamic Codes (ergo middleware factories)
+
+Each middleware factory generates a warning code using the pattern
+`ERGO_{NAME}_UNKNOWN_OPTION` where `{NAME}` is the uppercase factory
+name with camelCase boundaries expanded:
+
+| Code Pattern | Factory |
+| --- | --- |
+| `ERGO_ACCEPTS_UNKNOWN_OPTION` | `accepts()` |
+| `ERGO_AUTHORIZATION_UNKNOWN_OPTION` | `authorization()` |
+| `ERGO_BODY_UNKNOWN_OPTION` | `body()` |
+| `ERGO_CACHE_CONTROL_UNKNOWN_OPTION` | `cacheControl()` |
+| `ERGO_COMPRESS_UNKNOWN_OPTION` | `compress()` |
+| `ERGO_COOKIE_UNKNOWN_OPTION` | `cookie()` |
+| `ERGO_CORS_UNKNOWN_OPTION` | `cors()` |
+| `ERGO_CSRF_UNKNOWN_OPTION` | `csrf()` |
+| `ERGO_HANDLER_UNKNOWN_OPTION` | `handler()` |
+| `ERGO_IDEMPOTENCY_UNKNOWN_OPTION` | `idempotency()` |
+| `ERGO_LOGGER_UNKNOWN_OPTION` | `logger()` |
+| `ERGO_PAGINATE_UNKNOWN_OPTION` | `paginate()` |
+| `ERGO_PRECONDITION_UNKNOWN_OPTION` | `precondition()` |
+| `ERGO_RATE_LIMIT_UNKNOWN_OPTION` | `rateLimit()` |
+| `ERGO_SECURITY_HEADERS_UNKNOWN_OPTION` | `securityHeaders()` |
+| `ERGO_SEND_UNKNOWN_OPTION` | `send()` |
+| `ERGO_TIMEOUT_UNKNOWN_OPTION` | `timeout()` |
+| `ERGO_TRACING_UNKNOWN_OPTION` | `tracing()` |
+
+All dynamic codes include the unrecognized option name(s) and a "did
+you mean?" suggestion when a valid option is within Levenshtein
+distance ≤ 3.
+
+### ergo-router Validation
+
+ergo-router does **not** use `process.emitWarning()`. Its config
+validation uses:
+
+- **Strict mode** (default): `throw new Error()` for unknown config
+  keys at registration time
+- **Lenient mode** (`strict: false`): `console.warn()` for unknown
+  config keys — prefixed with `[ergo-router]`
+
+## Pipeline Debug Mode
+
+For request-level debugging (identifying which middleware rejected a
+request), enable pipeline debug mode with `debug: true`. This
+populates `_trace` in error response bodies, showing the execution
+path and break point.
+
+See the [Debug Tracing recipe](/recipes/debug-tracing/) for full
+usage examples and the `_trace` shape reference.
+
+## onResponse Hook Debugging
+
+The `onResponse` lifecycle hook fires after `send()` completes.
+Errors thrown by the hook are **silently swallowed** — they do not
+appear in the HTTP response or cause unhandled rejections. If your
+`onResponse` hook appears to not fire:
+
+1. Check application logs — hook errors are caught internally
+2. Verify that no `catchHandler` is configured on the route —
+   `onResponse` does **not** fire when a `catchHandler` handles the
+   error via early return
+
+See [Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for
+the execution model and
+[handler `onResponse`](/middleware/handler/#onresponse-hook) for the
+standalone equivalent.
+
+## Troubleshooting FAQ
+
+### "Startup error about body:false"
+
+**Symptom:** Server fails to start with an error like:
+
+```text
+Error: Route config for POST /users has body: false but validate.body is configured.
+```
+
+**Cause:** The route (or inherited defaults) sets `body: false`
+while also configuring `validate.body`. Body parsing must run
+before body validation.
+
+**Fix:** Remove `body: false` from the route config, or remove the
+`validate.body` schema if body validation is not needed.
+
+### "428 on PUT requests"
+
+**Symptom:** PUT or PATCH requests return `428 Precondition Required`
+even though the request body is correct.
+
+**Cause:** The route has `preconditionRequired: true` (or inherits it
+from defaults), which enforces that clients send an `If-Match` or
+`If-Unmodified-Since` header. This is independent of
+[ETag generation](/middleware/send/) — ETags enable conditional
+evaluation, while `preconditionRequired` enforces header presence.
+
+**Fix:** Send an `If-Match` header with the resource's current ETag,
+or set `preconditionRequired: false` on the route if enforcement is
+not needed. See the
+[precondition middleware guide](/middleware/precondition/) for the
+full interaction.
+
+### "Middleware option typo"
+
+**Symptom:** A warning appears in the console:
+
+```text
+(node:12345) [ERGO_AUTHORIZATION_UNKNOWN_OPTION] ErgoWarning:
+authorization() received unknown option: "stratagies" (did you mean "strategies"?).
+```
+
+**Cause:** A middleware option name is misspelled. The middleware
+still functions but ignores the unrecognized option.
+
+**Fix:** Correct the option name as suggested. Run with
+`--trace-warnings` to see the call site.
+
+### "Compression not working"
+
+**Symptom:** Responses are not compressed even though `compress` is
+configured.
+
+**Cause:** The `Accept-Encoding` request header does not include a
+supported encoding (gzip, deflate, br), or the response body is
+below the minimum size threshold.
+
+**Fix:** Verify the request includes `Accept-Encoding: gzip` (or
+another supported encoding). Check the `compress` middleware's
+`threshold` option — bodies smaller than the threshold are not
+compressed.
+
+### "onResponse hook not firing"
+
+**Symptom:** The `onResponse` callback never executes.
+
+**Cause:** A `catchHandler` is configured on the route or router.
+When the pipeline throws, the `catchHandler` takes control via early
+return — `onResponse` hooks do not fire in this path.
+
+**Fix:** If you need post-response observation alongside error
+handling, add logging inside the `catchHandler` itself. See
+[Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for the
+execution model.
+
+## Further Reading
+
+- [Debug Tracing recipe](/recipes/debug-tracing/) — request-level
+  pipeline tracing with `_trace`
+- [Error Response Reference](/concepts/error-responses/) — every HTTP
+  error response produced by ergo middleware
+- [handler guide](/middleware/handler/) — `debug`, `onResponse`, and
+  `redactErrors` options
+- [Route Config Key Reference](/packages/ergo-router/#route-config-key-reference) —
+  complete key listing with categories and accumulator paths

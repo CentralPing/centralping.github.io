@@ -95,6 +95,10 @@ export default defineConfig({
               label: "Error Response Reference",
               slug: "concepts/error-responses",
             },
+            {
+              label: "Debugging & Diagnostics",
+              slug: "concepts/debugging",
+            },
             { label: "Fast Fail Pipeline", slug: "concepts/fast-fail" },
             {
               label: "Standards Compliance",

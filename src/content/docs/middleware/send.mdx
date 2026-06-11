@@ -154,6 +154,15 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
 | **412 Precondition Failed** | `If-Match` fails on unsafe methods, or `If-Unmodified-Since` fails |
 | **204 No Content** | `Prefer: return=minimal` on 2xx responses (200 → 204) |
 
+<Aside type="tip" title="Enforcing conditional headers">
+  `send()` evaluates conditional headers **when present** but does not
+  require them. To enforce that clients must send `If-Match` or
+  `If-Unmodified-Since` on write operations, add
+  [`preconditionRequired`](/middleware/precondition/) to the route
+  config. The two work together: `preconditionRequired` gates the
+  request (428), then `send()` evaluates the header value (304/412).
+</Aside>
+
 ### Setting `lastModified`
 
 Return `lastModified` on the response accumulator to set the

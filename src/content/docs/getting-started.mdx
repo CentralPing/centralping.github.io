@@ -199,6 +199,15 @@ stages:
   Setting the key to `false` disables auto-inclusion for that route.
 </Aside>
 
+<Aside type="note" title="ETags and conditional requests">
+  ETags are enabled by default on all routes (via `send()`'s
+  `etag: true` default). For write-safe operations where clients must
+  prove they have a current representation, add
+  `preconditionRequired: true` to enforce conditional headers. See the
+  [precondition middleware guide](/middleware/precondition/) for the
+  full interaction between ETags and precondition enforcement.
+</Aside>
+
 <Aside type="tip" title="The execute function">
   The third argument (`acc`) is the **domain accumulator** — it carries
   middleware outputs (parsed body, auth identity, etc.) accumulated through the
@@ -291,6 +300,8 @@ exactly once to serialize the HTTP response. See the
   error responses
 - [Custom Middleware](/recipes/custom-middleware/) — write middleware that fits
   the accumulator contract
+- [Debugging & Diagnostics](/concepts/debugging/) — startup errors, runtime
+  warnings, warning codes, and troubleshooting FAQ
 - [Structured Logging](/recipes/structured-logging/) — integrate pino or
   winston with ergo's logging surfaces
 - [Testing Patterns](/recipes/testing-patterns/) — reliable HTTP testing with

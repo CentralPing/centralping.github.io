@@ -3,7 +3,7 @@ title: precondition
 description: Precondition Required middleware — enforces If-Match or If-Unmodified-Since on unsafe requests (RFC 6585 §3).
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 Enforces that unsafe requests include a conditional header (`If-Match` or
 `If-Unmodified-Since`) before proceeding. Prevents lost-update problems
@@ -32,6 +32,60 @@ Returns `undefined` on success — the middleware is a gate.
 | Status | Condition |
 | ------ | --------- |
 | **428 Precondition Required** | Neither `If-Match` nor `If-Unmodified-Since` header is present |
+
+<Aside type="caution" title="Relationship with ETags">
+  `preconditionRequired` and `etag` ([send](/middleware/send/)) are
+  **complementary but independent** concerns:
+
+  - **`etag: true`** (the default on `send()`) generates ETags and
+    evaluates conditional headers **when present** — returning
+    `304 Not Modified` or `412 Precondition Failed`.
+  - **`preconditionRequired: true`** enforces that clients **must send**
+    a conditional header (`If-Match` or `If-Unmodified-Since`) —
+    returning `428 Precondition Required` when the header is absent.
+
+  Neither enables the other. If you want write-safe operations where
+  clients are required to prove they have a current representation,
+  configure both.
+</Aside>
+
+### Common Pattern — Safe Write Operations
+
+Use `preconditionRequired` with the default `etag: true` behavior to
+enforce optimistic concurrency on write operations:
+
+<Tabs>
+  <TabItem label="ergo-router">
+    ```js
+    router.put("/users/:id", {
+      preconditionRequired: true,
+      // etag: true is the send() default — no explicit config needed
+      execute: async (req, res, acc) => {
+        const user = await db.findAndUpdate(
+          acc.route.params.id,
+          acc.body.parsed,
+        );
+        return { response: { body: user } };
+      },
+    });
+    // PUT without If-Match → 428 Precondition Required
+    // PUT with stale If-Match → 412 Precondition Failed
+    // PUT with current If-Match → 200 OK
+    ```
+  </TabItem>
+  <TabItem label="Opt-out">
+    ```js
+    // ETag generation without enforcement —
+    // clients CAN send conditional headers but are not required to
+    router.put("/settings/:id", {
+      preconditionRequired: false,
+      // etag: true remains the default — ETags are generated,
+      // If-Match is evaluated when present
+      execute: updateSettings,
+    });
+    ```
+  </TabItem>
+</Tabs>
 
 ## Usage
 

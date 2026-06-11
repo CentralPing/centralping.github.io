@@ -150,6 +150,73 @@ router.get("/admin", {
   URL parsing.
 </Aside>
 
+### Route Config Key Reference
+
+Every key accepted in a declarative route config object or in
+`defaults`. Keys are grouped by role — pipeline middleware, route
+options, and annotations.
+
+#### Pipeline Keys
+
+Pipeline keys resolve to middleware factories via the
+[pipeline builder](/concepts/fast-fail/). Each produces a `{fn, setPath}`
+config object that contributes to the domain accumulator.
+
+| Config Key | Accumulator Path | Pipeline Stage | Notes |
+| --- | --- | --- | --- |
+| `tracing` | `acc.trace` | Negotiation | OpenTelemetry span and context |
+| `logger` | `acc.log` | Negotiation | Structured request metadata |
+| `rateLimit` | `acc.rateLimit` | Negotiation | Circuit breaker — response headers only |
+| `accepts` | `acc.accepts` | Negotiation | Content negotiation |
+| `preconditionRequired` | `acc.precondition` | Negotiation | Gate — enforces conditional headers (428); PUT/PATCH only when enabled |
+| `cookie` | `acc.cookies` | Negotiation | Cookie jar (parse + set) |
+| `url` | `acc.url` | Negotiation | Fast URL parser; auto-included for GET/DELETE |
+| `paginate` | `acc.paginate` | Negotiation | Parsed pagination params; auto-includes `url` |
+| `jsonApiQuery` | `acc.jsonApiQuery` | Negotiation | JSON:API query parameter parsing |
+| `prefer` | `acc.prefer` | Negotiation | RFC 7240 Prefer header |
+| `securityHeaders` | `acc.security` | Negotiation | HSTS, CSP, X-Content-Type-Options — response headers only |
+| `cacheControl` | `acc.cache` | Negotiation | Cache-Control directive — response headers only |
+| `csrf` | `acc.csrf` | Authorization | CSRF token issue/verify |
+| `authorization` | `acc.auth` | Authorization | Strategy-based auth |
+| `body` | `acc.body` | Validation | Request body parsing; auto-included for POST/PUT/PATCH |
+| `idempotency` | `acc.idempotency` | Validation | Idempotency-Key processing |
+| `validate` | `acc.validation` | Validation | JSON Schema validation (`{body, query, params}` or [shorthand form](/middleware/validate/)) |
+| `timeout` | n/a | Execution | Request timeout — aborts pipeline on expiry |
+| `compress` | n/a | Execution | Response compression |
+| `use` | n/a | Between Validation and Execution | Custom middleware array; defaults and route arrays are concatenated |
+| `execute` | n/a | Execution | Route handler function |
+
+<Aside type="tip">
+  For the full accumulator shape and typed interfaces, see the
+  [Accumulator Reference](/concepts/accumulator/).
+</Aside>
+
+#### Route Option Keys
+
+Route options are extracted from the config object and passed to the
+auto-wrap layer. They do not correspond to pipeline middleware.
+
+| Config Key | Type | Description |
+| --- | --- | --- |
+| `send` | `object` | Per-route options passed to `send()` (e.g. `responseSchema`, `envelope`) |
+| `noSend` | `boolean` | Skip automatic `send()` — handler writes the full response |
+| `catchHandler` | `function` | Per-route error handler: `(req, res, err, domainAcc)` |
+| `onResponse` | `function` | Post-send observation hook: `(req, res, responseInfo, domainAcc)` |
+
+See [Route Options](#route-options) below for full documentation and
+examples.
+
+#### Annotation Keys
+
+Annotation keys pass through to route metadata without being consumed
+by the pipeline builder.
+
+| Config Key | Description |
+| --- | --- |
+| `openapi` | OpenAPI operation object merged onto auto-derived spec output. Not valid in `defaults`. |
+
+See [OpenAPI Generation](#openapi-generation) for usage.
+
 ### Application Middleware
 
 `router.use(...fns)` registers middleware that runs before every route
