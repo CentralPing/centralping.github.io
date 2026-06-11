@@ -200,7 +200,8 @@ to the auto-wrap layer — they do not correspond to pipeline middleware.
 | --- | --- | --- | --- |
 | `noSend` | `boolean` | `false` | Skip the automatic `send()` call after the pipeline completes. The handler is responsible for writing the full HTTP response. |
 | `send` | `object` | — | Per-route options passed to `send()`. Overrides router-level `send` defaults. |
-| `catchHandler` | `function` | — | Per-route error handler. Receives `(req, res, err)` when the pipeline throws. Overrides router-level `catchHandler`. |
+| `catchHandler` | `function` | — | Per-route error handler. Receives `(req, res, err, domainAcc)` when the pipeline throws. Overrides router-level `catchHandler`. The fourth argument provides the domain accumulator state at the time of the error. |
+| `onResponse` | `function` | — | Per-route post-send observation hook. Receives `(req, res, responseInfo, domainAcc)` after `send()` completes. Fires before the router-level hook. |
 
 #### `noSend` — Manual Response Control
 
@@ -241,6 +242,76 @@ router.get("/events", {
   `res.writeHead()`, `res.write()`, and `res.end()` — if you don't,
   the client connection will hang.
 </Aside>
+
+### Lifecycle Hooks
+
+ergo-router supports `onResponse` observation hooks at two levels:
+**router-level** (via `createRouter({onResponse})`) and **per-route**
+(via the `onResponse` route option). Both receive the same signature:
+
+```js
+(req, res, responseInfo, domainAcc) => void | Promise
+```
+
+#### Execution Order
+
+1. **Route-level** hook fires first (if defined)
+2. **Router-level** hook fires second (if defined)
+
+Each hook is wrapped in its own `try/catch` — a route-level hook
+failure does not prevent the router-level hook from firing.
+
+#### responseInfo Snapshot
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `statusCode` | `number` | Final HTTP status code |
+| `headers` | `object` | Response headers snapshot |
+| `method` | `string` | Request HTTP method |
+| `url` | `string` | Request URL |
+| `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
+| `duration` | `number` | Pipeline execution time in milliseconds |
+
+<Aside type="caution" title="Does not fire with catchHandler">
+  When a `catchHandler` is defined and the pipeline throws, the
+  `catchHandler` receives control via early return. The `onResponse`
+  hooks do **not** fire in this case — the catch handler is
+  responsible for the full response lifecycle.
+</Aside>
+
+<Aside type="note" title="Error handling">
+  Errors thrown by `onResponse` hooks are silently swallowed. Async
+  hooks are awaited. The hooks cannot alter the response — it has
+  already been sent.
+</Aside>
+
+#### Usage — Audit Logging + Per-Route Metrics
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const router = createRouter({
+  onResponse: (req, res, responseInfo, domainAcc) => {
+    auditLog.write({
+      method: responseInfo.method,
+      url: responseInfo.url,
+      status: responseInfo.statusCode,
+      duration: responseInfo.duration,
+      user: domainAcc.auth?.identity,
+    });
+  },
+});
+
+router.post("/payments", {
+  onResponse: (req, res, responseInfo) => {
+    metrics.histogram("payments.duration", responseInfo.duration);
+    metrics.increment(`payments.status.${responseInfo.statusCode}`);
+  },
+  authorization: { strategies: [bearerStrategy] },
+  validate: { body: paymentSchema },
+  execute: processPayment,
+});
+```
 
 ### Pagination
 

@@ -3,7 +3,7 @@ title: handler
 description: Pipeline executor — creates accumulators, runs the pipeline, handles errors, and calls send().
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 The HTTP request handler factory for ergo's two-accumulator model.
 Creates domain and response accumulators per request, runs the composed
@@ -29,6 +29,7 @@ import { handler } from "@centralping/ergo";
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
 | `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an RFC 9457 extension member. |
+| `onResponse` | `function` | — | Post-send lifecycle observation hook. Called after `send()` completes with `(req, res, responseInfo, domainAcc)`. Errors thrown by the hook are swallowed — the hook cannot affect the response. Async hooks are awaited. |
 | `redactErrors` | `boolean` | `true` | Control whether caught 5xx exception messages appear in the RFC 9457 response `detail` field. When `true`, `detail` is set to generic status text. When `false`, `err.message` is passed through for 5xx only — 4xx always uses generic text. Stack traces are never exposed. Only set to `false` in development. |
 | `prettify` | `boolean` | `false` | Pretty-print JSON output (forwarded to [send](/middleware/send/)) |
 | `vary` | `string[]` | `['Accept']` | Vary header values to append (forwarded to [send](/middleware/send/)) |
@@ -37,6 +38,7 @@ import { handler } from "@centralping/ergo";
 | `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate RFC 8288 Link headers and `X-Total-Count` for paginated responses (forwarded to [send](/middleware/send/)) |
 | `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope (forwarded to [send](/middleware/send/)) |
 | `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the RFC 9457 Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json`. (forwarded to [send](/middleware/send/)) |
+| `responseSchema` | `Record<number\|string, object>` | — | Map of status code to JSON Schema for response body projection (forwarded to [send](/middleware/send/)) |
 
 ## Return Value
 
@@ -56,6 +58,81 @@ Returns an async handler `(req, res) => void` suitable for
 | Status | Condition |
 | ------ | --------- |
 | **500 Internal Server Error** | Uncaught pipeline error (detail is redacted for security) |
+
+## onResponse Hook
+
+The `onResponse` option registers a post-send observation callback.
+It fires after the HTTP response has been written — the hook cannot
+alter headers, status, or body.
+
+### responseInfo Shape
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `statusCode` | `number` | Final HTTP status code |
+| `headers` | `object` | Response headers snapshot (from `res.getHeaders()`) |
+| `method` | `string` | Request HTTP method |
+| `url` | `string` | Request URL |
+| `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
+| `duration` | `number` | Pipeline execution time in milliseconds (from `performance.now()`) |
+
+<Aside type="note" title="Error handling">
+  Errors thrown by the `onResponse` hook are silently swallowed —
+  the hook is for observation only and cannot affect the client
+  response. Async hooks are awaited (the handler blocks until the
+  hook completes or throws).
+</Aside>
+
+<Aside type="caution" title="bodySize for streams">
+  When the response body is a stream, `Content-Length` is not set
+  before piping begins. `bodySize` will be `undefined` in that case.
+</Aside>
+
+### Usage — Audit Logging
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import { handler, compose } from "@centralping/ergo";
+
+    const pipeline = compose(
+      (req, res, acc) => ({
+        response: { statusCode: 200, body: { ok: true } },
+      }),
+    );
+
+    const server = http.createServer(
+      handler(pipeline, {
+        onResponse: (req, res, responseInfo, domainAcc) => {
+          console.log(JSON.stringify({
+            method: responseInfo.method,
+            url: responseInfo.url,
+            status: responseInfo.statusCode,
+            duration: responseInfo.duration,
+            user: domainAcc.auth?.identity,
+          }));
+        },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      onResponse: (req, res, responseInfo, domainAcc) => {
+        console.log(JSON.stringify({
+          method: responseInfo.method,
+          url: responseInfo.url,
+          status: responseInfo.statusCode,
+          duration: responseInfo.duration,
+          user: domainAcc.auth?.identity,
+        }));
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
 
 ## Usage
 
