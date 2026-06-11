@@ -35,10 +35,36 @@ These are **direct properties** of the first argument, not nested under a
 wrapper key. For example: `validate({body: schema})`, not
 `validate({schemas: {body: schema}})`.
 
+#### Shorthand Form (body-only)
+
+A raw JSON Schema can be passed directly — it is interpreted as body
+validation. The shorthand is detected when the first argument contains at
+least one JSON Schema keyword and none of the targeted keys (`body`,
+`query`, `params`).
+
+```js
+validate({
+  type: "object",
+  properties: { name: { type: "string" } },
+  required: ["name"],
+});
+```
+
+Detection keywords include: `type`, `properties`, `required`, `items`,
+`$schema`, `$ref`, `$id`, `$defs`, `allOf`, `anyOf`, `oneOf`, `not`,
+`if`, `enum`, `const`, `additionalProperties`, `patternProperties`.
+
+**Precedence:** The targeted form takes priority — when any of `body`,
+`query`, or `params` is present, the object is always treated as a
+targeted schema map regardless of other keys.
+
+**Empty object:** `{}` is not treated as shorthand (no indicator keywords
+are present) and will trigger the unrecognized keys warning.
+
 <Aside type="caution" title="Unrecognized keys warning">
-  Passing unrecognized keys (e.g. `validate({schemas: {body: ...}})`)
-  emits a one-time `ERGO_VALIDATE_UNKNOWN_KEY` process warning. The
-  recognized keys are `body`, `query`, and `params` only.
+  Objects matching neither the targeted form (no `body`, `query`, or
+  `params` keys) nor the shorthand form (no JSON Schema indicator
+  keywords) emit a one-time `ERGO_VALIDATE_UNKNOWN_KEY` process warning.
 </Aside>
 
 ### Options (second argument)
@@ -74,6 +100,8 @@ a data producer.
 | **500 Internal Server Error** | A body schema is configured but `acc.body` is missing — `body()` middleware was not placed before `validate()` in the pipeline. Emits a one-time `ERGO_VALIDATE_NO_BODY` process warning |
 
 ## Usage
+
+### Targeted Form
 
 <Tabs>
   <TabItem label="Standalone">
@@ -113,6 +141,39 @@ a data producer.
           properties: { id: { type: "string", minLength: 1 } },
           required: ["id"],
         },
+      },
+      execute: (req, res, acc) => ({
+        response: { statusCode: 201, body: { created: true } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Shorthand Form
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { compose, body, validate } from "@centralping/ergo";
+
+    const pipeline = compose(
+      {fn: body(), setPath: "body"},
+      validate({
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/users", {
+      validate: {
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
       },
       execute: (req, res, acc) => ({
         response: { statusCode: 201, body: { created: true } },
