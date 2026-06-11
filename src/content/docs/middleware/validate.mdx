@@ -59,7 +59,7 @@ Detection keywords include: `type`, `properties`, `required`, `items`,
 targeted schema map regardless of other keys.
 
 **Empty object:** `{}` is not treated as shorthand (no indicator keywords
-are present) and will trigger the unrecognized keys warning.
+are present) and produces no validators — validation is effectively skipped.
 
 <Aside type="caution" title="Unrecognized keys warning">
   Objects matching neither the targeted form (no `body`, `query`, or
