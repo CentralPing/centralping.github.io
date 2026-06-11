@@ -17,25 +17,25 @@ Each middleware registers its result at a fixed path on the domain
 accumulator via `{fn, setPath}` config objects. The table below maps every
 pipeline-builder key to its accumulator path and typed interface.
 
-| Config Key | setPath (`acc.*`) | Type Interface | Pipeline Stage |
-| --- | --- | --- | --- |
-| `tracing` | `trace` | [`TracingResult`](#acctrace) | Negotiation |
-| `logger` | `log` | [`LogEntry`](#acclog) | Negotiation |
-| `rateLimit` | `rateLimit` | — | Negotiation |
-| `accepts` | `accepts` | [`AcceptsResult`](#accaccepts) | Negotiation |
-| `preconditionRequired` | `precondition` | — | Negotiation |
-| `cookie` | `cookies` | [`CookieJar`](#acccookies) | Negotiation |
-| `url` | `url` | [`UrlResult`](#accurl) | Negotiation |
-| `paginate` | `paginate` | [`PaginateResult`](#accpaginate) | Negotiation |
-| `jsonApiQuery` | `jsonApiQuery` | — | Negotiation |
-| `prefer` | `prefer` | [`PreferResult`](#accprefer) | Negotiation |
-| `securityHeaders` | `security` | — | Negotiation |
-| `cacheControl` | `cache` | — | Negotiation |
-| `csrf` | `csrf` | — | Authorization |
-| `authorization` | `auth` | [`AuthorizationResult`](#accauth) | Authorization |
-| `body` | `body` | [`BodyResult`](#accbody) | Validation |
-| `idempotency` | `idempotency` | [`IdempotencyResult`](#accidempotency) | Validation |
-| `validate` | `validation` | — | Validation |
+| Config Key | setPath (`acc.*`) | Type Interface | Pipeline Stage | Notes |
+| --- | --- | --- | --- | --- |
+| `tracing` | `trace` | [`TracingResult`](#acctrace) | Negotiation | Shortened — aligns with OpenTelemetry `trace` terminology |
+| `logger` | `log` | [`LogEntry`](#acclog) | Negotiation | Shortened for ergonomics |
+| `rateLimit` | `rateLimit` | — | Negotiation | |
+| `accepts` | `accepts` | [`AcceptsResult`](#accaccepts) | Negotiation | |
+| `preconditionRequired` | `precondition` | — | Negotiation | Shortened — the `Required` suffix describes the middleware's enforcement behavior, not the accumulator value |
+| `cookie` | `cookies` | [`CookieJar`](#acccookies) | Negotiation | Pluralized — the jar holds multiple cookies |
+| `url` | `url` | [`UrlResult`](#accurl) | Negotiation | |
+| `paginate` | `paginate` | [`PaginateResult`](#accpaginate) | Negotiation | |
+| `jsonApiQuery` | `jsonApiQuery` | — | Negotiation | |
+| `prefer` | `prefer` | [`PreferResult`](#accprefer) | Negotiation | |
+| `securityHeaders` | `security` | — | Negotiation | Shortened — config key names the middleware's concern (headers), setPath names the domain concept |
+| `cacheControl` | `cache` | — | Negotiation | Shortened — `cacheControl` names the HTTP directive, `cache` names the domain concept |
+| `csrf` | `csrf` | — | Authorization | |
+| `authorization` | `auth` | [`AuthorizationResult`](#accauth) | Authorization | Shortened for ergonomics — `acc.auth` is accessed frequently in execute handlers |
+| `body` | `body` | [`BodyResult`](#accbody) | Validation | |
+| `idempotency` | `idempotency` | [`IdempotencyResult`](#accidempotency) | Validation | |
+| `validate` | `validation` | — | Validation | Renamed — config key names the action (validate), setPath names the result (validation output) |
 
 <Aside type="tip">
   Config keys marked **—** for Type Interface either produce response
@@ -44,10 +44,16 @@ pipeline-builder key to its accumulator path and typed interface.
   for details.
 </Aside>
 
-<Aside type="caution">
-  Five config keys diverge from their setPath name: `cookie` →
-  `cookies`, `securityHeaders` → `security`, `cacheControl` → `cache`,
-  `validate` → `validation`, `preconditionRequired` → `precondition`.
+<Aside type="caution" title="Config key ≠ accumulator path">
+  Five config keys diverge from their setPath name. Each divergence has a specific rationale:
+
+  - **`cookie`** → `acc.cookies` — pluralized because the jar holds multiple cookies
+  - **`securityHeaders`** → `acc.security` — config key names the middleware's concern (HTTP headers), setPath names the broader domain concept
+  - **`cacheControl`** → `acc.cache` — `cacheControl` is the HTTP directive name, `cache` is the domain concept
+  - **`validate`** → `acc.validation` — config key names the action, setPath names the result
+  - **`preconditionRequired`** → `acc.precondition` — the `Required` suffix describes enforcement behavior, not the accumulator value
+
+  When using the [`validate` shorthand form](/middleware/validate/) (passing a raw JSON Schema directly), it resolves to `acc.validation.body` — the same path as the targeted `{body: schema}` form.
 </Aside>
 
 ### `acc.url`
