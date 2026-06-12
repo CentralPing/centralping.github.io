@@ -3,7 +3,7 @@ title: compress
 description: Response compression middleware — negotiates Accept-Encoding and applies gzip, br, or deflate.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 Negotiates `Accept-Encoding` and wraps the response stream through the
 best-matching compressor (Brotli, gzip, or deflate). Compression is
@@ -22,20 +22,97 @@ import { compress } from "@centralping/ergo";
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `threshold` | `number` | `1024` | Minimum body size in bytes before compression kicks in |
-| `encodings` | `string[]` | `['br', 'gzip', 'deflate']` | Supported encodings in priority order |
+| `threshold` | `number` | `1024` | Minimum body size in bytes before compression kicks in. Only evaluated on the `res.end(chunk)` path for single-chunk responses — streaming via `res.write()` bypasses the threshold check entirely. |
+| `encodings` | `string[]` | `['br', 'gzip', 'deflate']` | Supported encodings in priority order. The client's `Accept-Encoding` header is negotiated against this list using quality-value weighting per [RFC 9110 §12.5.3](https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3). |
 
 ## Return Value
 
 The middleware modifies the response stream in-place (wrapping
 `res.write` and `res.end`). It does not add to the domain accumulator.
 
-## Compression Skipped When
+## Supported Algorithms
 
-- Status code is **204** or **304**
-- `Content-Type` is non-compressible (binary, images, etc.)
-- Body is below `threshold` bytes
-- No acceptable encoding found in `Accept-Encoding`
+| Encoding | Algorithm | Node.js API |
+| -------- | --------- | ----------- |
+| `br` | Brotli | `zlib.createBrotliCompress()` |
+| `gzip` | gzip | `zlib.createGzip()` |
+| `deflate` | DEFLATE | `zlib.createDeflate()` |
+
+The `encodings` option controls which algorithms are offered and their
+priority order. The client's `Accept-Encoding` quality values are
+negotiated against this list using the
+[`negotiator`](https://www.npmjs.com/package/negotiator) package
+(RFC 7231 §5.3.4 compliant). The first mutually acceptable encoding
+wins — `identity` is excluded since the goal is compression.
+
+## Threshold Behavior
+
+The `threshold` option (default: 1024 bytes) prevents compressing
+responses that are too small to benefit from compression. The threshold
+check depends on the response path:
+
+- **`res.end(chunk)` path** (single-chunk responses from `send()`):
+  the chunk size is measured before compression begins. If the chunk is
+  smaller than `threshold`, the response is sent uncompressed with the
+  original `Content-Length` intact.
+- **`res.write()` path** (streaming responses): the compressor is
+  activated on the first `res.write()` call regardless of chunk size.
+  The threshold cannot be checked because the total body size is
+  unknown when streaming begins.
+
+<Aside type="note" title="Streaming and threshold">
+  When `res.write()` is called before `res.end()`, compression
+  activates immediately — the threshold only guards the single-chunk
+  `res.end(chunk)` path. This means streaming responses are always
+  compressed (assuming the content type is compressible), even if the
+  total body is small.
+</Aside>
+
+## Content-Type Filtering
+
+Only compressible content types trigger compression. The middleware
+tests the `Content-Type` response header against:
+
+```
+text/*
+application/json
+application/javascript
+application/xml
+application/x-www-form-urlencoded
+```
+
+Binary formats (images, audio, video, `application/octet-stream`) are
+not compressible and are always skipped.
+
+## Content-Length Behavior
+
+When compression activates, the middleware:
+
+1. Sets `Content-Encoding` to the negotiated encoding
+2. **Removes the `Content-Length` header** — the compressed size is
+   unknown at the time headers are written
+3. The response switches to chunked transfer encoding (HTTP/1.1
+   default when `Content-Length` is absent)
+
+When compression is skipped (below threshold, non-compressible type,
+or no acceptable encoding), `Content-Length` is preserved as-is.
+
+## When Compression is Skipped
+
+Compression is skipped entirely when any of the following conditions
+is true:
+
+- **No `Accept-Encoding` header** — the client did not request
+  compression
+- **No matching encoding** — the client's acceptable encodings do not
+  overlap with the configured `encodings` list
+- **Non-compressible `Content-Type`** — the response content type does
+  not match the compressible pattern (binary formats, images, etc.)
+- **Status code 204 or 304** — no-body responses have nothing to
+  compress
+- **Body below `threshold`** — single-chunk responses smaller than the
+  threshold are sent uncompressed (streaming responses bypass this
+  check)
 
 ## Error Responses
 
@@ -58,18 +135,67 @@ None. Compression is silently skipped when conditions are not met.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
+    import createRouter from "@centralping/ergo-router";
+
     const router = createRouter({
       defaults: {
         compress: { threshold: 512 },
       },
     });
+
+    // Disable compression for a specific route
+    router.get("/small", {
+      compress: false,
+      execute: () => ({ response: { body: { ok: true } } }),
+    });
+
+    // Custom threshold for a specific route
+    router.post("/upload", {
+      compress: { threshold: 2048 },
+      execute: handleUpload,
+    });
     ```
+
+    <Aside type="note" title="Compression is opt-in">
+      In ergo-router, compression is **not** auto-enabled. You must
+      explicitly set `defaults.compress` or per-route `compress` to
+      activate it. Omitting the key entirely means no compression
+      middleware is added to the pipeline.
+    </Aside>
   </TabItem>
 </Tabs>
+
+## Testing with curl
+
+Verify compression behavior using `curl` with explicit
+`Accept-Encoding` headers:
+
+```bash
+# Request Brotli compression
+curl -H "Accept-Encoding: br" -v http://localhost:3000/api/data
+
+# Request gzip compression
+curl -H "Accept-Encoding: gzip" -v http://localhost:3000/api/data
+
+# Verify Content-Encoding in response headers (look for Content-Encoding: br or gzip)
+# The response body will be compressed — pipe through a decompressor to inspect:
+curl -H "Accept-Encoding: gzip" -s http://localhost:3000/api/data | gunzip
+
+# Request with no compression (omit Accept-Encoding)
+curl -v http://localhost:3000/api/data
+# → Response includes Content-Length, no Content-Encoding
+```
+
+<Aside type="tip" title="curl --compressed">
+  `curl --compressed` automatically sends `Accept-Encoding: deflate, gzip, br`
+  and decompresses the response. Useful for quick testing, but use explicit
+  headers when verifying specific algorithm negotiation.
+</Aside>
 
 ## RFC References
 
 - [RFC 9110 §12.5.3 — Accept-Encoding](https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3)
+- [RFC 9110 §8.8.1 — Content-Encoding](https://www.rfc-editor.org/rfc/rfc9110#section-8.8.1)
 
 ## API Reference
 
