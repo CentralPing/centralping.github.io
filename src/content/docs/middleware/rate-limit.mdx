@@ -121,11 +121,14 @@ class RedisStore {
     pipeline.zremrangebyscore(windowKey, 0, cutoff);
     pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
     pipeline.zcard(windowKey);
+    pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
     pipeline.pexpire(windowKey, windowMs);
 
     const results = await pipeline.exec();
     const count = results[2][1];
-    const resetMs = windowMs;
+    const oldest = results[3][1];
+    const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
+    const resetMs = Math.max(0, oldestScore + windowMs - now);
 
     return { count, resetMs };
   }

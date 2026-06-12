@@ -221,7 +221,9 @@ router
   global limit applied to every request before routing. Pipeline-level
   `rateLimit` (in `defaults`) is per-route and runs inside the pipeline
   after routing. They serve different purposes — transport protects the
-  server; pipeline protects individual resources.
+  server; pipeline protects individual resources. Both can be active on
+  the same request — a request that passes the transport limit can still
+  be rejected by a stricter pipeline limit on a specific route.
 </Aside>
 
 ### Complete Multi-Resource API
