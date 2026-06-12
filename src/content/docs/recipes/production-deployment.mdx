@@ -1,0 +1,470 @@
+---
+title: Production Deployment
+description: Full-stack production deployment with Docker, nginx reverse proxy, health checks, structured logging, Redis rate limiting, and graceful shutdown.
+---
+
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
+
+## Problem
+
+You need to deploy an ergo API to production with process management,
+a reverse proxy for TLS termination, health checks for load balancer
+integration, structured logging for observability, Redis-backed rate
+limiting for multi-instance consistency, and graceful shutdown for
+zero-downtime deploys. These concerns are documented individually
+across several recipe and middleware pages — you need a consolidated
+reference showing how they compose into a complete deployment.
+
+## Solution
+
+### Application Setup
+
+Wire environment-based configuration, structured logging, Redis rate
+limiting, a health check endpoint, and graceful shutdown into a single
+entry point:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import pino from "pino";
+    import Redis from "ioredis";
+    import {
+      compose,
+      handler,
+      logger,
+      accepts,
+      url,
+      rateLimit,
+    } from "@centralping/ergo";
+    import { graceful } from "@centralping/ergo-router";
+
+    const {
+      PORT = "3000",
+      HOSTNAME = "0.0.0.0",
+      REDIS_URL = "redis://localhost:6379",
+      SHUTDOWN_TIMEOUT = "10000",
+    } = process.env;
+
+    const log = pino({ level: "info" });
+    const redis = new Redis(REDIS_URL);
+
+    class RedisStore {
+      constructor(client) {
+        this.redis = client;
+      }
+
+      async hit(key, windowMs) {
+        const now = Date.now();
+        const windowKey = `rl:${key}`;
+        const cutoff = now - windowMs;
+
+        const pipeline = this.redis.pipeline();
+        pipeline.zremrangebyscore(windowKey, 0, cutoff);
+        pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
+        pipeline.zcard(windowKey);
+        pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
+        pipeline.pexpire(windowKey, windowMs);
+
+        const results = await pipeline.exec();
+        const count = results[2][1];
+        const oldest = results[3][1];
+        const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
+        const resetMs = Math.max(0, oldestScore + windowMs - now);
+
+        return { count, resetMs };
+      }
+    }
+
+    let isShuttingDown = false;
+
+    const healthPipeline = handler(
+      (req, res, acc) => {
+        if (isShuttingDown) {
+          return { response: { statusCode: 503, body: { status: "draining" } } };
+        }
+        return { response: { body: { status: "healthy" } } };
+      },
+    );
+
+    const apiPipeline = handler(
+      compose(
+        { fn: logger({ log: (info) => log.info(info) }), setPath: "log" },
+        { fn: accepts({ types: ["application/json"] }), setPath: "accepts" },
+        { fn: url(), setPath: "url" },
+        {
+          fn: rateLimit({
+            max: 100,
+            windowMs: 60_000,
+            store: new RedisStore(redis),
+          }),
+          setPath: "rateLimit",
+        },
+        (req, res, acc) => ({
+          response: { body: { path: acc.url.pathname } },
+        }),
+      ),
+    );
+
+    const requestListener = (req, res) => {
+      if (req.url === "/health") return healthPipeline(req, res);
+      return apiPipeline(req, res);
+    };
+
+    const { server, shutdown } = await graceful(requestListener, {
+      port: Number(PORT),
+      hostname: HOSTNAME,
+      timeout: Number(SHUTDOWN_TIMEOUT),
+      log,
+      onStartup: async ({ log }) => {
+        await redis.ping();
+        log.info("Redis connected");
+      },
+      onShutdown: async ({ log }) => {
+        isShuttingDown = true;
+        await redis.quit();
+        log.info("Redis disconnected");
+      },
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import pino from "pino";
+    import Redis from "ioredis";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    const {
+      PORT = "3000",
+      HOSTNAME = "0.0.0.0",
+      REDIS_URL = "redis://localhost:6379",
+      SHUTDOWN_TIMEOUT = "10000",
+    } = process.env;
+
+    const log = pino({ level: "info" });
+    const redis = new Redis(REDIS_URL);
+
+    class RedisStore {
+      constructor(client) {
+        this.redis = client;
+      }
+
+      async hit(key, windowMs) {
+        const now = Date.now();
+        const windowKey = `rl:${key}`;
+        const cutoff = now - windowMs;
+
+        const pipeline = this.redis.pipeline();
+        pipeline.zremrangebyscore(windowKey, 0, cutoff);
+        pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
+        pipeline.zcard(windowKey);
+        pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
+        pipeline.pexpire(windowKey, windowMs);
+
+        const results = await pipeline.exec();
+        const count = results[2][1];
+        const oldest = results[3][1];
+        const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
+        const resetMs = Math.max(0, oldestScore + windowMs - now);
+
+        return { count, resetMs };
+      }
+    }
+
+    let isShuttingDown = false;
+
+    const router = createRouter({
+      transport: {
+        trustProxy: true,
+      },
+      defaults: {
+        accepts: { types: ["application/json"] },
+        logger: {
+          log: (info) => log.info(info),
+          error: (info) => log.error(info),
+        },
+        rateLimit: {
+          max: 100,
+          windowMs: 60_000,
+          store: new RedisStore(redis),
+        },
+      },
+    });
+
+    router.get("/health", {
+      authorization: false,
+      rateLimit: false,
+      execute: () => {
+        if (isShuttingDown) {
+          return { response: { statusCode: 503, body: { status: "draining" } } };
+        }
+        return { response: { body: { status: "healthy" } } };
+      },
+    });
+
+    router.get("/users", {
+      authorization: {
+        strategies: [
+          {
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              if (!token) return { authorized: false };
+              return { authorized: true, info: { userId: token } };
+            },
+          },
+        ],
+      },
+      execute: () => ({
+        response: { body: [{ id: "1", name: "Jane" }] },
+      }),
+    });
+
+    await graceful(router.handle(), {
+      port: Number(PORT),
+      hostname: HOSTNAME,
+      timeout: Number(SHUTDOWN_TIMEOUT),
+      log,
+      onStartup: async ({ log }) => {
+        await redis.ping();
+        log.info("Redis connected");
+      },
+      onShutdown: async ({ log }) => {
+        isShuttingDown = true;
+        await redis.quit();
+        log.info("Redis disconnected");
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  The `RedisStore` implementation above uses the same ioredis sorted-set
+  pattern documented in the
+  [rate-limit middleware guide](/middleware/rate-limit/#redis-store-example).
+  See that page for the full store contract and when to use a shared store.
+</Aside>
+
+<Aside type="caution" title="trustProxy requires a trusted reverse proxy">
+  Only enable `trustProxy: true` when the application runs behind a
+  reverse proxy you control (nginx, a cloud load balancer, etc.).
+  Without a trusted proxy, clients can forge `X-Forwarded-*` headers.
+  See the [ergo-router transport options](/packages/ergo-router/) for
+  details.
+</Aside>
+
+### Dockerfile
+
+Use a multi-stage build to keep the production image minimal:
+
+```dockerfile
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+FROM node:22-alpine
+RUN apk add --no-cache tini
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+USER node
+EXPOSE 3000
+ENTRYPOINT ["tini", "--"]
+CMD ["node", "server.js"]
+```
+
+<Aside type="tip">
+  [`tini`](https://github.com/krallin/tini) acts as PID 1 and forwards
+  signals correctly to the Node.js process. Without an init process,
+  `SIGTERM` from `docker stop` may not reach your application. An
+  alternative is `init: true` in your `docker-compose.yml` service
+  definition (see below).
+</Aside>
+
+### docker-compose.yml
+
+Compose the application with nginx and Redis:
+
+```yaml
+services:
+  app:
+    build: .
+    init: true
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - SHUTDOWN_TIMEOUT=10000
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      app:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+```
+
+### nginx Configuration
+
+Configure nginx as a reverse proxy with TLS termination:
+
+```nginx
+worker_processes auto;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream api {
+        server app:3000;
+    }
+
+    server {
+        listen 80;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+
+        ssl_certificate     /etc/nginx/certs/cert.pem;
+        ssl_certificate_key /etc/nginx/certs/key.pem;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+
+        location / {
+            proxy_pass http://api;
+
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+    }
+}
+```
+
+## Explanation
+
+### Trust Proxy Configuration
+
+When running behind a reverse proxy, enable `trustProxy: true` on the
+router so that ergo-router reads client identity from `X-Forwarded-For`
+instead of the direct socket address, and `X-Forwarded-Proto` for
+protocol detection. This affects:
+
+- **Request IDs** — the
+  [request-id transport](/packages/ergo-router/) reads
+  `X-Request-Id` / `X-Forwarded-For` headers when trusted
+- **HSTS** — security headers use `X-Forwarded-Proto` to determine
+  whether to send `Strict-Transport-Security`
+
+<Aside type="danger" title="Never trust proxies from the public internet">
+  If your application is directly exposed to the internet (no reverse
+  proxy), leave `trustProxy` disabled. A malicious client can set
+  `X-Forwarded-For` to any value, spoofing their IP address for rate
+  limiting, logging, and access control.
+</Aside>
+
+### Environment-Based Configuration
+
+The application reads all deployment-specific values from environment
+variables with sensible defaults:
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `PORT` | `3000` | HTTP listen port |
+| `HOSTNAME` | `0.0.0.0` | Bind address |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
+| `SHUTDOWN_TIMEOUT` | `10000` | Graceful shutdown deadline (ms) |
+
+This keeps the application image immutable — the same image runs in
+development, staging, and production with different environment values.
+
+### Connection Draining
+
+The `timeout` option on `graceful()` sets the maximum time to wait for
+in-flight requests to complete after a shutdown signal. Align this
+value with your load balancer's drain timeout:
+
+```
+docker stop --time=30 app    ← sends SIGTERM, waits 30s
+graceful(..., { timeout: 25000 })  ← app drains for 25s, then force-closes
+```
+
+Set the application timeout slightly below the container stop timeout
+to ensure the process exits cleanly before the container runtime
+force-kills it. See the
+[Graceful Shutdown recipe](/recipes/graceful-shutdown/) for the
+complete lifecycle flow and configuration options.
+
+### TLS Termination
+
+nginx handles TLS termination — the application receives plain HTTP
+on its internal port. This separates certificate management from
+application code and allows certificate rotation without application
+restarts.
+
+The `X-Forwarded-Proto: https` header from nginx tells ergo-router
+(via `trustProxy: true`) that the original client connection was
+encrypted, enabling correct HSTS header generation and protocol-aware
+redirects.
+
+### Process Signals in Containers
+
+Docker sends `SIGTERM` to PID 1 when stopping a container. Node.js
+processes that are PID 1 do not handle `SIGTERM` by default — use
+one of these approaches:
+
+| Approach | How | Trade-off |
+| -------- | --- | --------- |
+| `tini` (Dockerfile `ENTRYPOINT`) | `ENTRYPOINT ["tini", "--"]` | Adds ~20KB to image; handles zombie reaping |
+| `init: true` (docker-compose) | `init: true` in service definition | No image change; Docker provides the init process |
+| `--init` (docker run) | `docker run --init ...` | Per-invocation flag |
+
+`graceful()` listens for `SIGINT` and `SIGTERM` by default and
+initiates the shutdown sequence automatically. The init process
+ensures the signal reaches the Node.js process.
+
+### What This Recipe Does Not Cover
+
+- **Kubernetes** — orchestration, pod lifecycle, and readiness/liveness
+  probes are out of scope. The health check endpoint works with any
+  orchestrator.
+- **CI/CD pipelines** — image building and deployment automation depend
+  on your platform.
+- **Secrets management** — environment variables are shown for
+  simplicity. Use your platform's secret management (Docker secrets,
+  Vault, cloud KMS) for production credentials.
+- **Monitoring and alerting** — see
+  [Structured Logging](/recipes/structured-logging/) for log
+  integration patterns and the
+  [Graceful Shutdown recipe](/recipes/graceful-shutdown/) for
+  OpenTelemetry SDK lifecycle.
