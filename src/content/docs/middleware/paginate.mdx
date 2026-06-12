@@ -68,6 +68,7 @@ None. Invalid or missing query parameters fall back to defaults silently.
 <Tabs>
   <TabItem label="Standalone">
     ```js
+    import http from "node:http";
     import { compose, url, paginate, handler } from "@centralping/ergo";
 
     const pipeline = compose(
