@@ -114,13 +114,13 @@ The factory returns `{ issue, verify }`:
 
     // Issue tokens on GET
     const issuePipeline = compose(
-      {fn: cookie(), setPath: "cookies"},
+      cookie(),
       {fn: csrfMiddleware.issue, setPath: "csrf"},
     );
 
     // Verify tokens on POST
     const verifyPipeline = compose(
-      {fn: cookie(), setPath: "cookies"},
+      cookie(),
       {fn: csrfMiddleware.verify, setPath: "csrf"},
     );
     ```

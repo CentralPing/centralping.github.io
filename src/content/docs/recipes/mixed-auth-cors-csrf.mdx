@@ -89,9 +89,9 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
 
     // Browser route — CSRF protection + Bearer auth
     const browserPipeline = compose(
-      {fn: cookie(), setPath: "cookies"},
+      cookie(),
       {fn: csrfMiddleware.verify, setPath: "csrf"},
-      {fn: authorization({
+      authorization({
         strategies: [{
           type: "Bearer",
           authorizer: async (attributes, token) => {
@@ -101,12 +101,12 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
               : { authorized: false };
           },
         }],
-      }), setPath: "auth"},
+      }),
     );
 
     // API route — Bearer auth, no CSRF
     const apiPipeline = compose(
-      {fn: authorization({
+      authorization({
         strategies: [{
           type: "Bearer",
           authorizer: async (attributes, token) => {
@@ -116,7 +116,7 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
               : { authorized: false };
           },
         }],
-      }), setPath: "auth"},
+      }),
     );
     ```
   </TabItem>
@@ -201,9 +201,9 @@ overrides:
     // Browser route: CORS + cookies + CSRF + auth
     const settingsPipeline = compose(
       corsMiddleware,
-      {fn: cookie(), setPath: "cookies"},
+      cookie(),
       {fn: csrfMiddleware.verify, setPath: "csrf"},
-      {fn: authorization({ strategies: [bearerStrategy] }), setPath: "auth"},
+      authorization({ strategies: [bearerStrategy] }),
       (req, res, acc) => ({
         response: { body: { userId: acc.auth.user.id } },
       }),
@@ -212,7 +212,7 @@ overrides:
     // API route: CORS + auth (no cookies, no CSRF)
     const webhookPipeline = compose(
       corsMiddleware,
-      {fn: authorization({ strategies: [bearerStrategy] }), setPath: "auth"},
+      authorization({ strategies: [bearerStrategy] }),
       (req, res, acc) => ({
         response: { body: { received: true } },
       }),

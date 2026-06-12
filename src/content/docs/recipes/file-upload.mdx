@@ -25,7 +25,7 @@ contains an array of part objects — one per form field or file.
     import { compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: body(), setPath: "body"},
+      body(),
       async (req, res, acc) => {
         const [file] = acc.body.parsed;
         await saveFile(file.filename, file.body);
@@ -66,7 +66,7 @@ contains an array of part objects — one per form field or file.
     import { compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: body({ limit: 10 * 1024 * 1024 }), setPath: "body"},
+      body({ limit: 10 * 1024 * 1024 }),
       async (req, res, acc) => {
         const files = acc.body.parsed.filter((part) => part.filename);
         const results = await Promise.all(
@@ -111,7 +111,7 @@ contains an array of part objects — one per form field or file.
     import { compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: body(), setPath: "body"},
+      body(),
       async (req, res, acc) => {
         const parts = acc.body.parsed;
         const description = parts.find((p) => p.name === "description");

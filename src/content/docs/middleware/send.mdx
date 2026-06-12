@@ -240,7 +240,7 @@ modified after the condition date, the request is rejected with
     import { handler, compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: body(), setPath: "body"},
+      body(),
       async (req, res, acc) => {
         const todo = await db.findAndUpdate("42", acc.body.parsed);
         return {

@@ -79,9 +79,10 @@ no subsequent middleware executes.
 
 ### Domain Accumulator Contribution
 
-Use a `{fn, setPath}` config object to set a named path on the domain
-accumulator. This is the standard pattern for middleware that produces
-a single named result:
+Built-in ergo middleware factories carry an intrinsic accumulator path
+and can be composed as bare functions. Custom middleware that produces
+domain data uses a `{fn, setPath}` config object to declare its path
+on the domain accumulator:
 
 <Tabs>
   <TabItem label="Standalone (JS)">

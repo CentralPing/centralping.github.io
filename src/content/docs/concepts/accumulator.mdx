@@ -13,11 +13,13 @@ both.
 
 ## Domain Accumulator
 
-Each middleware registers its result at a fixed path on the domain
-accumulator via `{fn, setPath}` config objects. The table below maps every
+Each domain-producing middleware carries an intrinsic accumulator path —
+a non-enumerable `setPath` property set by the factory at creation time.
+Built-in middleware can be composed as bare functions; custom middleware
+uses `{fn, setPath}` config objects. The table below maps every
 pipeline-builder key to its accumulator path and typed interface.
 
-| Config Key | setPath (`acc.*`) | Type Interface | Pipeline Stage | Notes |
+| Config Key | Accumulator Path (`acc.*`) | Type Interface | Pipeline Stage | Notes |
 | --- | --- | --- | --- | --- |
 | `tracing` | `trace` | [`TracingResult`](#acctrace) | Negotiation | Shortened — aligns with OpenTelemetry `trace` terminology |
 | `logger` | `log` | [`LogEntry`](#acclog) | Negotiation | Shortened for ergonomics |
@@ -45,12 +47,12 @@ pipeline-builder key to its accumulator path and typed interface.
 </Aside>
 
 <Aside type="caution" title="Config key ≠ accumulator path">
-  Five config keys diverge from their setPath name. Each divergence has a specific rationale:
+  Five config keys diverge from their accumulator path. Each divergence has a specific rationale — but with intrinsic paths, the middleware itself declares the correct path, so you rarely need to think about this mapping:
 
   - **`cookie`** → `acc.cookies` — pluralized because the jar holds multiple cookies
-  - **`securityHeaders`** → `acc.security` — config key names the middleware's concern (HTTP headers), setPath names the broader domain concept
+  - **`securityHeaders`** → `acc.security` — config key names the middleware's concern (HTTP headers), accumulator path names the broader domain concept
   - **`cacheControl`** → `acc.cache` — `cacheControl` is the HTTP directive name, `cache` is the domain concept
-  - **`validate`** → `acc.validation` — config key names the action, setPath names the result
+  - **`validate`** → `acc.validation` — config key names the action, accumulator path names the result
   - **`preconditionRequired`** → `acc.precondition` — the `Required` suffix describes enforcement behavior, not the accumulator value
 
   When using the [`validate` shorthand form](/middleware/validate/) (passing a raw JSON Schema directly), it resolves to `acc.validation.body` — the same path as the targeted `{body: schema}` form.

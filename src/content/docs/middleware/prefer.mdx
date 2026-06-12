@@ -49,7 +49,7 @@ None.
     import { compose, prefer, handler } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: prefer(), setPath: "prefer"},
+      prefer(),
       (req, res, acc) => ({
         response: { body: { id: 1, name: "item" } },
       }),

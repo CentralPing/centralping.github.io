@@ -71,10 +71,10 @@ None. Logger is observability-only.
     import { compose, logger } from "@centralping/ergo";
 
     const pipeline = compose(
-      [logger({
+      logger({
         log: (info) => structuredLog.info(info),
         error: (info) => structuredLog.error(info),
-      }), "log"],
+      }),
     );
     ```
   </TabItem>

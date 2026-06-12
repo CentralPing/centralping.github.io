@@ -72,9 +72,9 @@ to response completion:
 import { compose, logger } from "@centralping/ergo";
 
 const pipeline = compose(
-  [logger({
+  logger({
     log: (info) => console.log(`${info.method} ${info.url} ${info.duration}ms`),
-  }), "log"],
+  }),
   // ... remaining middleware
 );
 ```

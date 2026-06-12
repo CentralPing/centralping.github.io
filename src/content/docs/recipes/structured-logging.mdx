@@ -34,10 +34,10 @@ output with OpenTelemetry trace context.
     const log = pino({ level: "info" });
 
     const pipeline = compose(
-      {fn: logger({
+      logger({
         log: (info) => log.info(info),
         error: (info) => log.error(info),
-      }), setPath: "log"},
+      }),
       // ... remaining middleware
     );
 
@@ -90,10 +90,10 @@ output with OpenTelemetry trace context.
     });
 
     const pipeline = compose(
-      {fn: logger({
+      logger({
         log: (info) => log.info({ message: "request completed", ...info }),
         error: (info) => log.error({ message: "request error", ...info }),
-      }), setPath: "log"},
+      }),
       // ... remaining middleware
     );
 
@@ -188,10 +188,10 @@ available for log enrichment:
     import { handler, compose, tracing, logger } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: tracing(), setPath: "trace"},
-      {fn: logger({
+      tracing(),
+      logger({
         log: (info) => log.info(info),
-      }), setPath: "log"},
+      }),
       // ... remaining middleware
     );
     ```

@@ -56,8 +56,8 @@ Every ergo pipeline uses a **two-accumulator** composition model powered by
 
 Every middleware function returns `{value?, response?}`:
 
-- `value` merges into the domain accumulator at the path specified by the
-  config object's `setPath` property
+- `value` merges into the domain accumulator at the middleware's declared
+  path (intrinsic or explicitly specified via `{fn, setPath}`)
 - `response` merges into the response accumulator (headers append, scalar
   properties overwrite)
 - A `response` with `statusCode` breaks the pipeline immediately — no
@@ -65,18 +65,29 @@ Every middleware function returns `{value?, response?}`:
 
 ### Composition Format
 
-Middleware are registered as `{fn, setPath}` config objects that pair the middleware
-function with its domain accumulator key. Response-only middleware (those that
-contribute only headers, not domain data) are plain functions — no wrapper needed:
+Built-in domain-producing middleware factories carry an intrinsic
+accumulator path — compose them as bare functions. Custom middleware
+and overrides use `{fn, setPath}` config objects:
 
 ```js
 const pipeline = compose(
-  {fn: logger(), setPath: 'log'},
+  logger(),
   cors(),
-  {fn: accepts({types: ['application/json']}), setPath: 'accepts'},
-  {fn: authorization({strategies: [...]}), setPath: 'auth'},
-  {fn: body(), setPath: 'body'},
+  accepts({types: ['application/json']}),
+  authorization({strategies: [...]}),
+  body(),
   (req, res, acc) => ({response: {body: acc.body.parsed}})
+);
+```
+
+For custom middleware that produces domain data, use the explicit
+`{fn, setPath}` form:
+
+```js
+const pipeline = compose(
+  logger(),
+  {fn: myCustomMiddleware(), setPath: 'custom'},
+  (req, res, acc) => ({response: {body: acc.custom}})
 );
 ```
 
@@ -198,8 +209,10 @@ middleware to include and their options:
 
 The builder resolves route-level overrides against router-level defaults,
 auto-includes method-appropriate middleware (`url` for GET/DELETE, `body` for
-POST/PUT/PATCH), and produces a `{fn, setPath}` config object array ready for
-`compose-with`.
+POST/PUT/PATCH), and assembles the pipeline for `compose-with`. Built-in
+factories carry intrinsic accumulator paths; the builder constructs explicit
+`{fn, setPath}` config objects internally for any middleware that needs a
+path override.
 
 ## Further Reading
 

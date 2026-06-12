@@ -88,17 +88,14 @@ entry point:
 
     const apiPipeline = handler(
       compose(
-        { fn: logger({ log: (info) => log.info(info) }), setPath: "log" },
-        { fn: accepts({ types: ["application/json"] }), setPath: "accepts" },
-        { fn: url(), setPath: "url" },
-        {
-          fn: rateLimit({
-            max: 100,
-            windowMs: 60_000,
-            store: new RedisStore(redis),
-          }),
-          setPath: "rateLimit",
-        },
+        logger({ log: (info) => log.info(info) }),
+        accepts({ types: ["application/json"] }),
+        url(),
+        rateLimit({
+          max: 100,
+          windowMs: 60_000,
+          store: new RedisStore(redis),
+        }),
         (req, res, acc) => ({
           response: { body: { path: acc.url.pathname } },
         }),
