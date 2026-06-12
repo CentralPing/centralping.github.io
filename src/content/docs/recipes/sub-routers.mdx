@@ -216,6 +216,14 @@ router
   .mount("/premium", premiumRouter);
 ```
 
+<Aside type="tip" title="Proxy-aware rate limiting">
+  When rate limiting behind a reverse proxy, provide a custom
+  `keyGenerator` so each client gets its own rate-limit bucket instead
+  of sharing the proxy's IP. See the
+  [rate-limit middleware guide — Proxy Awareness](/middleware/rate-limit/#proxy-awareness)
+  for the pattern and security caveats.
+</Aside>
+
 <Aside type="caution" title="Transport vs. pipeline rate limiting">
   Transport-level `rateLimit` (in the parent's `transport` config) is a
   global limit applied to every request before routing. Pipeline-level
