@@ -183,7 +183,7 @@ rateLimit({
 This applies to both pipeline-level rate limiting
 (`defaults.rateLimit` or per-route `rateLimit` in ergo-router) and
 transport-level rate limiting (`transport.rateLimit`). The
-[`trustProxy`](/packages/ergo-router/) router transport option does
+[`trustProxy`](/recipes/production-deployment/#trust-proxy-configuration) router transport option does
 **not** automatically make rate limiting proxy-aware — it only affects
 request IDs and HSTS. A custom `keyGenerator` is always required for
 correct per-client rate limiting behind a proxy.
