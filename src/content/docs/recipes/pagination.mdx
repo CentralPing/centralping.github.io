@@ -28,8 +28,8 @@ Link headers and `X-Total-Count`.
     import { compose, url, paginate, handler } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: url(), setPath: "url"},
-      {fn: paginate(), setPath: "paginate"},
+      url(),
+      paginate(),
       async (req, res, acc) => {
         const { offset, limit } = acc.paginate;
         const items = await db.find(offset, limit);
@@ -76,8 +76,8 @@ Link headers and `X-Total-Count`.
     import { compose, url, paginate, handler } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: url(), setPath: "url"},
-      {fn: paginate({ strategy: "cursor" }), setPath: "paginate"},
+      url(),
+      paginate({ strategy: "cursor" }),
       async (req, res, acc) => {
         const { cursor, limit } = acc.paginate;
         const { items, nextCursor } = await db.findAfter(cursor, limit);
@@ -219,7 +219,7 @@ GET /articles?sort=date&filter=active&page=2&per_page=10
 
 The `paginate()` middleware reads parsed query parameters from
 `acc.url.query`. When using standalone `compose()`, you must include
-`{fn: url(), setPath: 'url'}` before `{fn: paginate(), setPath: 'paginate'}`.
+`url()` before `paginate()` in the pipeline.
 
 ergo-router handles this automatically — setting `paginate` in the
 route config auto-includes `url()` parsing.

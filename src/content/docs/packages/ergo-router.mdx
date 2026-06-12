@@ -312,8 +312,9 @@ options, and annotations.
 #### Pipeline Keys
 
 Pipeline keys resolve to middleware factories via the
-[pipeline builder](/concepts/fast-fail/). Each produces a `{fn, setPath}`
-config object that contributes to the domain accumulator.
+[pipeline builder](/concepts/fast-fail/). Built-in factories carry an
+intrinsic accumulator path; the builder constructs explicit `{fn, setPath}`
+config objects internally when assembling the pipeline.
 
 | Config Key | Accumulator Path | Pipeline Stage | Notes |
 | --- | --- | --- | --- |

@@ -36,7 +36,7 @@ graceful shutdown.
 
       it("creates a user", async () => {
         const pipeline = compose(
-          { fn: body(), setPath: "body" },
+          body(),
           (req, res, acc) => ({
             response: {
               statusCode: 201,
@@ -154,21 +154,18 @@ graceful shutdown.
 
       it("accepts valid Bearer token", async () => {
         const pipeline = compose(
-          {
-            fn: authorization({
-              strategies: [
-                {
-                  type: "Bearer",
-                  attributes: { realm: "API" },
-                  authorizer: async (_attrs, token) =>
-                    token === "valid-token"
-                      ? { authorized: true, info: { userId: "u1" } }
-                      : { authorized: false },
-                },
-              ],
-            }),
-            setPath: "auth",
-          },
+          authorization({
+            strategies: [
+              {
+                type: "Bearer",
+                attributes: { realm: "API" },
+                authorizer: async (_attrs, token) =>
+                  token === "valid-token"
+                    ? { authorized: true, info: { userId: "u1" } }
+                    : { authorized: false },
+              },
+            ],
+          }),
           (req, res, acc) => ({ response: { body: acc.auth } }),
         );
 
@@ -299,7 +296,7 @@ graceful shutdown.
         };
 
         const pipeline = compose(
-          { fn: body(), setPath: "body" },
+          body(),
           validate({ body: schema }),
           (req, res, acc) => ({
             response: { body: { name: acc.body.parsed.name } },

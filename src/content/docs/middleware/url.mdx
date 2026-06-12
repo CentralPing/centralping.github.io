@@ -58,7 +58,7 @@ None.
     import { compose, url } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: url(), setPath: "url"},
+      url(),
       (req, res, acc) => ({
         response: {
           body: {

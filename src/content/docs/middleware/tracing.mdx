@@ -65,8 +65,8 @@ None. Tracing is observability-only.
     } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: tracing(), setPath: "trace"},
-      {fn: logger(), setPath: "log"},
+      tracing(),
+      logger(),
       // ... remaining middleware
     );
 

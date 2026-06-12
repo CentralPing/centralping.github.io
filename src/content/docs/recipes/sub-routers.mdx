@@ -25,9 +25,9 @@ Create a sub-router with its own defaults and mount it at a prefix:
 
     // Each group composes its own pipeline independently
     const adminPipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-      }), "auth"],
+      }),
       (req, res, acc) => ({
         response: { body: { admin: true } },
       }),
@@ -68,18 +68,18 @@ entirely:
     import { compose, authorization } from "@centralping/ergo";
 
     const adminPipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-      }), "auth"],
+      }),
       (req, res, acc) => ({
         response: { body: { role: "admin" } },
       }),
     );
 
     const userPipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{ type: "Bearer", authorizer: verifyJwt }],
-      }), "auth"],
+      }),
       (req, res, acc) => ({
         response: { body: { userId: acc.auth.user.id } },
       }),

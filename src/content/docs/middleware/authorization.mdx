@@ -140,7 +140,7 @@ configured strategy:
     import { compose, authorization } from "@centralping/ergo";
 
     const pipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{
           type: "Bearer",
           authorizer: async (attributes, token) => {
@@ -150,7 +150,7 @@ configured strategy:
               : { authorized: false };
           },
         }],
-      }), "auth"],
+      }),
     );
     ```
   </TabItem>
@@ -184,7 +184,7 @@ configured strategy:
     import { compose, authorization } from "@centralping/ergo";
 
     const pipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{
           type: "Basic",
           attributes: { realm: "api" },
@@ -195,7 +195,7 @@ configured strategy:
               : { authorized: false };
           },
         }],
-      }), "auth"],
+      }),
     );
     ```
   </TabItem>

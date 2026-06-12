@@ -43,7 +43,7 @@ producer.
     import { compose, url, jsonApiQuery } from "@centralping/ergo";
 
     const pipeline = compose(
-      {fn: url(), setPath: "url"},
+      url(),
       jsonApiQuery(),
       // acc.url.query is validated against JSON:API conventions
     );

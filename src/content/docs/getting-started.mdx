@@ -267,9 +267,9 @@ import http from "node:http";
 import { compose, handler, logger, url, accepts } from "@centralping/ergo";
 
 const pipeline = compose(
-  {fn: logger(), setPath: "log"},
-  {fn: accepts({ types: ["application/json"] }), setPath: "accepts"},
-  {fn: url(), setPath: "url"},
+  logger(),
+  accepts({ types: ["application/json"] }),
+  url(),
   (req, res, acc) => ({
     response: {
       body: { path: acc.url.pathname, query: acc.url.query },
@@ -282,11 +282,12 @@ const server = http.createServer(handler(pipeline));
 server.listen(3000, () => console.log("Listening on :3000"));
 ```
 
-Middleware that writes to domain state is registered as a `{fn, setPath}` config
-object — the function and the key under which its result is stored on the
-[domain accumulator](/concepts/accumulator/). Response-only middleware and
-validation gates can be plain functions. The final function in the pipeline is
-the execute step: it reads accumulated values and returns a `{response}` object.
+Built-in middleware carries its own accumulator path — compose it as a
+bare function call. Custom middleware uses `{fn, setPath}` config objects
+to declare the key under which its result is stored on the
+[domain accumulator](/concepts/accumulator/). The final function in the
+pipeline is the execute step: it reads accumulated values and returns a
+`{response}` object.
 
 `handler()` creates both accumulators, runs the pipeline, and calls `send()`
 exactly once to serialize the HTTP response. See the
