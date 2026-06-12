@@ -25,7 +25,7 @@ Set router-level defaults and override per route. Setting
 
     // Protected route — Bearer auth
     const protectedPipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{
           type: "Bearer",
           authorizer: async (attributes, token) => {
@@ -35,7 +35,7 @@ Set router-level defaults and override per route. Setting
               : { authorized: false, info: { statusCode: 401 } };
           },
         }],
-      }), "auth"],
+      }),
       (req, res, acc) => ({
         response: { body: { userId: acc.auth.user.id } },
       }),
@@ -190,7 +190,7 @@ Use a custom scheme type to authenticate via a non-standard header
     import { compose, authorization } from "@centralping/ergo";
 
     const pipeline = compose(
-      [authorization({
+      authorization({
         strategies: [{
           type: "ApiKey",
           authorizer: async (attributes, credentials) => {
@@ -200,7 +200,7 @@ Use a custom scheme type to authenticate via a non-standard header
               : { authorized: false, info: { statusCode: 401 } };
           },
         }],
-      }), "auth"],
+      }),
       (req, res, acc) => ({
         response: { body: { clientId: acc.auth.client } },
       }),
