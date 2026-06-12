@@ -150,6 +150,159 @@ router.get("/admin", {
   URL parsing.
 </Aside>
 
+### Presets
+
+ergo-router ships named presets — pre-built `{transport, defaults}`
+configuration objects for common API patterns. Import them from the
+package entry point and spread into `createRouter()`:
+
+```js
+import createRouter, { presets } from "@centralping/ergo-router";
+
+const router = createRouter({
+  ...presets.jsonApi,
+  defaults: {
+    ...presets.jsonApi.defaults,
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+```
+
+#### Available Presets
+
+##### `presets.jsonApi`
+
+Standard JSON API with transport security and content negotiation.
+
+| Layer | Key | Value |
+| ----- | --- | ----- |
+| `transport` | `requestId` | `{}` (enabled with defaults) |
+| `transport` | `security` | `{}` (enabled with defaults) |
+| `defaults` | `accepts` | `{types: ['application/json']}` |
+
+##### `presets.sse`
+
+Server-Sent Events with compression disabled and no timeout.
+
+| Layer | Key | Value |
+| ----- | --- | ----- |
+| `transport` | `requestId` | `{}` (enabled with defaults) |
+| `transport` | `security` | `{}` (enabled with defaults) |
+| `defaults` | `compress` | `false` (prevents buffering of streamed chunks) |
+| `defaults` | `timeout` | `false` (SSE connections are long-lived) |
+| `defaults` | `accepts` | `{types: ['text/event-stream']}` |
+
+##### `presets.webhooks`
+
+Webhook receiver with idempotency enforcement.
+
+| Layer | Key | Value |
+| ----- | --- | ----- |
+| `transport` | `requestId` | `{}` (enabled with defaults) |
+| `transport` | `security` | `{}` (enabled with defaults) |
+| `defaults` | `accepts` | `{types: ['application/json']}` |
+| `defaults` | `idempotency` | `{required: true}` |
+
+##### `presets.public`
+
+Public read-only API with rate limiting and cache headers.
+
+| Layer | Key | Value |
+| ----- | --- | ----- |
+| `transport` | `requestId` | `{}` (enabled with defaults) |
+| `transport` | `security` | `{}` (enabled with defaults) |
+| `transport` | `rateLimit` | `{}` (enabled with built-in defaults: 100 req/60s) |
+| `defaults` | `accepts` | `{types: ['application/json']}` |
+| `defaults` | `cacheControl` | `{public: true, maxAge: 300}` |
+
+#### What Presets Do NOT Include
+
+Presets intentionally exclude deployment-specific concerns:
+
+- **Authorization** — auth strategies vary per project
+- **CORS** — origin allowlists are deployment-specific
+- **Timing** — observability is opt-in at the router level
+- **Debug** — development-only, not a preset concern
+
+#### Shallow Spread Semantics
+
+Presets are spread into `createRouter()` using the `...` operator.
+Because JavaScript spread is **shallow**, nested objects must be
+spread explicitly when you need to extend (not replace) them:
+
+<Aside type="caution" title="Shallow spread gotcha">
+  Spreading a preset and then setting `defaults` replaces the
+  preset's entire `defaults` — the preset's default keys are lost.
+  Always spread nested objects explicitly.
+</Aside>
+
+```js
+// ⚠️ WRONG — preset defaults are lost entirely
+const router = createRouter({
+  ...presets.jsonApi,
+  defaults: {
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+// defaults.accepts is gone — presets.jsonApi.defaults was replaced
+
+// ✓ CORRECT — spread nested objects explicitly
+const router = createRouter({
+  ...presets.jsonApi,
+  defaults: {
+    ...presets.jsonApi.defaults,
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+// defaults.accepts is preserved from the preset
+```
+
+The same applies to `transport`:
+
+```js
+// ✓ CORRECT — extend transport with CORS
+const router = createRouter({
+  ...presets.jsonApi,
+  transport: {
+    ...presets.jsonApi.transport,
+    cors: { origin: "https://myapp.com" },
+  },
+  defaults: {
+    ...presets.jsonApi.defaults,
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+```
+
+<Aside type="tip" title="Presets are frozen">
+  Each preset is deeply frozen with `Object.freeze()`. The spread
+  operator creates mutable copies — you can safely modify the
+  spread result without affecting the canonical preset.
+</Aside>
+
+<Aside type="note" title="noSend is per-route">
+  The SSE preset does not include `noSend: true` because `noSend` is
+  a [route option](#route-options), not a defaults key. SSE routes
+  must set `noSend: true` individually:
+
+  ```js
+  router.get("/events", {
+    noSend: true,
+    execute: sseHandler,
+  });
+  ```
+</Aside>
+
+Route-level values still follow the standard
+[Config Resolution](#config-resolution) rules — route values
+**replace** defaults entirely. Presets populate defaults; routes
+override them.
+
+For why the SSE preset disables compression, see the
+[compress middleware guide](/middleware/compress/) — streaming
+responses bypass the threshold check and compression interferes with
+chunked event delivery.
+
 ### Route Config Key Reference
 
 Every key accepted in a declarative route config object or in
@@ -379,6 +532,94 @@ router.post("/payments", {
   execute: processPayment,
 });
 ```
+
+### Response Timing
+
+`createRouter({timing: true})` injects an `X-Response-Time` header on
+every response, measuring pipeline execution time in milliseconds.
+
+#### Options
+
+| Value | Effect |
+| ----- | ------ |
+| `timing: false` | Default. No timing header, zero overhead. |
+| `timing: true` | Injects `x-response-time` header with 3 decimal places. |
+| `timing: {header, precision}` | Custom header name and/or decimal precision. |
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `header` | `string` | `'x-response-time'` | Response header name |
+| `precision` | `number` | `3` | Decimal places for the millisecond value |
+
+#### Example Response Header
+
+```http
+HTTP/1.1 200 OK
+x-response-time: 12.345
+Content-Type: application/json
+```
+
+The value is a **plain millisecond string** (e.g., `"12.345"`), not the
+[W3C Server-Timing](https://www.w3.org/TR/server-timing/) format
+(`metric;dur=12.345`). If you need the W3C format for DevTools
+integration, set a custom header name — the value format remains a
+plain number regardless of the header name.
+
+<Aside type="tip" title="Custom header name">
+  To use `server-timing` as the header name (for DevTools Server Timing
+  panel integration), set `timing: {header: 'server-timing'}`. Note
+  that the value format is still a plain millisecond number — not the
+  W3C `metric;dur=N` syntax.
+</Aside>
+
+#### What is Measured
+
+Timing measures elapsed time from auto-wrap handler entry (when the
+route pipeline begins) to `res.writeHead` (when response headers
+flush). This includes:
+
+- All pipeline middleware (negotiation, authorization, validation,
+  execution)
+- `send()` processing (serialization, conditional evaluation, envelope)
+
+This excludes:
+
+- **Transport/dispatch overhead** — CORS, rate limiting, request ID,
+  and route matching happen before the pipeline
+- **Short-circuit responses** — 404 (no route), 405 (method not
+  allowed), 415 (unsupported media type), and 429 (rate limited) are
+  produced by `dispatch()` before the auto-wrap handler runs; these
+  responses have no timing header
+- **Bare function pipelines** — routes registered as a single handler
+  function (not a config object or array) bypass auto-wrap entirely
+
+<Aside type="note" title="Independent from responseInfo.duration">
+  The `X-Response-Time` header and the `responseInfo.duration` in
+  [onResponse hooks](#lifecycle-hooks) are **independent measurements**.
+  Both use `performance.now()` starting from auto-wrap entry, but are
+  captured at different endpoints — timing is captured at
+  `res.writeHead`, while `responseInfo.duration` is captured after
+  `send()` completes.
+</Aside>
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const router = createRouter({
+  timing: true,
+  defaults: {
+    accepts: { types: ["application/json"] },
+  },
+});
+
+router.get("/health", {
+  execute: () => ({ response: { body: { ok: true } } }),
+});
+// GET /health → x-response-time: 0.456
+```
+
+For standalone (non-router) usage of the `timing` option, see the
+[handler middleware guide](/middleware/handler/).
 
 ### Pagination
 
