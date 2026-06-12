@@ -249,3 +249,7 @@ onShutdown: async ({ log, signal }) => {
   log.info(`All resources released (${signal})`);
 }
 ```
+
+For a complete production deployment combining graceful shutdown with
+Docker, nginx, health checks, and Redis rate limiting, see the
+[Production Deployment recipe](/recipes/production-deployment/).
