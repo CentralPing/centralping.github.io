@@ -193,7 +193,7 @@ import createRouter from "@centralping/ergo-router";
 
 const publicRouter = createRouter({
   defaults: {
-    rateLimit: { max: 100, window: 60_000 },
+    rateLimit: { max: 100, windowMs: 60_000 },
   },
 });
 publicRouter.get("/search", { execute: search });
@@ -201,14 +201,14 @@ publicRouter.get("/search", { execute: search });
 const premiumRouter = createRouter({
   defaults: {
     authorization: { strategies: [apiKeyStrategy] },
-    rateLimit: { max: 1000, window: 60_000 },
+    rateLimit: { max: 1000, windowMs: 60_000 },
   },
 });
 premiumRouter.get("/search", { execute: search });
 
 const router = createRouter({
   transport: {
-    rateLimit: { max: 10_000, window: 60_000 },
+    rateLimit: { max: 10_000, windowMs: 60_000 },
   },
 });
 router
@@ -221,7 +221,9 @@ router
   global limit applied to every request before routing. Pipeline-level
   `rateLimit` (in `defaults`) is per-route and runs inside the pipeline
   after routing. They serve different purposes — transport protects the
-  server; pipeline protects individual resources.
+  server; pipeline protects individual resources. Both can be active on
+  the same request — a request that passes the transport limit can still
+  be rejected by a stricter pipeline limit on a specific route.
 </Aside>
 
 ### Complete Multi-Resource API
@@ -273,7 +275,7 @@ const router = createRouter({
     requestId: true,
     security: { hsts: { maxAge: 31_536_000 } },
     cors: { origin: "https://app.example.com" },
-    rateLimit: { max: 10_000, window: 60_000 },
+    rateLimit: { max: 10_000, windowMs: 60_000 },
   },
   strictPatch: true,
   strictBody: true,
