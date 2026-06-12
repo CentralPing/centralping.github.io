@@ -26,7 +26,6 @@ entry point:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
     import pino from "pino";
     import Redis from "ioredis";
     import {
@@ -251,6 +250,27 @@ entry point:
   Without a trusted proxy, clients can forge `X-Forwarded-*` headers.
   See the [ergo-router transport options](/packages/ergo-router/) for
   details.
+</Aside>
+
+<Aside type="caution" title="Rate-limit key behind a reverse proxy">
+  The default `keyGenerator` uses `req.socket.remoteAddress`, which
+  resolves to the proxy's IP when running behind nginx — all clients
+  share a single rate-limit bucket. To rate-limit per client, provide
+  a custom `keyGenerator` that reads the forwarded client IP:
+
+  ```js
+  keyGenerator: (req) => {
+    const forwarded = req.headers["x-forwarded-for"];
+    return forwarded
+      ? forwarded.split(",")[0].trim()
+      : req.socket.remoteAddress;
+  },
+  ```
+
+  Only trust `X-Forwarded-For` when your app runs behind a proxy you
+  control. See the
+  [rate-limit middleware guide](/middleware/rate-limit/) for the full
+  store and key generation contract.
 </Aside>
 
 ### Dockerfile
