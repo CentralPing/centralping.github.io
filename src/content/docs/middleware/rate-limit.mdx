@@ -150,6 +150,44 @@ class RedisStore {
   store.
 </Aside>
 
+### Proxy Awareness
+
+<Aside type="caution" title="Default key is the proxy's IP behind a reverse proxy">
+  The default `keyGenerator` uses `req.socket.remoteAddress`, which
+  resolves to the **proxy's IP** when your application runs behind
+  nginx, a cloud load balancer, or any reverse proxy. All clients
+  share a single rate-limit bucket, making rate limiting ineffective.
+</Aside>
+
+When deploying behind a reverse proxy, provide a custom `keyGenerator`
+that reads the forwarded client IP:
+
+```js
+rateLimit({
+  keyGenerator: (req) => {
+    const forwarded = req.headers["x-forwarded-for"];
+    return forwarded
+      ? forwarded.split(",")[0].trim()
+      : req.socket.remoteAddress;
+  },
+})
+```
+
+<Aside type="caution" title="Only trust X-Forwarded-For behind a proxy you control">
+  When the application is directly exposed to the internet (no reverse
+  proxy), clients can set `X-Forwarded-For` to any value — bypassing
+  rate limiting entirely. Only use a forwarded-header `keyGenerator`
+  when your app runs behind a proxy you control.
+</Aside>
+
+This applies to both pipeline-level rate limiting
+(`defaults.rateLimit` or per-route `rateLimit` in ergo-router) and
+transport-level rate limiting (`transport.rateLimit`). The
+[`trustProxy`](/packages/ergo-router/) router transport option does
+**not** automatically make rate limiting proxy-aware — it only affects
+request IDs and HSTS. A custom `keyGenerator` is always required for
+correct per-client rate limiting behind a proxy.
+
 ## Usage
 
 <Tabs>

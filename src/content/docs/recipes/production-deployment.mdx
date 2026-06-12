@@ -75,6 +75,13 @@ entry point:
       }
     }
 
+    const proxyKeyGenerator = (req) => {
+      const forwarded = req.headers["x-forwarded-for"];
+      return forwarded
+        ? forwarded.split(",")[0].trim()
+        : req.socket.remoteAddress;
+    };
+
     let isShuttingDown = false;
 
     const healthPipeline = handler(
@@ -95,6 +102,7 @@ entry point:
           max: 100,
           windowMs: 60_000,
           store: new RedisStore(redis),
+          keyGenerator: proxyKeyGenerator,
         }),
         (req, res, acc) => ({
           response: { body: { path: acc.url.pathname } },
@@ -167,6 +175,13 @@ entry point:
       }
     }
 
+    const proxyKeyGenerator = (req) => {
+      const forwarded = req.headers["x-forwarded-for"];
+      return forwarded
+        ? forwarded.split(",")[0].trim()
+        : req.socket.remoteAddress;
+    };
+
     let isShuttingDown = false;
 
     const router = createRouter({
@@ -183,6 +198,7 @@ entry point:
           max: 100,
           windowMs: 60_000,
           store: new RedisStore(redis),
+          keyGenerator: proxyKeyGenerator,
         },
       },
     });
@@ -249,25 +265,13 @@ entry point:
   details.
 </Aside>
 
-<Aside type="caution" title="Rate-limit key behind a reverse proxy">
-  The default `keyGenerator` uses `req.socket.remoteAddress`, which
-  resolves to the proxy's IP when running behind nginx — all clients
-  share a single rate-limit bucket. To rate-limit per client, provide
-  a custom `keyGenerator` that reads the forwarded client IP:
-
-  ```js
-  keyGenerator: (req) => {
-    const forwarded = req.headers["x-forwarded-for"];
-    return forwarded
-      ? forwarded.split(",")[0].trim()
-      : req.socket.remoteAddress;
-  },
-  ```
-
-  Only trust `X-Forwarded-For` when your app runs behind a proxy you
-  control. See the
-  [rate-limit middleware guide](/middleware/rate-limit/) for the full
-  store and key generation contract.
+<Aside type="tip" title="Proxy-aware rate limiting">
+  The code examples above include a `proxyKeyGenerator` that reads
+  `X-Forwarded-For` instead of `req.socket.remoteAddress`. Without
+  this, all clients behind a reverse proxy share a single rate-limit
+  bucket. See the
+  [rate-limit middleware guide — Proxy Awareness](/middleware/rate-limit/#proxy-awareness)
+  for details and security caveats.
 </Aside>
 
 ### Dockerfile
