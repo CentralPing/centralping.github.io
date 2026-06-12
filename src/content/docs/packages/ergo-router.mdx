@@ -596,9 +596,10 @@ This excludes:
 <Aside type="note" title="Independent from responseInfo.duration">
   The `X-Response-Time` header and the `responseInfo.duration` in
   [onResponse hooks](#lifecycle-hooks) are **independent measurements**.
-  Both use `performance.now()` but start from different points — timing
-  starts at auto-wrap entry, while `responseInfo.duration` starts at
-  the same point but is captured after `send()` completes.
+  Both use `performance.now()` starting from auto-wrap entry, but are
+  captured at different endpoints — timing is captured at
+  `res.writeHead`, while `responseInfo.duration` is captured after
+  `send()` completes.
 </Aside>
 
 ```js
