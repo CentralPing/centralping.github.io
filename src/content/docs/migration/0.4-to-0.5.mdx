@@ -1,0 +1,308 @@
+---
+title: Migrating to 0.5
+description: Step-by-step migration guide for upgrading @centralping/ergo and @centralping/ergo-router from 0.4.x to 0.5.x.
+---
+
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
+
+This guide covers changes introduced in **ergo 0.5.0** and
+**ergo-router 0.5.0**. Both packages should be upgraded together —
+ergo-router 0.5.x requires `@centralping/ergo >=0.5.0 <0.6.0`.
+
+<Aside type="tip">
+  If you are upgrading from **0.3.x or earlier**, also review the
+  [cumulative changes](#cumulative-changes-from-earlier-versions) at the
+  bottom of this page.
+</Aside>
+
+## Prerequisites
+
+```bash
+npm install @centralping/ergo@^0.5.0 @centralping/ergo-router@^0.5.0
+```
+
+Verify versions after install:
+
+```bash
+npm ls @centralping/ergo @centralping/ergo-router
+```
+
+## Potentially Breaking: Registration-Time Config Validation (ergo-router)
+
+Routes that combine `body: false` with `validate: {body: schema}` now
+**throw at registration time** instead of producing a guaranteed 500
+error on every request. The check uses resolved values — contradictions
+originating from `defaults` are also caught.
+
+<Aside type="note">
+  This change only affects **misconfigured** routes that were already
+  broken at runtime. Correctly configured routes are unaffected. The
+  error surfaces earlier (at startup instead of per-request), making
+  it a safety improvement.
+</Aside>
+
+### Before (0.4.x)
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const router = createRouter();
+
+// ⚠️ This route silently produced a 500 on every request
+router.post("/items", {
+  body: false,
+  validate: { body: itemSchema },
+  execute: createItem,
+});
+
+// Server starts without error — the bug surfaces at request time
+```
+
+### After (0.5.x)
+
+```js
+import createRouter from "@centralping/ergo-router";
+
+const router = createRouter();
+
+// ✓ Now throws immediately at registration time:
+// "Route config for POST /items has body: false but validate.body
+//  is configured. Body parsing must be enabled for body validation
+//  to work."
+router.post("/items", {
+  body: false,
+  validate: { body: itemSchema },
+  execute: createItem,
+});
+```
+
+### Migration Steps
+
+1. **Start your application** — if any routes have this contradiction,
+   you will see an immediate error with the route method and path.
+2. **Fix the contradiction** — either remove `body: false` (to allow
+   body parsing) or remove `validate: {body: schema}` (if body
+   validation is not needed).
+3. **Check defaults** — the validation resolves config against
+   `defaults`, so a `defaults: {validate: {body: schema}}` combined
+   with a per-route `body: false` will also throw.
+
+## Notable Additions
+
+These are **non-breaking** additions in 0.5.0. No migration is required,
+but you may want to adopt them.
+
+### Validate Shorthand Form (ergo)
+
+Pass a raw JSON Schema directly to `validate()` instead of wrapping
+it in `{body: schema}`:
+
+<Tabs>
+  <TabItem label="Before (targeted form)">
+    ```js
+    router.post("/users", {
+      validate: { body: userSchema },
+      execute: createUser,
+    });
+    ```
+  </TabItem>
+  <TabItem label="After (shorthand form)">
+    ```js
+    router.post("/users", {
+      validate: userSchema,
+      execute: createUser,
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+The shorthand is detected when the argument contains JSON Schema
+keywords (`type`, `properties`, `required`, etc.) and none of the
+targeted keys (`body`, `query`, `params`). The targeted form is
+unchanged and takes precedence when any targeted key is present.
+
+See the [validate middleware guide](/middleware/validate/) for the full
+detection algorithm and precedence rules.
+
+### Response Schema Projection (ergo)
+
+`responseSchema` strips undeclared properties from response bodies
+before serialization — schema-based output projection:
+
+```js
+router.get("/users/:id", {
+  send: {
+    responseSchema: {
+      200: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+        },
+      },
+    },
+  },
+  execute: async (req, res, acc) => {
+    const user = await db.findById(acc.route.params.id);
+    // Even if `user` has extra fields (email, passwordHash),
+    // only `id` and `name` are sent to the client
+    return { response: { body: user } };
+  },
+});
+```
+
+Resolution order: exact status code match → range key (`'2xx'`) →
+`'default'`. Only applies to Object bodies with `statusCode < 400`.
+Projectors are compiled at factory time for zero per-request overhead.
+
+See the [send middleware guide](/middleware/send/) for the full
+resolution table and interaction with the response envelope.
+
+### onResponse Lifecycle Hook (ergo + ergo-router)
+
+Post-send observation hook for audit logging, metrics, and monitoring:
+
+```js
+const router = createRouter({
+  onResponse: (req, res, responseInfo, domainAcc) => {
+    auditLog.write({
+      method: responseInfo.method,
+      url: responseInfo.url,
+      status: responseInfo.statusCode,
+      duration: responseInfo.duration,
+      user: domainAcc.auth?.identity,
+    });
+  },
+});
+```
+
+Configurable at router level and per-route. Route-level hooks fire
+first, then router-level. Hook errors are silently swallowed — they
+cannot affect the response.
+
+<Aside type="caution">
+  `onResponse` does **not** fire when a `catchHandler` is defined and
+  the pipeline throws — the catch handler receives control via early
+  return.
+</Aside>
+
+See the [handler guide](/middleware/handler/) for standalone usage and
+the [ergo-router package page](/packages/ergo-router/#lifecycle-hooks)
+for the dual-level execution model.
+
+### catchHandler 4th Argument (ergo-router)
+
+Custom error handlers now receive the domain accumulator as a fourth
+argument:
+
+```js
+router.post("/orders", {
+  catchHandler: (req, res, err, domainAcc) => {
+    // domainAcc contains route params, parsed body, auth identity,
+    // and other pipeline data available at the time of the error
+    logger.error({
+      error: err.message,
+      user: domainAcc.auth?.identity,
+      route: domainAcc.route?.params,
+    });
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Internal Server Error" }));
+  },
+  authorization: { strategies: [bearerStrategy] },
+  validate: { body: orderSchema },
+  execute: processOrder,
+});
+```
+
+Backwards compatible — existing 3-argument handlers continue to work.
+
+### New Presets (ergo-router)
+
+Three new presets join `presets.jsonApi`:
+
+- **`presets.sse`** — Server-Sent Events: disables compression and
+  timeout, restricts to `text/event-stream`
+- **`presets.webhooks`** — Webhook receiver: requires
+  `Idempotency-Key` header, restricts to `application/json`
+- **`presets.public`** — Public read-only API: enables transport-level
+  rate limiting (100 req/60s), sets `Cache-Control: public, max-age=300`
+
+```js
+import createRouter, { presets } from "@centralping/ergo-router";
+
+const router = createRouter({
+  ...presets.sse,
+  defaults: {
+    ...presets.sse.defaults,
+    authorization: { strategies: [bearerStrategy] },
+  },
+});
+```
+
+See the [ergo-router package page](/packages/ergo-router/#presets) for
+per-preset inventory tables and override patterns.
+
+## Informational
+
+These changes require no action but are worth noting.
+
+### Multi-Runtime CI (ergo)
+
+The ergo test suite now runs on **Deno 2.x** and **Bun 1.x** alongside
+Node.js 22/24. Both runtimes pass all contract tests (100%) and nearly
+all unit tests via their Node.js compatibility layers. These are
+informational CI checks — Node.js remains the primary runtime.
+
+### `@types/node` Optional Peer Dependency (ergo + ergo-router)
+
+Both packages now declare `@types/node` (`>= 22`) as an **optional**
+peer dependency. TypeScript consumers compiling with
+`skipLibCheck: false` need `@types/node` installed for `.d.ts` files
+that reference `import('node:http')`. JavaScript-only consumers are
+unaffected — npm prints an informational warning but does not fail.
+
+## Cumulative Changes from Earlier Versions
+
+If you are upgrading from a version earlier than 0.4.x, the following
+breaking changes also apply. See the
+[0.3-to-0.4 migration guide](/migration/0.3-to-0.4/) for the
+composition format change (the primary 0.4.0 breaking change) and its
+earlier cumulative entries.
+
+### From 0.1.x: Validate Body Prerequisite (ergo 0.2.0)
+
+`validate({body: schema})` now returns a **500** response when
+`body()` middleware is not in the pipeline ahead of it. A one-time
+`process.emitWarning` diagnostic is emitted with code
+`ERGO_VALIDATE_NO_BODY`. Previously, body validation was silently
+skipped, allowing invalid request data to reach the execute handler.
+
+**Correctly ordered pipelines are unaffected** — this only surfaces
+when `validate()` is placed before `body()` (or when `body()` is
+missing entirely).
+
+### From 0.1.x: Idempotency Malformed Header (ergo 0.2.0)
+
+`idempotency()` now distinguishes **missing** from **malformed**
+`Idempotency-Key` headers. A malformed header (present but not a valid
+RFC 8941 sf-string) always returns **400** with format guidance,
+regardless of the `required` option.
+
+Previously, a malformed header with `required: false` silently passed
+through as if the header were absent.
+
+## Verification
+
+After migrating, confirm everything works:
+
+1. **Application starts** — no registration-time errors from the
+   `body: false` + `validate.body` semantic check.
+2. **Build passes** — `npm run build` (or your project's build command)
+   exits without errors.
+3. **Tests pass** — `npm test` exits without failures.
+4. **No runtime warnings** — check for `process.emitWarning` diagnostics
+   during startup (ergo validates option keys at factory time).
+5. **Review changelog** — see the full
+   [ergo changelog](/changelog/ergo/) and
+   [ergo-router changelog](/changelog/ergo-router/) for additional
+   non-breaking additions you may want to adopt.

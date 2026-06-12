@@ -166,6 +166,27 @@ router.get("/users", {
   The accumulator path remains `acc.auth` — only the config key changed.
 </Aside>
 
+### From 0.1.x: Validate Body Prerequisite (ergo 0.2.0)
+
+`validate({body: schema})` now returns a **500** response when `body()`
+middleware is not in the pipeline ahead of it. A one-time
+`process.emitWarning` diagnostic is emitted with code
+`ERGO_VALIDATE_NO_BODY`. Previously, body validation was silently skipped,
+allowing invalid request data to reach the execute handler.
+
+Correctly ordered pipelines are unaffected — this only surfaces when
+`validate()` is placed before `body()` or when `body()` is missing entirely.
+
+### From 0.1.x: Idempotency Malformed Header (ergo 0.2.0)
+
+`idempotency()` now distinguishes **missing** from **malformed**
+`Idempotency-Key` headers. A malformed header (present but not a valid
+RFC 8941 sf-string) always returns **400** with format guidance, regardless
+of the `required` option.
+
+Previously, a malformed header with `required: false` silently passed
+through as if the header were absent.
+
 ## Verification
 
 After migrating, confirm everything works:
