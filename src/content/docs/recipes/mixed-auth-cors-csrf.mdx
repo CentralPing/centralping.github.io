@@ -221,8 +221,7 @@ overrides:
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import http from "node:http";
-    import createRouter from "@centralping/ergo-router";
+    import createRouter, { graceful } from "@centralping/ergo-router";
 
     const router = createRouter({
       transport: {
@@ -285,8 +284,7 @@ overrides:
       }),
     });
 
-    const server = http.createServer(router.handle());
-    server.listen(3000);
+    await graceful(router.handle(), { port: 3000 });
     ```
   </TabItem>
 </Tabs>

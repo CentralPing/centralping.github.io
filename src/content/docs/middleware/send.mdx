@@ -68,6 +68,7 @@ import { send } from "@centralping/ergo";
 <Tabs>
   <TabItem label="Standalone">
     ```js
+    import http from "node:http";
     import { handler, compose } from "@centralping/ergo";
 
     const pipeline = compose(
@@ -173,6 +174,7 @@ values are silently ignored (no header set, no conditional evaluation).
 <Tabs>
   <TabItem label="Standalone">
     ```js
+    import http from "node:http";
     import { handler, compose } from "@centralping/ergo";
 
     const pipeline = compose(
@@ -237,6 +239,7 @@ modified after the condition date, the request is rejected with
 <Tabs>
   <TabItem label="Standalone">
     ```js
+    import http from "node:http";
     import { handler, compose, body } from "@centralping/ergo";
 
     const pipeline = compose(
@@ -299,6 +302,7 @@ modified after the condition date, the request is rejected with
 <Tabs>
   <TabItem label="Standalone">
     ```js
+    import http from "node:http";
     import { handler, compose, send } from "@centralping/ergo";
 
     const pipeline = compose(
