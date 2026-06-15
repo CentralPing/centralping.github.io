@@ -3,7 +3,7 @@ title: Middleware
 description: Per-middleware guides with options, return values, error responses, and usage examples.
 ---
 
-ergo ships 21 middleware factories covering every stage of the
+ergo ships 22 middleware factories covering every stage of the
 [Fast Fail pipeline](/concepts/fast-fail/). Each guide page documents the
 full options table, return value, error responses, and usage examples for
 both standalone composition and declarative ergo-router configuration.
@@ -17,6 +17,7 @@ both standalone composition and declarative ergo-router configuration.
 | Negotiation | [cors](/middleware/cors/) | Cross-origin resource sharing |
 | Negotiation | [cookie](/middleware/cookie/) | Cookie parsing |
 | Negotiation | [url](/middleware/url/) | URL and query string parsing |
+| Negotiation | [paginate](/middleware/paginate/) | Pagination parameter parsing (offset + cursor) |
 | Negotiation | [prefer](/middleware/prefer/) | Prefer header parsing (RFC 7240) |
 | Negotiation | [precondition](/middleware/precondition/) | Conditional request enforcement |
 | Negotiation | [rate-limit](/middleware/rate-limit/) | Per-client rate limiting |
