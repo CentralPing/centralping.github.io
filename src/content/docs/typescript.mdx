@@ -3,7 +3,7 @@ title: TypeScript
 description: Set up TypeScript for @centralping/ergo and @centralping/ergo-router — tsconfig configuration, type imports, and typed route helpers.
 ---
 
-import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
 Both `@centralping/ergo` and `@centralping/ergo-router` ship with TypeScript
 declarations generated from JSDoc. No separate `@types/` packages are needed —
@@ -81,7 +81,11 @@ Without `"types": ["node"]`, TypeScript produces TS2591 errors like
 
 ## Importing Types
 
-Both packages export consumer-facing type interfaces from a `./types` subpath:
+`@centralping/ergo` exports consumer-facing type interfaces from a `./types`
+subpath. `@centralping/ergo-router` exports typed route helpers (`defineGet`,
+`definePost`, `defineRoute`) and utility types from its main entry point.
+
+### ergo type interfaces
 
 ```ts
 import type {
@@ -91,6 +95,7 @@ import type {
   AuthorizationResult,
   CookieJar,
   LogEntry,
+  PaginateResult,
   PreferResult,
   TracingResult,
   IdempotencyResult,
@@ -190,7 +195,7 @@ examples of the middleware contract and domain contribution patterns.
   first API
 - [Custom Middleware](/recipes/custom-middleware/) — write middleware that fits
   the accumulator contract (includes TypeScript examples)
-- [ergo-router Typed Route Helpers](/packages/ergo-router/#typed-route-helpers)
-  — full reference for `defineGet`, `definePost`, and `defineRoute`
+- [ergo-router](/packages/ergo-router/) — router API, config resolution, and
+  pipeline builder reference
 - [ergo Type Exports](/api/ergo/centralping/ergo/) — auto-generated API
   reference
