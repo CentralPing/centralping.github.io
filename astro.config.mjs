@@ -81,6 +81,7 @@ export default defineConfig({
           items: [
             { label: "Why ergo?", slug: "why-ergo" },
             { label: "Getting Started", slug: "getting-started" },
+            { label: "TypeScript", slug: "typescript" },
           ],
         },
         {

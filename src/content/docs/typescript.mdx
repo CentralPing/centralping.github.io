@@ -1,0 +1,201 @@
+---
+title: TypeScript
+description: Set up TypeScript for @centralping/ergo and @centralping/ergo-router — tsconfig configuration, type imports, and typed route helpers.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Both `@centralping/ergo` and `@centralping/ergo-router` ship with TypeScript
+declarations generated from JSDoc. No separate `@types/` packages are needed —
+but your project's `tsconfig.json` does require a small configuration step.
+
+## Prerequisites
+
+- **Node.js 22** or later
+- **TypeScript 5.x** (any recent 5.x release)
+- Both packages installed:
+
+```bash
+npm install @centralping/ergo @centralping/ergo-router
+```
+
+## Install @types/node
+
+Both packages' type declarations reference Node.js built-in types
+(`import('node:http').IncomingMessage`, `import('node:http').ServerResponse`).
+TypeScript needs `@types/node` to resolve these:
+
+```bash
+npm install -D @types/node
+```
+
+<Aside type="note">
+  `@types/node` is declared as an **optional peer dependency** in both packages
+  (matching the convention used by Express, Fastify, Koa, and Hono). npm warns
+  when it is absent but does not fail — JavaScript-only consumers are
+  unaffected.
+</Aside>
+
+## tsconfig Configuration
+
+Add `"types": ["node"]` to your `compilerOptions`. This tells TypeScript to
+load `@types/node` for `node:` protocol imports used in the package
+declarations:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "strict": true,
+    "types": ["node"]
+  }
+}
+```
+
+Without `"types": ["node"]`, TypeScript produces TS2591 errors like
+`Cannot find name 'node:http'` when compiling with `skipLibCheck: false`.
+
+<Aside type="caution" title="The types array narrows type resolution">
+  When you specify `"types"` in `tsconfig.json`, TypeScript **only** loads
+  the listed packages from `node_modules/@types/`. If your project also
+  depends on other `@types/*` packages (e.g., `@types/express`), you must
+  list them all:
+
+  ```json
+  "types": ["node", "express"]
+  ```
+
+  Omitting the `"types"` field entirely loads **all** `@types/*` packages
+  automatically — but this can mask the TS2591 errors for `node:` protocol
+  imports depending on your `moduleResolution` setting.
+</Aside>
+
+<Aside type="tip" title="Bundler module resolution">
+  The example above uses `"module": "Node16"` / `"moduleResolution": "Node16"`,
+  which is recommended for Node.js server applications. If you use a bundler
+  (Vite, esbuild, webpack), `"moduleResolution": "Bundler"` also works — both
+  settings are compatible with ergo's pure ESM package structure.
+</Aside>
+
+## Importing Types
+
+`@centralping/ergo` exports consumer-facing type interfaces from a `./types`
+subpath. `@centralping/ergo-router` exports typed route helpers (`defineGet`,
+`definePost`, `defineRoute`) and utility types from its main entry point.
+
+### ergo type interfaces
+
+```ts
+import type {
+  UrlResult,
+  BodyResult,
+  AcceptsResult,
+  AuthorizationResult,
+  CookieJar,
+  LogEntry,
+  PaginateResult,
+  PreferResult,
+  TracingResult,
+  IdempotencyResult,
+  ResponseAccumulator,
+} from "@centralping/ergo/types";
+```
+
+These interfaces describe the middleware result shapes stored on the domain
+accumulator (e.g., `acc.url` is `UrlResult`, `acc.body` is `BodyResult`).
+
+## Typed Routes with defineGet / definePost
+
+ergo-router's `defineGet` and `definePost` helpers infer the domain accumulator
+type from enabled middleware config keys — providing fully typed `acc` in
+execute callbacks without manual annotation:
+
+```ts
+import createRouter, { defineGet, definePost } from "@centralping/ergo-router";
+
+const router = createRouter({
+  defaults: {
+    accepts: { types: ["application/json"] },
+  },
+});
+
+router.get(
+  "/users/:id",
+  defineGet(
+    { authorization: true, url: true },
+    (req, res, acc) => {
+      acc.auth;         // AuthorizationResult — typed
+      acc.url.query;    // Record<string, string | string[]> — typed
+      acc.route.params; // Record<string, string> — always present
+      return { response: { body: { id: acc.route.params.id } } };
+    },
+  ),
+);
+
+router.post(
+  "/users",
+  definePost(
+    { authorization: true },
+    (req, res, acc) => {
+      acc.auth;        // AuthorizationResult — typed
+      acc.body.parsed; // unknown — typed
+      return { response: { statusCode: 201, body: acc.body.parsed } };
+    },
+  ),
+);
+```
+
+See the [Getting Started TypeScript tab](/getting-started/#quick-start) for
+a complete working example.
+
+<Aside type="note" title="Known limitation: defaults interaction">
+  `defineGet` / `definePost` infer types from the **route-level** config object
+  only. Middleware enabled via `createRouter({defaults: {...}})` is not visible
+  to type inference. Add the key explicitly to the route config for typed
+  access — for example, add `logger: true` to get `acc.log` typed even if
+  logger is already in defaults.
+</Aside>
+
+## Standalone compose with Manual Annotations
+
+When using `compose()` directly (without ergo-router), TypeScript cannot fully
+infer accumulator types across `{fn, setPath}` config objects. Add explicit
+type annotations to the execute function:
+
+```ts
+import { compose, handler, logger, accepts, url } from "@centralping/ergo";
+import type { UrlResult, AcceptsResult, LogEntry } from "@centralping/ergo/types";
+
+type Acc = {
+  log: LogEntry;
+  accepts: AcceptsResult;
+  url: UrlResult;
+};
+
+const pipeline = compose(
+  logger(),
+  accepts({ types: ["application/json"] }),
+  url(),
+  (req, res, acc: Acc) => ({
+    response: {
+      body: { path: acc.url.pathname, query: acc.url.query },
+    },
+  }),
+);
+```
+
+See the [Custom Middleware recipe](/recipes/custom-middleware/) for TypeScript
+examples of the middleware contract and domain contribution patterns.
+
+## Next Steps
+
+- [Getting Started](/getting-started/) — install both packages and build your
+  first API
+- [Custom Middleware](/recipes/custom-middleware/) — write middleware that fits
+  the accumulator contract (includes TypeScript examples)
+- [ergo-router](/packages/ergo-router/) — router API, config resolution, and
+  pipeline builder reference
+- [ergo Type Exports](/api/ergo/centralping/ergo/) — auto-generated API
+  reference
