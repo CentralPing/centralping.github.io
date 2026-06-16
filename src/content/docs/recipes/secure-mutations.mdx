@@ -232,7 +232,7 @@ function getCookie(name) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-async function secureMutation(url, body, idempotencyKey) {
+async function secureMutation(url, body, idempotencyKey, sessionToken) {
   const csrfToken = getCookie("CSRF-TOKEN");
 
   const response = await fetch(url, {
@@ -276,6 +276,8 @@ all required headers, (3) replay POST verifying idempotent response.
     describe("secure mutation", () => {
       let server;
       let baseUrl;
+      let tokenValue;
+      let cookieHeader;
 
       // Setup: start server with issuePipeline on GET, mutationPipeline on POST
       // (elided for brevity — see Testing Patterns recipe for server lifecycle)
@@ -301,11 +303,11 @@ all required headers, (3) replay POST verifying idempotent response.
           headers: { Authorization: "Bearer valid-token" },
         });
         const cookies = getRes.headers.getSetCookie();
-        const tokenValue = cookies
+        tokenValue = cookies
           .find((c) => c.startsWith("CSRF-TOKEN="))
           .split("=")[1]
           .split(";")[0];
-        const cookieHeader = cookies
+        cookieHeader = cookies
           .map((c) => c.split(";")[0])
           .join("; ");
 
@@ -513,5 +515,5 @@ replayed to future requests.
   CORS configuration for cross-origin browser requests
 - [Authorization middleware guide](/middleware/authorization/) — auth
   strategy configuration
-- [Config Resolution](/packages/ergo-router/#config-resolution/) — how
+- [Config Resolution](/packages/ergo-router/#config-resolution) — how
   `defaults`, `true`, `false`, and per-route overrides interact
