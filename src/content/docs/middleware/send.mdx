@@ -146,6 +146,9 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
 
 ### Body Handling
 
+For success responses (`statusCode` < 400). Error responses use
+[RFC 9457 Problem Details](#error-responses) formatting instead.
+
 | Body Type | Content-Type | Behavior |
 | --------- | ------------ | -------- |
 | `null` / `undefined` | — | Default status text (empty for 204/304) |
