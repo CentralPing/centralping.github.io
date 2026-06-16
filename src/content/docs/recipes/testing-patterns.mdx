@@ -318,6 +318,12 @@ graceful shutdown.
         assert.equal(problem.status, 422);
         assert.equal(problem.title, "Unprocessable Entity");
         assert.ok(problem.detail);
+
+        // Per-field errors in the details extension member
+        assert.ok(Array.isArray(problem.details));
+        assert.equal(problem.details[0].path, "/name");
+        assert.equal(problem.details[0].message, "must be string");
+        assert.ok(problem.details[0].params);
       });
 
       it("passes valid body through pipeline", async () => {
@@ -381,6 +387,12 @@ graceful shutdown.
         assert.equal(problem.status, 422);
         assert.equal(problem.title, "Unprocessable Entity");
         assert.ok(problem.detail);
+
+        // Per-field errors in the details extension member
+        assert.ok(Array.isArray(problem.details));
+        assert.equal(problem.details[0].path, "/name");
+        assert.equal(problem.details[0].message, "must be string");
+        assert.ok(problem.details[0].params);
       });
 
       it("passes valid body through pipeline", async () => {
