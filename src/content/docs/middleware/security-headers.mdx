@@ -29,6 +29,33 @@ import { securityHeaders } from "@centralping/ergo";
 | `xXssProtection` | `string \| false` | `'0'` | X-XSS-Protection (0 disables legacy browser filter) |
 | `permissionsPolicy` | `string` | — | Permissions-Policy (omitted by default) |
 
+### Default Headers
+
+When called with no options, the pipeline middleware emits these headers
+on every response:
+
+| Header Name | Value | Option Key |
+| ----------- | ----- | ---------- |
+| Content-Security-Policy | `default-src 'none'` | `contentSecurityPolicy` |
+| X-Content-Type-Options | `nosniff` | `xContentTypeOptions` |
+| X-Frame-Options | `DENY` | `xFrameOptions` |
+| Referrer-Policy | `no-referrer` | `referrerPolicy` |
+| X-XSS-Protection | `0` | `xXssProtection` |
+
+`Strict-Transport-Security` and `Permissions-Policy` are **not** emitted
+by default. HSTS requires HTTPS verification (see note below);
+Permissions-Policy has no universal default.
+
+`X-XSS-Protection: 0` explicitly disables the legacy browser XSS filter.
+Modern CSP makes the filter unnecessary, and leaving it enabled can
+introduce vulnerabilities in older browsers.
+
+<Aside type="tip">
+ergo-router's transport-level security middleware applies different
+defaults (HSTS on, CSP off). See the
+[Transport-Level CSP](#transport-level-csp) section below for details.
+</Aside>
+
 ### HSTS Note
 
 HSTS defaults to `false` because this middleware returns pre-computed
