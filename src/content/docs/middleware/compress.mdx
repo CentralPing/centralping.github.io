@@ -30,90 +30,6 @@ import { compress } from "@centralping/ergo";
 The middleware modifies the response stream in-place (wrapping
 `res.write` and `res.end`). It does not add to the domain accumulator.
 
-## Supported Algorithms
-
-| Encoding | Algorithm | Node.js API |
-| -------- | --------- | ----------- |
-| `br` | Brotli | `zlib.createBrotliCompress()` |
-| `gzip` | gzip | `zlib.createGzip()` |
-| `deflate` | DEFLATE | `zlib.createDeflate()` |
-
-The `encodings` option controls which algorithms are offered and their
-priority order. The client's `Accept-Encoding` quality values are
-negotiated against this list using the
-[`negotiator`](https://www.npmjs.com/package/negotiator) package
-(RFC 9110 §12.5.3 compliant). The first mutually acceptable encoding
-wins — `identity` is excluded since the goal is compression.
-
-## Threshold Behavior
-
-The `threshold` option (default: 1024 bytes) prevents compressing
-responses that are too small to benefit from compression. The threshold
-check depends on the response path:
-
-- **`res.end(chunk)` path** (single-chunk responses from `send()`):
-  the chunk size is measured before compression begins. If the chunk is
-  smaller than `threshold`, the response is sent uncompressed with the
-  original `Content-Length` intact.
-- **`res.write()` path** (streaming responses): the compressor is
-  activated on the first `res.write()` call regardless of chunk size.
-  The threshold cannot be checked because the total body size is
-  unknown when streaming begins.
-
-<Aside type="note" title="Streaming and threshold">
-  When `res.write()` is called before `res.end()`, compression
-  activates immediately — the threshold only guards the single-chunk
-  `res.end(chunk)` path. This means streaming responses are always
-  compressed (assuming the content type is compressible), even if the
-  total body is small.
-</Aside>
-
-## Content-Type Filtering
-
-Only compressible content types trigger compression. The middleware
-tests the `Content-Type` response header against:
-
-```
-text/*
-application/json
-application/javascript
-application/xml
-application/x-www-form-urlencoded
-```
-
-Binary formats (images, audio, video, `application/octet-stream`) are
-not compressible and are always skipped.
-
-## Content-Length Behavior
-
-When compression activates, the middleware:
-
-1. Sets `Content-Encoding` to the negotiated encoding
-2. **Removes the `Content-Length` header** — the compressed size is
-   unknown at the time headers are written
-3. The response switches to chunked transfer encoding (HTTP/1.1
-   default when `Content-Length` is absent)
-
-When compression is skipped (below threshold, non-compressible type,
-or no acceptable encoding), `Content-Length` is preserved as-is.
-
-## When Compression is Skipped
-
-Compression is skipped entirely when any of the following conditions
-is true:
-
-- **No `Accept-Encoding` header** — the client did not request
-  compression
-- **No matching encoding** — the client's acceptable encodings do not
-  overlap with the configured `encodings` list
-- **Non-compressible `Content-Type`** — the response content type does
-  not match the compressible pattern (binary formats, images, etc.)
-- **Status code 204 or 304** — no-body responses have nothing to
-  compress
-- **Body below `threshold`** — single-chunk responses smaller than the
-  threshold are sent uncompressed (streaming responses bypass this
-  check)
-
 ## Error Responses
 
 None. Compression is silently skipped when conditions are not met.
@@ -165,7 +81,91 @@ None. Compression is silently skipped when conditions are not met.
   </TabItem>
 </Tabs>
 
-## Testing with curl
+### Supported Algorithms
+
+| Encoding | Algorithm | Node.js API |
+| -------- | --------- | ----------- |
+| `br` | Brotli | `zlib.createBrotliCompress()` |
+| `gzip` | gzip | `zlib.createGzip()` |
+| `deflate` | DEFLATE | `zlib.createDeflate()` |
+
+The `encodings` option controls which algorithms are offered and their
+priority order. The client's `Accept-Encoding` quality values are
+negotiated against this list using the
+[`negotiator`](https://www.npmjs.com/package/negotiator) package
+(RFC 9110 §12.5.3 compliant). The first mutually acceptable encoding
+wins — `identity` is excluded since the goal is compression.
+
+### Threshold Behavior
+
+The `threshold` option (default: 1024 bytes) prevents compressing
+responses that are too small to benefit from compression. The threshold
+check depends on the response path:
+
+- **`res.end(chunk)` path** (single-chunk responses from `send()`):
+  the chunk size is measured before compression begins. If the chunk is
+  smaller than `threshold`, the response is sent uncompressed with the
+  original `Content-Length` intact.
+- **`res.write()` path** (streaming responses): the compressor is
+  activated on the first `res.write()` call regardless of chunk size.
+  The threshold cannot be checked because the total body size is
+  unknown when streaming begins.
+
+<Aside type="note" title="Streaming and threshold">
+  When `res.write()` is called before `res.end()`, compression
+  activates immediately — the threshold only guards the single-chunk
+  `res.end(chunk)` path. This means streaming responses are always
+  compressed (assuming the content type is compressible), even if the
+  total body is small.
+</Aside>
+
+### Content-Type Filtering
+
+Only compressible content types trigger compression. The middleware
+tests the `Content-Type` response header against:
+
+```
+text/*
+application/json
+application/javascript
+application/xml
+application/x-www-form-urlencoded
+```
+
+Binary formats (images, audio, video, `application/octet-stream`) are
+not compressible and are always skipped.
+
+### Content-Length Behavior
+
+When compression activates, the middleware:
+
+1. Sets `Content-Encoding` to the negotiated encoding
+2. **Removes the `Content-Length` header** — the compressed size is
+   unknown at the time headers are written
+3. The response switches to chunked transfer encoding (HTTP/1.1
+   default when `Content-Length` is absent)
+
+When compression is skipped (below threshold, non-compressible type,
+or no acceptable encoding), `Content-Length` is preserved as-is.
+
+### When Compression is Skipped
+
+Compression is skipped entirely when any of the following conditions
+is true:
+
+- **No `Accept-Encoding` header** — the client did not request
+  compression
+- **No matching encoding** — the client's acceptable encodings do not
+  overlap with the configured `encodings` list
+- **Non-compressible `Content-Type`** — the response content type does
+  not match the compressible pattern (binary formats, images, etc.)
+- **Status code 204 or 304** — no-body responses have nothing to
+  compress
+- **Body below `threshold`** — single-chunk responses smaller than the
+  threshold are sent uncompressed (streaming responses bypass this
+  check)
+
+### Testing with curl
 
 Verify compression behavior using `curl` with explicit
 `Accept-Encoding` headers:

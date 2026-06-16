@@ -19,34 +19,6 @@ pipeline builder automatically dispatches `issue` for safe methods
   `Authorization: Bearer` headers are not vulnerable to CSRF.
 </Aside>
 
-## When CSRF Applies
-
-CSRF attacks exploit a browser behavior: cookies are automatically
-attached to every request to the cookie's origin, regardless of which
-site initiated the request. A malicious page can submit a form or fire a
-fetch to your API and the browser will include the user's session cookie
-— without the user's knowledge. CSRF tokens prevent this by requiring a
-secondary proof of intent that the attacking site cannot access.
-
-This means CSRF protection is tied to your **authentication mechanism**,
-not your API's functionality:
-
-| Auth mechanism | Client type | CSRF needed? | Rationale |
-| -------------- | ----------- | ------------ | --------- |
-| Session cookie | Browser | **Yes** | Browsers auto-attach cookies — CSRF prevents forged submissions |
-| Bearer token | Mobile/service | **No** | Tokens are explicitly attached by the client — not auto-sent by the browser |
-| Cookie + Bearer (mixed) | Both | **Per-route** | Enable CSRF on cookie-auth routes, disable on Bearer-only routes |
-| None (public) | Any | **No** | No credentials to protect |
-
-For APIs that serve both browser and token-based clients, configure CSRF
-per-route — enable it on cookie-authenticated routes and disable it on
-Bearer-only routes with `csrf: false`. See
-[Mixed-Auth CORS & CSRF](/recipes/mixed-auth-cors-csrf/) for the
-complete implementation pattern.
-
-For configuring authentication strategies (Bearer, Basic, API key), see
-the [authorization](/middleware/authorization/) middleware guide.
-
 ## Import
 
 ```js
@@ -104,6 +76,34 @@ The factory returns `{ issue, verify }`:
 | **403 Forbidden** | Missing header token, missing UUID cookie, or token verification fails |
 
 ## Usage
+
+### When CSRF Applies
+
+CSRF attacks exploit a browser behavior: cookies are automatically
+attached to every request to the cookie's origin, regardless of which
+site initiated the request. A malicious page can submit a form or fire a
+fetch to your API and the browser will include the user's session cookie
+— without the user's knowledge. CSRF tokens prevent this by requiring a
+secondary proof of intent that the attacking site cannot access.
+
+This means CSRF protection is tied to your **authentication mechanism**,
+not your API's functionality:
+
+| Auth mechanism | Client type | CSRF needed? | Rationale |
+| -------------- | ----------- | ------------ | --------- |
+| Session cookie | Browser | **Yes** | Browsers auto-attach cookies — CSRF prevents forged submissions |
+| Bearer token | Mobile/service | **No** | Tokens are explicitly attached by the client — not auto-sent by the browser |
+| Cookie + Bearer (mixed) | Both | **Per-route** | Enable CSRF on cookie-auth routes, disable on Bearer-only routes |
+| None (public) | Any | **No** | No credentials to protect |
+
+For APIs that serve both browser and token-based clients, configure CSRF
+per-route — enable it on cookie-authenticated routes and disable it on
+Bearer-only routes with `csrf: false`. See
+[Mixed-Auth CORS & CSRF](/recipes/mixed-auth-cors-csrf/) for the
+complete implementation pattern.
+
+For configuring authentication strategies (Bearer, Basic, API key), see
+the [authorization](/middleware/authorization/) middleware guide.
 
 <Tabs>
   <TabItem label="Standalone">

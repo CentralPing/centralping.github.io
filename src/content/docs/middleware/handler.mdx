@@ -57,7 +57,15 @@ import { handler } from "@centralping/ergo";
 Returns an async handler `(req, res) => void` suitable for
 `http.createServer()`.
 
-## Error Handling
+## Error Responses
+
+| Status | Condition |
+| ------ | --------- |
+| **500 Internal Server Error** | Uncaught pipeline error (detail is redacted for security) |
+
+## Usage
+
+### Error Handling
 
 - Sets `responseAcc.statusCode = 500` for uncaught pipeline errors
   (unless a timeout or earlier pipeline break already set the status)
@@ -69,19 +77,13 @@ Returns an async handler `(req, res) => void` suitable for
 For startup errors, runtime warnings, and troubleshooting, see [Debugging & Diagnostics](/concepts/debugging/).
 </Aside>
 
-## Error Responses
-
-| Status | Condition |
-| ------ | --------- |
-| **500 Internal Server Error** | Uncaught pipeline error (detail is redacted for security) |
-
-## onResponse Hook
+### onResponse Hook
 
 The `onResponse` option registers a post-send observation callback.
 It fires after the HTTP response has been written — the hook cannot
 alter headers, status, or body.
 
-### responseInfo Shape
+#### responseInfo Shape
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
@@ -104,7 +106,7 @@ alter headers, status, or body.
   before piping begins. `bodySize` will be `undefined` in that case.
 </Aside>
 
-### Usage — Audit Logging
+#### Audit Logging
 
 <Tabs>
   <TabItem label="Standalone">
@@ -150,7 +152,7 @@ alter headers, status, or body.
   </TabItem>
 </Tabs>
 
-## Usage
+### Basic Usage
 
 <Tabs>
   <TabItem label="Standalone">
@@ -195,6 +197,10 @@ alter headers, status, or body.
     ```
   </TabItem>
 </Tabs>
+
+## RFC References
+
+- [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
 
 ## Related Recipes
 
