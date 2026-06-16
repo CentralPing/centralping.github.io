@@ -41,6 +41,17 @@ import { handler } from "@centralping/ergo";
 | `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the RFC 9457 Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json`. (forwarded to [send](/middleware/send/)) |
 | `responseSchema` | `Record<number\|string, object>` | — | Map of status code to JSON Schema for response body projection (forwarded to [send](/middleware/send/)) |
 
+<Aside type="caution" title="Header collision with custom middleware">
+  When `timing` is enabled, the timing primitive patches `res.writeHead`
+  to inject the response time header via `res.setHeader()` at
+  header-flush time. If custom middleware also sets a header with the
+  same name (default: `x-response-time`), the timing patch **silently
+  overwrites** the custom value. To avoid the collision, either disable
+  the built-in `timing` option and handle response timing entirely in
+  your middleware, or configure a different header name via
+  `timing: {header: 'x-custom-timing'}`.
+</Aside>
+
 ## Return Value
 
 Returns an async handler `(req, res) => void` suitable for
