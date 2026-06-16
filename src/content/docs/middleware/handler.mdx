@@ -65,6 +65,10 @@ Returns an async handler `(req, res) => void` suitable for
 - Emits error on `res` if error listeners are present
 - If `send()` itself throws: `res.statusCode = 500; res.end()`
 
+<Aside type="tip">
+For startup errors, runtime warnings, and troubleshooting, see [Debugging & Diagnostics](/concepts/debugging/).
+</Aside>
+
 ## Error Responses
 
 | Status | Condition |
@@ -196,7 +200,6 @@ alter headers, status, or body.
 
 - [Custom Middleware](/recipes/custom-middleware/) — Writing middleware that fits ergo's accumulator-based return-value contract
 - [Debug Tracing](/recipes/debug-tracing/) — Finding which middleware rejected a request using pipeline debug mode
-- [Debugging & Diagnostics](/concepts/debugging/) — Startup errors, runtime warnings, warning codes, and troubleshooting FAQ
 
 ## API Reference
 
