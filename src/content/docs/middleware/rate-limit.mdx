@@ -66,128 +66,6 @@ RFC 9457 error body.
 | ------ | --------- |
 | **429 Too Many Requests** | Request count exceeds `max` within `windowMs` |
 
-## Custom Store
-
-The `store` option accepts any object that implements a single method:
-
-| Method | Signature | Returns |
-| ------ | --------- | ------- |
-| `hit` | `(key: string, windowMs: number) => object` | `{ count: number, resetMs: number }` |
-
-| Return Field | Type | Meaning |
-| ------------ | ---- | ------- |
-| `count` | `number` | Total hits recorded for `key` within the current window |
-| `resetMs` | `number` | Milliseconds until the oldest entry in the window expires |
-
-The middleware calls `store.hit(key, windowMs)` once per request. The
-store is responsible for recording the hit, pruning expired entries,
-and returning the current state. No other methods are called.
-
-### MemoryStore Options
-
-The built-in `MemoryStore` accepts optional configuration:
-
-| Option | Type | Default | Description |
-| ------ | ---- | ------- | ----------- |
-| `maxKeys` | `number` | `10000` | Maximum tracked keys before FIFO eviction. When exceeded, the oldest key is silently removed. |
-| `now` | `function` | `Date.now` | Clock function returning current time in milliseconds. Useful for deterministic testing. |
-
-```js
-import { MemoryStore } from "@centralping/ergo/lib/rate-limit";
-
-const store = new MemoryStore({ maxKeys: 50_000 });
-```
-
-### Redis Store Example
-
-For multi-instance deployments, implement the `hit()` contract with a
-shared data store. This example uses
-[ioredis](https://www.npmjs.com/package/ioredis) with sorted sets:
-
-```js
-import Redis from "ioredis";
-
-class RedisStore {
-  constructor(redis) {
-    this.redis = redis;
-  }
-
-  async hit(key, windowMs) {
-    const now = Date.now();
-    const windowKey = `rl:${key}`;
-    const cutoff = now - windowMs;
-
-    const pipeline = this.redis.pipeline();
-    pipeline.zremrangebyscore(windowKey, 0, cutoff);
-    pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
-    pipeline.zcard(windowKey);
-    pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
-    pipeline.pexpire(windowKey, windowMs);
-
-    const results = await pipeline.exec();
-    const count = results[2][1];
-    const oldest = results[3][1];
-    const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
-    const resetMs = Math.max(0, oldestScore + windowMs - now);
-
-    return { count, resetMs };
-  }
-}
-```
-
-### When to Use a Shared Store
-
-| Scenario | Recommended Store |
-| -------- | ----------------- |
-| Single process, development, or testing | `MemoryStore` (default) — no external dependencies |
-| Multiple instances behind a load balancer | Redis or another shared store — counters must be visible across instances |
-| Serverless / ephemeral containers | Shared store — process restarts reset in-memory counters |
-
-<Aside type="caution" title="Process restart resets in-memory counters">
-  `MemoryStore` state lives in the Node.js process. Restarting the
-  server (deploy, crash, autoscale) resets all counters to zero. If
-  consistent rate limiting across restarts is required, use a shared
-  store.
-</Aside>
-
-### Proxy Awareness
-
-<Aside type="caution" title="Default key is the proxy's IP behind a reverse proxy">
-  The default `keyGenerator` uses `req.socket.remoteAddress`, which
-  resolves to the **proxy's IP** when your application runs behind
-  nginx, a cloud load balancer, or any reverse proxy. All clients
-  share a single rate-limit bucket, making rate limiting ineffective.
-</Aside>
-
-When deploying behind a reverse proxy, provide a custom `keyGenerator`
-that reads the forwarded client IP:
-
-```js
-rateLimit({
-  keyGenerator: (req) => {
-    const forwarded = req.headers["x-forwarded-for"];
-    return forwarded
-      ? forwarded.split(",")[0].trim()
-      : req.socket.remoteAddress;
-  },
-})
-```
-
-<Aside type="caution" title="Only trust X-Forwarded-For behind a proxy you control">
-  When the application is directly exposed to the internet (no reverse
-  proxy), clients can set `X-Forwarded-For` to any value — bypassing
-  rate limiting entirely. Only use a forwarded-header `keyGenerator`
-  when your app runs behind a proxy you control.
-</Aside>
-
-This applies to both pipeline-level rate limiting
-(`defaults.rateLimit` or per-route `rateLimit` in ergo-router) and
-transport-level rate limiting (`transport.rateLimit`). The
-[`trustProxy`](/recipes/production-deployment/#trust-proxy-configuration) router transport option does
-**not** automatically make rate limiting proxy-aware — it only affects
-request IDs and HSTS. A custom `keyGenerator` is always required for
-correct per-client rate limiting behind a proxy.
-
 ## Usage
 
 <Tabs>
@@ -237,9 +115,131 @@ correct per-client rate limiting behind a proxy.
   </TabItem>
 </Tabs>
 
-## ergo-router Configuration
+### Custom Store
 
-### Precedence
+The `store` option accepts any object that implements a single method:
+
+| Method | Signature | Returns |
+| ------ | --------- | ------- |
+| `hit` | `(key: string, windowMs: number) => object` | `{ count: number, resetMs: number }` |
+
+| Return Field | Type | Meaning |
+| ------------ | ---- | ------- |
+| `count` | `number` | Total hits recorded for `key` within the current window |
+| `resetMs` | `number` | Milliseconds until the oldest entry in the window expires |
+
+The middleware calls `store.hit(key, windowMs)` once per request. The
+store is responsible for recording the hit, pruning expired entries,
+and returning the current state. No other methods are called.
+
+#### MemoryStore Options
+
+The built-in `MemoryStore` accepts optional configuration:
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `maxKeys` | `number` | `10000` | Maximum tracked keys before FIFO eviction. When exceeded, the oldest key is silently removed. |
+| `now` | `function` | `Date.now` | Clock function returning current time in milliseconds. Useful for deterministic testing. |
+
+```js
+import { MemoryStore } from "@centralping/ergo/lib/rate-limit";
+
+const store = new MemoryStore({ maxKeys: 50_000 });
+```
+
+#### Redis Store Example
+
+For multi-instance deployments, implement the `hit()` contract with a
+shared data store. This example uses
+[ioredis](https://www.npmjs.com/package/ioredis) with sorted sets:
+
+```js
+import Redis from "ioredis";
+
+class RedisStore {
+  constructor(redis) {
+    this.redis = redis;
+  }
+
+  async hit(key, windowMs) {
+    const now = Date.now();
+    const windowKey = `rl:${key}`;
+    const cutoff = now - windowMs;
+
+    const pipeline = this.redis.pipeline();
+    pipeline.zremrangebyscore(windowKey, 0, cutoff);
+    pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
+    pipeline.zcard(windowKey);
+    pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
+    pipeline.pexpire(windowKey, windowMs);
+
+    const results = await pipeline.exec();
+    const count = results[2][1];
+    const oldest = results[3][1];
+    const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
+    const resetMs = Math.max(0, oldestScore + windowMs - now);
+
+    return { count, resetMs };
+  }
+}
+```
+
+#### When to Use a Shared Store
+
+| Scenario | Recommended Store |
+| -------- | ----------------- |
+| Single process, development, or testing | `MemoryStore` (default) — no external dependencies |
+| Multiple instances behind a load balancer | Redis or another shared store — counters must be visible across instances |
+| Serverless / ephemeral containers | Shared store — process restarts reset in-memory counters |
+
+<Aside type="caution" title="Process restart resets in-memory counters">
+  `MemoryStore` state lives in the Node.js process. Restarting the
+  server (deploy, crash, autoscale) resets all counters to zero. If
+  consistent rate limiting across restarts is required, use a shared
+  store.
+</Aside>
+
+#### Proxy Awareness
+
+<Aside type="caution" title="Default key is the proxy's IP behind a reverse proxy">
+  The default `keyGenerator` uses `req.socket.remoteAddress`, which
+  resolves to the **proxy's IP** when your application runs behind
+  nginx, a cloud load balancer, or any reverse proxy. All clients
+  share a single rate-limit bucket, making rate limiting ineffective.
+</Aside>
+
+When deploying behind a reverse proxy, provide a custom `keyGenerator`
+that reads the forwarded client IP:
+
+```js
+rateLimit({
+  keyGenerator: (req) => {
+    const forwarded = req.headers["x-forwarded-for"];
+    return forwarded
+      ? forwarded.split(",")[0].trim()
+      : req.socket.remoteAddress;
+  },
+})
+```
+
+<Aside type="caution" title="Only trust X-Forwarded-For behind a proxy you control">
+  When the application is directly exposed to the internet (no reverse
+  proxy), clients can set `X-Forwarded-For` to any value — bypassing
+  rate limiting entirely. Only use a forwarded-header `keyGenerator`
+  when your app runs behind a proxy you control.
+</Aside>
+
+This applies to both pipeline-level rate limiting
+(`defaults.rateLimit` or per-route `rateLimit` in ergo-router) and
+transport-level rate limiting (`transport.rateLimit`). The
+[`trustProxy`](/recipes/production-deployment/#trust-proxy-configuration) router transport option does
+**not** automatically make rate limiting proxy-aware — it only affects
+request IDs and HSTS. A custom `keyGenerator` is always required for
+correct per-client rate limiting behind a proxy.
+
+### ergo-router Configuration
+
+#### Precedence
 
 Per-route `rateLimit` config follows
 [Config Resolution](/packages/ergo-router/#config-resolution) semantics:
@@ -267,7 +267,7 @@ Per-route `rateLimit` config follows
   route.
 </Aside>
 
-### Presets Interaction
+#### Presets Interaction
 
 Only [`presets.public`](/packages/ergo-router/#presets) includes
 transport-level rate limiting (`transport.rateLimit: {}` with built-in

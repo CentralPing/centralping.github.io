@@ -57,98 +57,11 @@ import { handler } from "@centralping/ergo";
 Returns an async handler `(req, res) => void` suitable for
 `http.createServer()`.
 
-## Error Handling
-
-- Sets `responseAcc.statusCode = 500` for uncaught pipeline errors
-  (unless a timeout or earlier pipeline break already set the status)
-- Attaches `instance` from the `X-Request-Id` response header
-- Emits error on `res` if error listeners are present
-- If `send()` itself throws: `res.statusCode = 500; res.end()`
-
-<Aside type="tip">
-For startup errors, runtime warnings, and troubleshooting, see [Debugging & Diagnostics](/concepts/debugging/).
-</Aside>
-
 ## Error Responses
 
 | Status | Condition |
 | ------ | --------- |
 | **500 Internal Server Error** | Uncaught pipeline error (detail is redacted for security) |
-
-## onResponse Hook
-
-The `onResponse` option registers a post-send observation callback.
-It fires after the HTTP response has been written — the hook cannot
-alter headers, status, or body.
-
-### responseInfo Shape
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `statusCode` | `number` | Final HTTP status code |
-| `headers` | `object` | Response headers snapshot (from `res.getHeaders()`) |
-| `method` | `string` | Request HTTP method |
-| `url` | `string` | Request URL |
-| `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
-| `duration` | `number` | Pipeline execution time in milliseconds (from `performance.now()`) |
-
-<Aside type="note" title="Error handling">
-  Errors thrown by the `onResponse` hook are silently swallowed —
-  the hook is for observation only and cannot affect the client
-  response. Async hooks are awaited (the handler blocks until the
-  hook completes or throws).
-</Aside>
-
-<Aside type="caution" title="bodySize for streams">
-  When the response body is a stream, `Content-Length` is not set
-  before piping begins. `bodySize` will be `undefined` in that case.
-</Aside>
-
-### Usage — Audit Logging
-
-<Tabs>
-  <TabItem label="Standalone">
-    ```js
-    import http from "node:http";
-    import { handler, compose } from "@centralping/ergo";
-
-    const pipeline = compose(
-      (req, res, acc) => ({
-        response: { statusCode: 200, body: { ok: true } },
-      }),
-    );
-
-    const server = http.createServer(
-      handler(pipeline, {
-        onResponse: (req, res, responseInfo, domainAcc) => {
-          console.log(JSON.stringify({
-            method: responseInfo.method,
-            url: responseInfo.url,
-            status: responseInfo.statusCode,
-            duration: responseInfo.duration,
-            user: domainAcc.auth?.identity,
-          }));
-        },
-      }),
-    );
-    ```
-  </TabItem>
-  <TabItem label="ergo-router">
-    ```js
-    const router = createRouter({
-      onResponse: (req, res, responseInfo, domainAcc) => {
-        console.log(JSON.stringify({
-          method: responseInfo.method,
-          url: responseInfo.url,
-          status: responseInfo.statusCode,
-          duration: responseInfo.duration,
-          user: domainAcc.auth?.identity,
-        }));
-      },
-    });
-    ```
-  </TabItem>
-</Tabs>
 
 ## Usage
 
@@ -195,6 +108,97 @@ alter headers, status, or body.
     ```
   </TabItem>
 </Tabs>
+
+### Error Handling
+
+- Sets `responseAcc.statusCode = 500` for uncaught pipeline errors
+  (unless a timeout or earlier pipeline break already set the status)
+- Attaches `instance` from the `X-Request-Id` response header
+- Emits error on `res` if error listeners are present
+- If `send()` itself throws: `res.statusCode = 500; res.end()`
+
+<Aside type="tip">
+For startup errors, runtime warnings, and troubleshooting, see [Debugging & Diagnostics](/concepts/debugging/).
+</Aside>
+
+### onResponse Hook
+
+The `onResponse` option registers a post-send observation callback.
+It fires after the HTTP response has been written — the hook cannot
+alter headers, status, or body.
+
+#### responseInfo Shape
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `statusCode` | `number` | Final HTTP status code |
+| `headers` | `object` | Response headers snapshot (from `res.getHeaders()`) |
+| `method` | `string` | Request HTTP method |
+| `url` | `string` | Request URL |
+| `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
+| `duration` | `number` | Pipeline execution time in milliseconds (from `performance.now()`) |
+
+<Aside type="note" title="Error handling">
+  Errors thrown by the `onResponse` hook are silently swallowed —
+  the hook is for observation only and cannot affect the client
+  response. Async hooks are awaited (the handler blocks until the
+  hook completes or throws).
+</Aside>
+
+<Aside type="caution" title="bodySize for streams">
+  When the response body is a stream, `Content-Length` is not set
+  before piping begins. `bodySize` will be `undefined` in that case.
+</Aside>
+
+#### Audit Logging
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import { handler, compose } from "@centralping/ergo";
+
+    const pipeline = compose(
+      (req, res, acc) => ({
+        response: { statusCode: 200, body: { ok: true } },
+      }),
+    );
+
+    const server = http.createServer(
+      handler(pipeline, {
+        onResponse: (req, res, responseInfo, domainAcc) => {
+          console.log(JSON.stringify({
+            method: responseInfo.method,
+            url: responseInfo.url,
+            status: responseInfo.statusCode,
+            duration: responseInfo.duration,
+            user: domainAcc.auth?.identity,
+          }));
+        },
+      }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      onResponse: (req, res, responseInfo, domainAcc) => {
+        console.log(JSON.stringify({
+          method: responseInfo.method,
+          url: responseInfo.url,
+          status: responseInfo.statusCode,
+          duration: responseInfo.duration,
+          user: domainAcc.auth?.identity,
+        }));
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## RFC References
+
+- [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
 
 ## Related Recipes
 

@@ -43,22 +43,6 @@ Depends on the request state:
 For new requests, call `complete(response)` after your execute stage to
 store the response for future replays, or `discard()` to remove the key.
 
-## Header Format
-
-The `Idempotency-Key` header value must be an
-[RFC 8941 structured field string](https://www.rfc-editor.org/rfc/rfc8941#section-3.3.3)
-— a double-quoted value on the wire:
-
-```bash
-curl -X POST https://api.example.com/payments \
-  -H 'Idempotency-Key: "my-unique-key-123"' \
-  -H 'Content-Type: application/json' \
-  -d '{"amount": 1000}'
-```
-
-Unquoted values (e.g., `Idempotency-Key: my-key`) are rejected with a
-`400` response that includes format guidance.
-
 ## Error Responses
 
 | Status | Condition |
@@ -100,7 +84,23 @@ Unquoted values (e.g., `Idempotency-Key: my-key`) are rejected with a
   </TabItem>
 </Tabs>
 
-## Storing Responses for Replay
+### Header Format
+
+The `Idempotency-Key` header value must be an
+[RFC 8941 structured field string](https://www.rfc-editor.org/rfc/rfc8941#section-3.3.3)
+— a double-quoted value on the wire:
+
+```bash
+curl -X POST https://api.example.com/payments \
+  -H 'Idempotency-Key: "my-unique-key-123"' \
+  -H 'Content-Type: application/json' \
+  -d '{"amount": 1000}'
+```
+
+Unquoted values (e.g., `Idempotency-Key: my-key`) are rejected with a
+`400` response that includes format guidance.
+
+### Storing Responses for Replay
 
 For new requests, the middleware returns `complete()` and `discard()`
 callbacks. Call `complete(response)` after your execute logic to store
@@ -156,7 +156,7 @@ idempotency entry (e.g. on failure).
   </TabItem>
 </Tabs>
 
-### Lifecycle
+#### Lifecycle
 
 1. **New request** — the middleware returns `{ key, fingerprint,
    complete, discard }` on `acc.idempotency`. The execute handler runs

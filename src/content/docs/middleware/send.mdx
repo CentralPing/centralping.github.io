@@ -63,7 +63,49 @@ import { send } from "@centralping/ergo";
   responses (≥ 400) are never projected.
 </Aside>
 
-#### Usage
+## Return Value
+
+None. `send()` writes directly to the HTTP response and is called by
+`handler()` after the pipeline completes.
+
+## Error Responses
+
+Error bodies are automatically formatted as
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) from
+the response accumulator's `statusCode`, `detail`, `retryAfter`,
+`instance`, and any extension members.
+
+## Usage
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import { handler, compose, send } from "@centralping/ergo";
+
+    const pipeline = compose(
+      (req, res, acc) => ({
+        response: { statusCode: 200, body: { hello: "world" } },
+      }),
+    );
+
+    const server = http.createServer(
+      handler(pipeline, { etag: true, prettify: true }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    const router = createRouter({
+      defaults: {
+        send: { etag: true, prefer: true },
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Response Schema
 
 <Tabs>
   <TabItem label="Standalone">
@@ -120,7 +162,7 @@ import { send } from "@centralping/ergo";
   </TabItem>
 </Tabs>
 
-## Accumulator Inputs
+### Accumulator Inputs
 
 **Response accumulator:** `statusCode`, `body`, `headers`, `detail`,
 `retryAfter`, `instance`, `location`, `lastModified`, `type`,
@@ -130,7 +172,7 @@ import { send } from "@centralping/ergo";
 **Domain accumulator:** `cookies` (cookie jar → `Set-Cookie`), `prefer`
 (parsed Prefer header), `paginate` (parsed pagination parameters)
 
-## Body Handling (statusCode < 400)
+### Body Handling
 
 | Body Type | Content-Type | Behavior |
 | --------- | ------------ | -------- |
@@ -140,14 +182,7 @@ import { send } from "@centralping/ergo";
 | `Stream` | — | Piped to response |
 | `Object` | `application/json` | JSON-serialized (respects `prettify`) |
 
-## Error Responses (statusCode ≥ 400)
-
-Error bodies are automatically formatted as
-[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) from
-the response accumulator's `statusCode`, `detail`, `retryAfter`,
-`instance`, and any extension members.
-
-## Conditional Requests
+### Conditional Requests
 
 | Status | Condition |
 | ------ | --------- |
@@ -164,7 +199,7 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
   request (428), then `send()` evaluates the header value (304/412).
 </Aside>
 
-### Setting `lastModified`
+#### Setting `lastModified`
 
 Return `lastModified` on the response accumulator to set the
 `Last-Modified` header and enable date-based conditional request
@@ -229,7 +264,7 @@ If-Modified-Since: Thu, 05 Jun 2025 12:00:00 GMT
 → 304 Not Modified (no body)
 ```
 
-### Write Protection with `If-Unmodified-Since`
+#### Write Protection with `If-Unmodified-Since`
 
 For unsafe methods (PUT, PATCH, DELETE), `send()` evaluates
 `If-Unmodified-Since` as a write-protection guard. If the resource was
@@ -296,36 +331,6 @@ modified after the condition date, the request is rejected with
   The same precedence applies to `If-Match` over `If-Unmodified-Since`
   per [RFC 9110 §13.1.4](https://www.rfc-editor.org/rfc/rfc9110#section-13.1.4).
 </Aside>
-
-## Usage
-
-<Tabs>
-  <TabItem label="Standalone">
-    ```js
-    import http from "node:http";
-    import { handler, compose, send } from "@centralping/ergo";
-
-    const pipeline = compose(
-      (req, res, acc) => ({
-        response: { statusCode: 200, body: { hello: "world" } },
-      }),
-    );
-
-    const server = http.createServer(
-      handler(pipeline, { etag: true, prettify: true }),
-    );
-    ```
-  </TabItem>
-  <TabItem label="ergo-router">
-    ```js
-    const router = createRouter({
-      defaults: {
-        send: { etag: true, prefer: true },
-      },
-    });
-    ```
-  </TabItem>
-</Tabs>
 
 ## RFC References
 

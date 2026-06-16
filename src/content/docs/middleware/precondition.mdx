@@ -49,44 +49,6 @@ Returns `undefined` on success — the middleware is a gate.
   configure both.
 </Aside>
 
-### Common Pattern — Safe Write Operations
-
-Use `preconditionRequired` with the default `etag: true` behavior to
-enforce optimistic concurrency on write operations:
-
-<Tabs>
-  <TabItem label="ergo-router">
-    ```js
-    router.put("/users/:id", {
-      preconditionRequired: true,
-      // etag: true is the send() default — no explicit config needed
-      execute: async (req, res, acc) => {
-        const user = await db.findAndUpdate(
-          acc.route.params.id,
-          acc.body.parsed,
-        );
-        return { response: { body: user } };
-      },
-    });
-    // PUT without If-Match → 428 Precondition Required
-    // PUT with stale If-Match → 412 Precondition Failed
-    // PUT with current If-Match → 200 OK
-    ```
-  </TabItem>
-  <TabItem label="Opt-out">
-    ```js
-    // ETag generation without enforcement —
-    // clients CAN send conditional headers but are not required to
-    router.put("/settings/:id", {
-      preconditionRequired: false,
-      // etag: true remains the default — ETags are generated,
-      // If-Match is evaluated when present
-      execute: updateSettings,
-    });
-    ```
-  </TabItem>
-</Tabs>
-
 ## Usage
 
 <Tabs>
@@ -112,6 +74,87 @@ enforce optimistic concurrency on write operations:
       execute: (req, res, acc) => ({
         response: { body: { updated: true } },
       }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+### Common Pattern — Safe Write Operations
+
+Use `preconditionRequired` with the default `etag: true` behavior to
+enforce optimistic concurrency on write operations:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import { handler, compose, body, precondition } from "@centralping/ergo";
+
+    const pipeline = compose(
+      precondition({ methods: ["PUT", "PATCH"] }),
+      body(),
+      async (req, res, acc) => {
+        const user = await db.findAndUpdate("42", acc.body.parsed);
+        return { response: { body: user } };
+      },
+    );
+
+    const server = http.createServer(handler(pipeline));
+    // PUT without If-Match → 428 Precondition Required
+    // PUT with stale If-Match → 412 Precondition Failed
+    // PUT with current If-Match → 200 OK
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.put("/users/:id", {
+      preconditionRequired: true,
+      // etag: true is the send() default — no explicit config needed
+      execute: async (req, res, acc) => {
+        const user = await db.findAndUpdate(
+          acc.route.params.id,
+          acc.body.parsed,
+        );
+        return { response: { body: user } };
+      },
+    });
+    // PUT without If-Match → 428 Precondition Required
+    // PUT with stale If-Match → 412 Precondition Failed
+    // PUT with current If-Match → 200 OK
+    ```
+  </TabItem>
+</Tabs>
+
+### Opting Out
+
+ETag generation without enforcement — clients can send conditional
+headers but are not required to:
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import http from "node:http";
+    import { handler, compose } from "@centralping/ergo";
+
+    // No precondition() in the pipeline — ETags are still generated
+    // by send()'s default etag: true, and If-Match is evaluated when
+    // present, but clients are not required to send conditional headers.
+    const pipeline = compose(
+      async (req, res, acc) => ({
+        response: { body: await updateSettings(acc) },
+      }),
+    );
+
+    const server = http.createServer(handler(pipeline));
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.put("/settings/:id", {
+      preconditionRequired: false,
+      // etag: true remains the default — ETags are generated,
+      // If-Match is evaluated when present
+      execute: updateSettings,
     });
     ```
   </TabItem>
