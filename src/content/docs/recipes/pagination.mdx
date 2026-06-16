@@ -213,8 +213,10 @@ fails. All five must be true for headers to emit:
    a `paginate` property on the response accumulator
 4. **`statusCode < 400`** — error responses never include pagination
    headers
-5. **Offset only: `total` is `Number.isFinite()`** — `undefined`,
-   `null`, `NaN`, and `Infinity` all cause silent skipping
+5. **Offset only: `Number.isFinite(Number(total))`** — the source
+   applies `Number()` coercion, then checks `isFinite`. `undefined`,
+   `NaN`, and `Infinity` cause silent skipping. Note: `null` coerces
+   to `0` (finite), so it produces headers with `total=0`
 
 When debugging missing pagination headers, check these conditions in
 order — the most common cause is a missing `response.paginate` return
@@ -251,8 +253,9 @@ GET /articles?sort=date&filter=active&page=2&per_page=10
 ### Edge Cases
 
 - **`total` not a finite number** — `send()` silently skips Link and
-  X-Total-Count headers. This includes `undefined`, `null`, `NaN`,
-  and `Infinity`.
+  X-Total-Count headers. `undefined`, `NaN`, and `Infinity` all fail
+  the `Number.isFinite(Number(total))` gate. Note: `null` coerces to
+  `0` (finite), producing headers with `total=0` rather than skipping.
 - **4xx or 5xx status** — pagination headers are skipped entirely
   (only generated for `statusCode < 400`).
 - **Missing `response.paginate`** — if the execute handler does not
