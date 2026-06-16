@@ -1,0 +1,519 @@
+---
+title: Secure Mutations
+description: Integrated CSRF + mixed auth + idempotency workflow with client-side fetch helpers and test examples.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Problem
+
+Your browser-facing API needs a mutation endpoint that combines:
+
+- **CSRF protection** — the browser auto-attaches session cookies, so
+  you need a signed token to prove intent
+- **Bearer token auth** — mobile and service clients bypass CSRF but
+  still authenticate
+- **Idempotency-Key enforcement** — replay protection prevents
+  duplicate charges, double-creates, or repeated side effects
+
+Each middleware is documented individually, but wiring them together
+requires understanding the pipeline stage ordering, cookie
+prerequisites, RFC 8941 header quoting, and `complete()`/`discard()`
+lifecycle. This recipe shows the full integration — from CSRF token
+issuance on GET, through verification + idempotency on POST, to
+client-side header wiring.
+
+## Solution
+
+### Router Setup
+
+Configure mixed auth with CSRF defaults for browser routes and
+Bearer-only overrides for API routes. Idempotency applies to mutation
+routes.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import {
+      compose,
+      cookie,
+      csrf,
+      authorization,
+      body,
+      idempotency,
+    } from "@centralping/ergo";
+
+    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+
+    const bearerStrategy = {
+      type: "Bearer",
+      authorizer: async (attributes, token) => {
+        const user = await verifySession(token);
+        return user
+          ? { authorized: true, info: { user } }
+          : { authorized: false };
+      },
+    };
+
+    // GET — issues CSRF token cookies for the browser
+    const issuePipeline = compose(
+      cookie(),
+      {fn: csrfMiddleware.issue, setPath: "csrf"},
+      authorization({ strategies: [bearerStrategy] }),
+    );
+
+    // POST — verifies CSRF + enforces idempotency
+    const mutationPipeline = compose(
+      cookie(),
+      {fn: csrfMiddleware.verify, setPath: "csrf"},
+      authorization({ strategies: [bearerStrategy] }),
+      body(),
+      idempotency({ required: true }),
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import createRouter from "@centralping/ergo-router";
+
+    const router = createRouter({
+      defaults: {
+        cookie: true,
+        csrf: { secret: process.env.CSRF_SECRET },
+        authorization: {
+          strategies: [{
+            type: "Bearer",
+            authorizer: async (attributes, token) => {
+              const user = await verifySession(token);
+              return user
+                ? { authorized: true, info: { user } }
+                : { authorized: false };
+            },
+          }],
+        },
+      },
+    });
+
+    // Browser route — inherits cookie + CSRF + auth from defaults.
+    // GET issues CSRF token cookies; POST verifies them (auto-dispatch).
+    router.get("/account/transfer", {
+      execute: (req, res, acc) => ({
+        response: { body: { balance: acc.auth.user.balance } },
+      }),
+    });
+
+    router.post("/account/transfer", {
+      idempotency: { required: true },
+      validate: { body: transferSchema },
+      execute: async (req, res, acc) => {
+        // ... (see Idempotent Mutation section below)
+      },
+    });
+
+    // Bearer-only route — no CSRF, no idempotency
+    router.post("/api/webhooks", {
+      csrf: false,
+      cookie: false,
+      execute: async (req, res, acc) => ({
+        response: { body: { received: true } },
+      }),
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip" title="CORS for cross-origin browsers">
+  If your SPA and API are on different origins (e.g., `app.example.com`
+  calling `api.example.com`), you also need transport-level CORS with
+  `X-CSRF-TOKEN` in `allowedHeaders`. See
+  [Mixed-Auth CORS & CSRF](/recipes/mixed-auth-cors-csrf/) for the
+  transport CORS configuration.
+</Aside>
+
+### CSRF Token Flow
+
+The browser must obtain CSRF tokens before submitting mutations:
+
+1. **GET request** — the CSRF middleware's `issue` function sets two
+   cookies: a token cookie (`CSRF-TOKEN`, readable by client JS) and a
+   UUID cookie (`CSRF-UUID`, httpOnly)
+2. **POST request** — the client reads the token cookie and sends it
+   back as an `X-CSRF-TOKEN` header. The middleware's `verify` function
+   compares the header against the cookies using
+   `crypto.timingSafeEqual()`
+
+In ergo-router, this dispatch is automatic — safe methods
+(GET/HEAD/OPTIONS) run `issue`, unsafe methods (POST/PUT/PATCH/DELETE)
+run `verify`.
+
+### Idempotent Mutation
+
+The `complete()`/`discard()` lifecycle stores successful responses for
+replay and cleans up on failure.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import {
+      compose,
+      cookie,
+      csrf,
+      authorization,
+      body,
+      idempotency,
+    } from "@centralping/ergo";
+
+    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+
+    const pipeline = compose(
+      cookie(),
+      {fn: csrfMiddleware.verify, setPath: "csrf"},
+      authorization({ strategies: [bearerStrategy] }),
+      body(),
+      idempotency({ required: true }),
+      async (req, res, acc) => {
+        try {
+          const result = await processTransfer(acc.body.parsed);
+          const response = { statusCode: 201, body: result };
+
+          acc.idempotency.complete(response);
+
+          return { response };
+        } catch (err) {
+          acc.idempotency.discard();
+          throw err;
+        }
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    router.post("/account/transfer", {
+      idempotency: { required: true },
+      validate: { body: transferSchema },
+      execute: async (req, res, acc) => {
+        try {
+          const result = await processTransfer(acc.body.parsed);
+          const response = { statusCode: 201, body: result };
+
+          acc.idempotency.complete(response);
+
+          return { response };
+        } catch (err) {
+          acc.idempotency.discard();
+          throw err;
+        }
+      },
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="caution" title="Always call complete() or discard()">
+  If neither `complete()` nor `discard()` is called, the store entry
+  remains in a `processing` state. Concurrent requests with the same key
+  will receive a `409 Conflict` response until the entry expires. See
+  the [idempotency guide](/middleware/idempotency/#lifecycle) for the
+  full lifecycle.
+</Aside>
+
+### Client-Side Fetch Helper
+
+A framework-agnostic helper that reads the CSRF token from cookies,
+constructs all required headers, and applies RFC 8941 quoting to the
+Idempotency-Key:
+
+```js
+function getCookie(name) {
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${name}=([^;]*)`)
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function secureMutation(url, body, idempotencyKey, sessionToken) {
+  const csrfToken = getCookie("CSRF-TOKEN");
+
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": csrfToken,
+      // RFC 8941 sf-string: value MUST be double-quoted on the wire
+      "Idempotency-Key": `"${idempotencyKey}"`,
+      "Authorization": `Bearer ${sessionToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+}
+```
+
+<Aside type="caution" title="RFC 8941 double-quoting is required">
+  The `Idempotency-Key` header value must be an RFC 8941 structured
+  field string — double-quoted on the wire. Unquoted values (e.g.,
+  `Idempotency-Key: my-key`) are rejected with a `400` response. In
+  JavaScript, this means wrapping in escaped quotes:
+  `` `"${key}"` ``.
+</Aside>
+
+### Testing the Integration
+
+A complete test showing: (1) GET to obtain CSRF cookies, (2) POST with
+all required headers, (3) replay POST verifying idempotent response.
+
+<Tabs>
+  <TabItem label="Standalone">
+    ```js
+    import { describe, it } from "node:test";
+    import assert from "node:assert/strict";
+    import http from "node:http";
+    import { fetch } from "undici";
+
+    describe("secure mutation", () => {
+      let server;
+      let baseUrl;
+      let tokenValue;
+      let cookieHeader;
+
+      // Setup: start server with issuePipeline on GET, mutationPipeline on POST
+      // (elided for brevity — see Testing Patterns recipe for server lifecycle)
+
+      it("issues CSRF tokens on GET", async () => {
+        const res = await fetch(`${baseUrl}/account/transfer`, {
+          headers: { Authorization: "Bearer valid-token" },
+        });
+
+        assert.equal(res.status, 200);
+
+        const cookies = res.headers.getSetCookie();
+        const csrfToken = cookies.find((c) => c.startsWith("CSRF-TOKEN="));
+        const csrfUuid = cookies.find((c) => c.startsWith("CSRF-UUID="));
+
+        assert.ok(csrfToken, "CSRF-TOKEN cookie is set");
+        assert.ok(csrfUuid, "CSRF-UUID cookie is set");
+      });
+
+      it("accepts POST with CSRF + idempotency headers", async () => {
+        // Step 1: GET to obtain tokens
+        const getRes = await fetch(`${baseUrl}/account/transfer`, {
+          headers: { Authorization: "Bearer valid-token" },
+        });
+        const cookies = getRes.headers.getSetCookie();
+        tokenValue = cookies
+          .find((c) => c.startsWith("CSRF-TOKEN="))
+          .split("=")[1]
+          .split(";")[0];
+        cookieHeader = cookies
+          .map((c) => c.split(";")[0])
+          .join("; ");
+
+        // Step 2: POST with all headers
+        const postRes = await fetch(`${baseUrl}/account/transfer`, {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer valid-token",
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": tokenValue,
+            Cookie: cookieHeader,
+            "Idempotency-Key": '"txn-abc-123"',
+          },
+          body: JSON.stringify({ amount: 1000, to: "acct-456" }),
+        });
+
+        assert.equal(postRes.status, 201);
+      });
+
+      it("replays idempotent response on duplicate key", async () => {
+        // (after a successful POST with key "txn-abc-123")
+        const replayRes = await fetch(`${baseUrl}/account/transfer`, {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer valid-token",
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": tokenValue,
+            Cookie: cookieHeader,
+            "Idempotency-Key": '"txn-abc-123"',
+          },
+          body: JSON.stringify({ amount: 1000, to: "acct-456" }),
+        });
+
+        assert.equal(replayRes.status, 201);
+        const body = await replayRes.json();
+        // Same response as the original — replayed from store
+        assert.ok(body);
+      });
+    });
+    ```
+  </TabItem>
+  <TabItem label="ergo-router">
+    ```js
+    import { describe, it, before, after } from "node:test";
+    import assert from "node:assert/strict";
+    import { fetch } from "undici";
+    import createRouter, { graceful } from "@centralping/ergo-router";
+
+    describe("secure mutation (ergo-router)", () => {
+      let shutdown;
+      let baseUrl;
+
+      before(async () => {
+        const router = createRouter({
+          defaults: {
+            cookie: true,
+            csrf: { secret: "test-secret" },
+            authorization: {
+              strategies: [{
+                type: "Bearer",
+                authorizer: async (attributes, token) =>
+                  token === "valid-token"
+                    ? { authorized: true, info: { user: { id: 1 } } }
+                    : { authorized: false },
+              }],
+            },
+          },
+        });
+
+        router.get("/account/transfer", {
+          execute: () => ({
+            response: { body: { balance: 5000 } },
+          }),
+        });
+
+        router.post("/account/transfer", {
+          idempotency: { required: true },
+          validate: { body: { type: "object", properties: { amount: { type: "number" } } } },
+          execute: async (req, res, acc) => {
+            const response = { statusCode: 201, body: { transferred: true } };
+            acc.idempotency.complete(response);
+            return { response };
+          },
+        });
+
+        ({ shutdown } = await graceful(router.handle(), { port: 0 }));
+        const addr = shutdown.server.address();
+        baseUrl = `http://localhost:${addr.port}`;
+      });
+
+      after(() => shutdown());
+
+      it("full CSRF + idempotency flow", async () => {
+        // Step 1: GET issues CSRF cookies
+        const getRes = await fetch(`${baseUrl}/account/transfer`, {
+          headers: { Authorization: "Bearer valid-token" },
+        });
+        assert.equal(getRes.status, 200);
+
+        const cookies = getRes.headers.getSetCookie();
+        const tokenValue = cookies
+          .find((c) => c.startsWith("CSRF-TOKEN="))
+          .split("=")[1]
+          .split(";")[0];
+        const cookieHeader = cookies
+          .map((c) => c.split(";")[0])
+          .join("; ");
+
+        // Step 2: POST with CSRF + Idempotency-Key
+        const postRes = await fetch(`${baseUrl}/account/transfer`, {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer valid-token",
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": tokenValue,
+            Cookie: cookieHeader,
+            "Idempotency-Key": '"txn-unique-001"',
+          },
+          body: JSON.stringify({ amount: 1000 }),
+        });
+        assert.equal(postRes.status, 201);
+
+        // Step 3: Replay — same key returns stored response
+        const replayRes = await fetch(`${baseUrl}/account/transfer`, {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer valid-token",
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": tokenValue,
+            Cookie: cookieHeader,
+            "Idempotency-Key": '"txn-unique-001"',
+          },
+          body: JSON.stringify({ amount: 1000 }),
+        });
+        assert.equal(replayRes.status, 201);
+        const body = await replayRes.json();
+        assert.deepEqual(body, { transferred: true });
+      });
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## Explanation
+
+### Pipeline Stage Ordering
+
+The middleware runs in ergo-router's four-stage Fast Fail pipeline:
+
+| Stage | Middleware | Purpose |
+| ----- | ---------- | ------- |
+| 1 — Discovery | `cookie`, `url`, `accepts` | Parse request metadata |
+| 2 — Authorization | `csrf` (verify), `authorization` | Verify identity and intent |
+| 3 — Validation | `body`, `validate`, `idempotency` | Parse and validate input |
+| 4 — Execution | `execute` handler | Business logic |
+
+CSRF is in Stage 2 because it verifies request integrity before
+any authorization logic. Idempotency is in Stage 3 because it needs
+the parsed body for fingerprinting — it must come after `body()`.
+
+### CSRF Auto-Dispatch
+
+In ergo-router, the pipeline builder automatically dispatches the
+correct CSRF function based on the HTTP method:
+
+- **Safe methods** (GET, HEAD, OPTIONS) → `issue` — sets token cookies
+- **Unsafe methods** (POST, PUT, PATCH, DELETE) → `verify` — checks the
+  `X-CSRF-TOKEN` header
+
+This means a single `csrf: { secret }` config handles both sides
+of the token flow without manual dispatch logic.
+
+### Idempotency Fingerprint and Body
+
+The idempotency middleware generates a request fingerprint that includes
+the parsed body. This is why it runs in Stage 3 (after `body()` in the
+pipeline):
+
+- Same key + same body = replay (returns stored response)
+- Same key + different body = `409 Conflict` (fingerprint mismatch)
+- Same key while still processing = `409 Conflict` (concurrent request)
+
+### Why `complete()` Is Explicit
+
+The `complete(response)` call is not automatic — you must call it in
+your execute handler after the operation succeeds. This design allows
+the handler to decide whether a result should be stored:
+
+- **Success** → `complete(response)` stores the response for replay
+- **Failure** → `discard()` removes the key, allowing a retry with the
+  same idempotency key
+- **Neither called** → entry stays in `processing` state (concurrent
+  requests get 409 until TTL expiry)
+
+This explicit lifecycle prevents partial or error responses from being
+replayed to future requests.
+
+### Related Documentation
+
+- [CSRF middleware guide](/middleware/csrf/) — options, security
+  details, cookie behavior
+- [Idempotency middleware guide](/middleware/idempotency/) — store
+  interface, header format, lifecycle details
+- [Mixed-Auth CORS & CSRF](/recipes/mixed-auth-cors-csrf/) — transport
+  CORS configuration for cross-origin browser requests
+- [Authorization middleware guide](/middleware/authorization/) — auth
+  strategy configuration
+- [Config Resolution](/packages/ergo-router/#config-resolution) — how
+  `defaults`, `true`, `false`, and per-route overrides interact
