@@ -3,7 +3,7 @@ title: Graceful Shutdown
 description: Managing server lifecycle with database connections, OpenTelemetry, and health checks using ergo-router's graceful() utility.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Problem
 
@@ -192,6 +192,14 @@ onShutdown({log, signal})
     │
     └── timeout exceeded → server.closeAllConnections() → exit(1)
 ```
+
+<Aside type="caution" title="Listen event timing">
+  The promise returned by `graceful()` resolves _after_ the server is
+  already listening. Do not attach a `'listening'` event listener to
+  `server` after `await graceful(...)` — it will never fire because the
+  event has already been emitted. The function logs
+  `Server listening on {hostname}:{port}` upon successful bind.
+</Aside>
 
 ### Configuration Options
 
