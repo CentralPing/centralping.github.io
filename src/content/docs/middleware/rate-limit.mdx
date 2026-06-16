@@ -150,39 +150,65 @@ const store = new MemoryStore({ maxKeys: 50_000 });
 #### Redis Store Example
 
 For multi-instance deployments, implement the `hit()` contract with a
-shared data store. This example uses
-[ioredis](https://www.npmjs.com/package/ioredis) with sorted sets:
+shared data store. Because `store.hit()` must return synchronously, a
+Redis-backed store uses a local sliding-window counter for the
+synchronous return value and syncs counts to Redis in the background
+for cross-instance visibility.
+
+This example uses [ioredis](https://www.npmjs.com/package/ioredis)
+with sorted sets:
 
 ```js
 import Redis from "ioredis";
 
 class RedisStore {
+  #local = new Map();
+
   constructor(redis) {
     this.redis = redis;
   }
 
-  async hit(key, windowMs) {
+  hit(key, windowMs) {
     const now = Date.now();
-    const windowKey = `rl:${key}`;
     const cutoff = now - windowMs;
+    const windowKey = `rl:${key}`;
 
-    const pipeline = this.redis.pipeline();
-    pipeline.zremrangebyscore(windowKey, 0, cutoff);
-    pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
-    pipeline.zcard(windowKey);
-    pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
-    pipeline.pexpire(windowKey, windowMs);
+    let entries = this.#local.get(windowKey);
+    if (!entries) {
+      entries = [];
+      this.#local.set(windowKey, entries);
+    }
 
-    const results = await pipeline.exec();
-    const count = results[2][1];
-    const oldest = results[3][1];
-    const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
-    const resetMs = Math.max(0, oldestScore + windowMs - now);
+    while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
+    entries.push(now);
+
+    const count = entries.length;
+    const resetMs = entries.length > 0
+      ? Math.max(0, entries[0] + windowMs - now)
+      : windowMs;
+
+    this.#sync(windowKey, now, cutoff, windowMs);
 
     return { count, resetMs };
   }
+
+  #sync(windowKey, now, cutoff, windowMs) {
+    const pipeline = this.redis.pipeline();
+    pipeline.zremrangebyscore(windowKey, 0, cutoff);
+    pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
+    pipeline.pexpire(windowKey, windowMs);
+    pipeline.exec().catch(() => {});
+  }
 }
 ```
+
+<Aside type="caution" title="Local counts diverge across instances">
+  Each instance tracks its own local counter. The Redis sorted set
+  provides cross-instance visibility for monitoring but does **not**
+  feed back into the synchronous `hit()` return value. For truly
+  shared counters, consider transport-level rate limiting
+  (`transport.rateLimit`) or a custom middleware that awaits the store.
+</Aside>
 
 #### When to Use a Shared Store
 
