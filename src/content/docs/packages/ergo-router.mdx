@@ -573,6 +573,15 @@ plain number regardless of the header name.
   W3C `metric;dur=N` syntax.
 </Aside>
 
+<Aside type="caution" title="Collision with custom middleware">
+  The timing header is injected at `res.writeHead` time via
+  `res.setHeader()` — it **replaces** any header with the same name set
+  earlier by custom middleware. If your middleware sets its own response
+  time header (e.g., measuring only the execute stage), either disable
+  built-in timing (`timing: false`) or configure a different header name
+  so the two measurements coexist.
+</Aside>
+
 #### What is Measured
 
 Timing measures elapsed time from auto-wrap handler entry (when the

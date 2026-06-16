@@ -79,7 +79,7 @@ parameters, and idempotency keys.
 | **411 Length Required** | [`body()`](/middleware/body/) | Neither `Content-Length` nor chunked encoding present | [RFC 9110 §15.5.12](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.12) |
 | **413 Payload Too Large** | [`body()`](/middleware/body/) | Body exceeds `limit` (or decompressed body exceeds `decompressedLimit`) | [RFC 9110 §15.5.14](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.14) |
 | **415 Unsupported Media Type** | [`body()`](/middleware/body/) | Unrecognized content type or unsupported `Content-Encoding` | [RFC 9110 §15.5.16](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.16) |
-| **422 Unprocessable Entity** | [`validate()`](/middleware/validate/) | JSON Schema validation failure — response includes `details` array with per-field errors | [RFC 9110 §15.5.21](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.21) |
+| **422 Unprocessable Entity** | [`validate()`](/middleware/validate/) | JSON Schema validation failure — response includes `details` array with per-field errors (see [Validation Error Response](/middleware/validate/#validation-error-response) for the full `details` shape) | [RFC 9110 §15.5.21](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.21) |
 | **500 Internal Server Error** | [`validate()`](/middleware/validate/) | Body schema configured but `acc.body` is missing — `body()` middleware not placed before `validate()` | — |
 
 ## Stage 4: Execution / Post-Pipeline

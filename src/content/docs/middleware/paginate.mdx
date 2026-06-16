@@ -3,7 +3,7 @@ title: paginate
 description: Pagination parameter parsing middleware — offset and cursor strategies with RFC 8288 Link header integration via send().
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Parses pagination query parameters into structured shapes on the domain
 accumulator. Works in concert with `send()`'s `paginate: true` option
@@ -58,6 +58,14 @@ depends on the active strategy:
   limit: 20,          // clamped to ≤ maxLimit
 }
 ```
+
+<Aside type="tip" title="Response-side contract">
+  This page documents the **request-side** contract — what `paginate()`
+  parses and stores at `acc.paginate`. For the **response-side** contract
+  (`response.paginate` shape that your handler returns and the conditions
+  under which `send()` generates headers), see the
+  [Pagination recipe](/recipes/pagination/#the-responsepaginate-contract).
+</Aside>
 
 ## Error Responses
 
