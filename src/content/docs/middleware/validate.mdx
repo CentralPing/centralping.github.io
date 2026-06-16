@@ -99,6 +99,62 @@ a data producer.
 | **422 Unprocessable Entity** | Validation failure — response includes `details` array with per-field errors |
 | **500 Internal Server Error** | A body schema is configured but `acc.body` is missing — `body()` middleware was not placed before `validate()` in the pipeline. Emits a one-time `ERGO_VALIDATE_NO_BODY` process warning |
 
+### Validation Error Response
+
+When validation fails, the 422 response body is an
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) object
+with a `details` extension member containing per-field errors:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "Validation failed",
+  "details": [
+    {
+      "path": "/name",
+      "message": "must be string",
+      "params": { "type": "string" }
+    }
+  ]
+}
+```
+
+<Aside type="note">
+  `detail` (singular) is the RFC 9457 human-readable summary — always
+  `"Validation failed"`. `details` (plural) is the extension member
+  array with per-field error objects.
+</Aside>
+
+#### `details` Entry Shape
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `path` | `string` | JSON Pointer to the failing field (e.g., `"/name"`, `"/address/zip"`); `"/"` for root-level errors |
+| `message` | `string` | Human-readable error description from AJV |
+| `params` | `object` | Keyword-dependent parameters from the failing AJV rule |
+
+The `params` object shape depends on which JSON Schema keyword failed:
+
+| Keyword | `params` Example |
+| ------- | ---------------- |
+| `required` | `{ missingProperty: "name" }` |
+| `type` | `{ type: "string" }` |
+| `minLength` | `{ limit: 1 }` |
+| `pattern` | `{ pattern: "^[a-z]+$" }` |
+
+For the complete list of keyword-specific `params`, see the
+[AJV error objects documentation](https://ajv.js.org/api.html#validation-errors).
+
+#### Validation Order
+
+Targets are validated in order: **body → query → params**. The first
+target that fails produces the 422 response — subsequent targets are
+not validated. For example, if both body and query schemas are
+configured and the body is invalid, only body errors appear in
+`details`.
+
 ## Usage
 
 ### Targeted Form

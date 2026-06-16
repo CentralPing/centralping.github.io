@@ -158,6 +158,30 @@ paginate: { total } } }` (offset) or `{ response: { body, paginate:
 | `cursor` | `string \| undefined` | Opaque cursor token; `undefined` on first page |
 | `limit` | `number` | Items to fetch (clamped to ≤ `maxLimit`) |
 
+### The `response.paginate` Contract
+
+Your `execute` handler returns pagination metadata on `response.paginate`.
+The shape depends on the strategy:
+
+**Offset strategy:**
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `total` | `number` | Total item count — must be `Number.isFinite()` |
+
+**Cursor strategy:**
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `nextCursor` | `string \| undefined` | Opaque token for the next page |
+| `prevCursor` | `string \| undefined` | Opaque token for the previous page (optional — omit for forward-only) |
+
+<Aside type="caution">
+  `response.paginate` is a convention contract, not a typed interface —
+  `ResponseAccumulator` uses `[key: string]: unknown`. The shapes above
+  are what `send()` reads at runtime.
+</Aside>
+
 ### What `send()` Generates
 
 For **offset** pagination, `send()` generates:
@@ -174,6 +198,29 @@ For **cursor** pagination, `send()` generates:
 Unlike offset pagination, cursor responses do not include
 `X-Total-Count` or a `last` link because the total is typically
 unknown in cursor-based schemes.
+
+### When Headers Are NOT Generated
+
+`send()` silently skips pagination headers when any gate condition
+fails. All five must be true for headers to emit:
+
+1. **`send()` `paginate` option is `true`** — standalone:
+   `handler(pipeline, { paginate: true })`; ergo-router: auto-enabled
+   when `paginate` is in the route config
+2. **`acc.paginate` is present** — the `paginate()` middleware must be
+   in the pipeline
+3. **`response.paginate` is present** — the execute handler must return
+   a `paginate` property on the response accumulator
+4. **`statusCode < 400`** — error responses never include pagination
+   headers
+5. **Offset only: `Number.isFinite(Number(total))`** — the source
+   applies `Number()` coercion, then checks `isFinite`. `undefined`,
+   `NaN`, and `Infinity` cause silent skipping. Note: `null` coerces
+   to `0` (finite), so it produces headers with `total=0`
+
+When debugging missing pagination headers, check these conditions in
+order — the most common cause is a missing `response.paginate` return
+or a non-finite `total`.
 
 ### Default Bounds
 
@@ -206,8 +253,9 @@ GET /articles?sort=date&filter=active&page=2&per_page=10
 ### Edge Cases
 
 - **`total` not a finite number** — `send()` silently skips Link and
-  X-Total-Count headers. This includes `undefined`, `null`, `NaN`,
-  and `Infinity`.
+  X-Total-Count headers. `undefined`, `NaN`, and `Infinity` all fail
+  the `Number.isFinite(Number(total))` gate. Note: `null` coerces to
+  `0` (finite), producing headers with `total=0` rather than skipping.
 - **4xx or 5xx status** — pagination headers are skipped entirely
   (only generated for `statusCode < 400`).
 - **Missing `response.paginate`** — if the execute handler does not
@@ -225,6 +273,32 @@ The `paginate()` middleware reads parsed query parameters from
 
 ergo-router handles this automatically — setting `paginate` in the
 route config auto-includes `url()` parsing.
+
+### ergo-router Auto-Configuration
+
+When `paginate` is set in a route config, ergo-router automatically:
+
+1. **Includes `url()` parsing** — `acc.url.query` is available without
+   adding `url: true` separately
+2. **Enables `send({ paginate: true })`** — Link headers are generated
+   without additional handler options
+3. **Preserves other send options** — the pipeline builder uses spread
+   merge (`{...(send ?? {}), paginate: true}`), so existing send options
+   like `errorFormatter` or `responseSchema` are not clobbered
+
+This means the ergo-router form is fully declarative:
+
+```js
+router.get("/articles", {
+  paginate: true,
+  send: { responseSchema: { 200: listSchema } },
+  execute: async (req, res, acc) => {
+    // url() and send({ paginate: true }) are auto-configured
+    const { offset, limit } = acc.paginate;
+    // ...
+  },
+});
+```
 
 <Aside type="note">
   For cursor pagination with bidirectional navigation, return both
