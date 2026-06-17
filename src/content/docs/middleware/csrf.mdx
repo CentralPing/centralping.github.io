@@ -22,7 +22,7 @@ pipeline builder automatically dispatches `issue` for safe methods
 ## Import
 
 ```js
-import { csrf } from "@centralping/ergo";
+import {csrf} from '@centralping/ergo';
 ```
 
 ## Options
@@ -55,7 +55,7 @@ import { csrf } from "@centralping/ergo";
 
 ## Return Value
 
-The factory returns `{ issue, verify }`:
+The factory returns `{issue, verify}`:
 
 - **`issue(req, res, acc)`** — Sets token and UUID cookies on the jar
   (`acc.cookies`). No return value.
@@ -109,59 +109,59 @@ the [authorization](/middleware/authorization/) middleware guide.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, cookie, csrf } from "@centralping/ergo";
+    import {compose, cookie, csrf} from '@centralping/ergo';
 
-    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+    const csrfMiddleware = csrf({secret: process.env.CSRF_SECRET});
 
     // Issue tokens on GET
     const issuePipeline = compose(
       cookie(),
-      {fn: csrfMiddleware.issue, setPath: "csrf"},
+      {fn: csrfMiddleware.issue, setPath: 'csrf'},
     );
 
     // Verify tokens on POST
     const verifyPipeline = compose(
       cookie(),
-      {fn: csrfMiddleware.verify, setPath: "csrf"},
+      {fn: csrfMiddleware.verify, setPath: 'csrf'},
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
         cookie: true,
-        csrf: { secret: process.env.CSRF_SECRET },
-      },
-    });
+        csrf: {secret: process.env.CSRF_SECRET},
+     },
+   });
 
     // Browser route — inherits cookie + CSRF from defaults.
     // GET/HEAD/OPTIONS → issue (sets token cookies)
     // POST/PUT/PATCH/DELETE → verify (checks X-CSRF-TOKEN header)
-    router.get("/account/settings", {
+    router.get('/account/settings', {
       execute: (req, res, acc) => ({
-        response: { body: { settings: { theme: "dark" } } },
-      }),
-    });
+        response: {body: {settings: {theme: 'dark'}}},
+     }),
+   });
 
-    router.post("/account/settings", {
+    router.post('/account/settings', {
       execute: async (req, res, acc) => ({
-        response: { body: { updated: true } },
-      }),
-    });
+        response: {body: {updated: true}},
+     }),
+   });
 
     // Bearer-only route — disables CSRF (token clients are not
     // vulnerable). cookie: false is optional since cookie middleware
     // has no effect without CSRF, but makes intent explicit.
-    router.post("/api/webhooks", {
+    router.post('/api/webhooks', {
       csrf: false,
       cookie: false,
       execute: async (req, res, acc) => ({
-        response: { body: { received: true } },
-      }),
-    });
+        response: {body: {received: true}},
+     }),
+   });
     ```
 
     `cookie: true` is required alongside `csrf` — cookie middleware

@@ -34,60 +34,60 @@ Pluggable strategies support Bearer, Basic, and custom schemes.
 <Tabs>
   <TabItem label="JavaScript">
     ```js
-    router.get("/accounts/:id", {
+    router.get('/accounts/:id', {
       authorization: {
         strategies: [
           {
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
               const user = await verifyToken(token);
               return user
-                ? { authorized: true, info: user }
-                : { authorized: false };
-            },
-          },
+                ? {authorized: true, info: user}
+                : {authorized: false};
+           },
+         },
         ],
-      },
+     },
       execute: (req, res, acc) => {
         if (acc.auth.id !== acc.route.params.id) {
-          return { response: { statusCode: 403, detail: "Access denied" } };
-        }
-        return { response: { body: getAccount(acc.route.params.id) } };
-      },
-    });
+          return {response: {statusCode: 403, detail: 'Access denied'}};
+       }
+        return {response: {body: getAccount(acc.route.params.id)}};
+     },
+   });
     ```
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import { defineGet } from "@centralping/ergo-router";
+    import {defineGet} from '@centralping/ergo-router';
 
     router.get(
-      "/accounts/:id",
+      '/accounts/:id',
       defineGet(
         {
           authorization: {
             strategies: [
               {
-                type: "Bearer" as const,
+                type: 'Bearer' as const,
                 authorizer: async (
                   attributes: Record<string, string>,
                   token: string,
                 ) => {
                   const user = await verifyToken(token);
                   return user
-                    ? { authorized: true, info: user }
-                    : { authorized: false };
-                },
-              },
+                    ? {authorized: true, info: user}
+                    : {authorized: false};
+               },
+             },
             ],
-          },
-        },
+         },
+       },
         (req, res, acc) => {
           if (acc.auth.id !== acc.route.params.id) {
-            return { response: { statusCode: 403, detail: "Access denied" } };
-          }
-          return { response: { body: getAccount(acc.route.params.id) } };
-        },
+            return {response: {statusCode: 403, detail: 'Access denied'}};
+         }
+          return {response: {body: getAccount(acc.route.params.id)}};
+       },
       ),
     );
     ```
@@ -121,9 +121,9 @@ attackers to assume other users' identities.
   prevent header injection via challenge attributes.
 
 ```js
-router.post("/transfer", {
-  authorization: { strategies: [bearerStrategy] },
-  csrf: { secret: process.env.CSRF_SECRET },
+router.post('/transfer', {
+  authorization: {strategies: [bearerStrategy]},
+  csrf: {secret: process.env.CSRF_SECRET},
   execute: handleTransfer,
 });
 ```
@@ -141,45 +141,45 @@ execution.
 <Tabs>
   <TabItem label="JavaScript">
     ```js
-    router.put("/users/:id", {
+    router.put('/users/:id', {
       validate: {
         body: {
-          type: "object",
+          type: 'object',
           properties: {
-            name: { type: "string", maxLength: 100 },
-            email: { type: "string", format: "email" },
-          },
-          required: ["name", "email"],
+            name: {type: 'string', maxLength: 100},
+            email: {type: 'string', format: 'email'},
+         },
+          required: ['name', 'email'],
           additionalProperties: false,
-        },
-      },
+       },
+     },
       execute: updateUser,
-    });
+   });
     ```
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import { definePost } from "@centralping/ergo-router";
+    import {definePost} from '@centralping/ergo-router';
 
     router.put(
-      "/users/:id",
+      '/users/:id',
       definePost(
         {
           validate: {
             body: {
-              type: "object",
+              type: 'object',
               properties: {
-                name: { type: "string", maxLength: 100 },
-                email: { type: "string", format: "email" },
-              },
-              required: ["name", "email"],
+                name: {type: 'string', maxLength: 100},
+                email: {type: 'string', format: 'email'},
+             },
+              required: ['name', 'email'],
               additionalProperties: false,
-            },
-          },
-        },
+           },
+         },
+       },
         (req, res, acc) => ({
-          response: { body: updateUserById(acc.route.params.id, acc.body.parsed) },
-        }),
+          response: {body: updateUserById(acc.route.params.id, acc.body.parsed)},
+       }),
       ),
     );
     ```
@@ -199,15 +199,15 @@ and brute-force attacks.
 
 | Protection | Default | Configuration |
 | ---------- | ------- | ------------- |
-| Rate limiting | Sliding-window counter | `rateLimit({ max, windowMs })` |
-| Request body size | 1 MiB (`DEFAULT_LIMIT`) | `body({ limit })` |
-| Decompressed body size | 10 MiB (`MAX_DECOMPRESSED`) | `body({ decompressedLimit })` |
-| Query string length | 8,192 bytes | `url({ maxQueryLength })` |
-| Query key-value pairs | 256 | `url({ maxPairs })` |
-| Cookie count | 50 | `cookie({ max })` |
-| Multipart parts | Configurable | `body({ maxParts })` |
-| Rate limit store keys | Eviction cap on MemoryStore | `rateLimit({ store })` |
-| Request timeout | Configurable | `timeout({ ms })` |
+| Rate limiting | Sliding-window counter | `rateLimit({max, windowMs})` |
+| Request body size | 1 MiB (`DEFAULT_LIMIT`) | `body({limit})` |
+| Decompressed body size | 10 MiB (`MAX_DECOMPRESSED`) | `body({decompressedLimit})` |
+| Query string length | 8,192 bytes | `url({maxQueryLength})` |
+| Query key-value pairs | 256 | `url({maxPairs})` |
+| Cookie count | 50 | `cookie({max})` |
+| Multipart parts | Configurable | `body({maxParts})` |
+| Rate limit store keys | Eviction cap on MemoryStore | `rateLimit({store})` |
+| Request timeout | Configurable | `timeout({ms})` |
 
 Decompression bomb protection deserves special mention: a second meter stream
 after the decompressor enforces `decompressedLimit` independently of the
@@ -215,12 +215,12 @@ wire-side `limit`. A 1 KiB compressed payload that expands to 100 MiB is
 caught and rejected.
 
 ```js
-router.post("/upload", {
+router.post('/upload', {
   body: {
     limit: 5 * 1024 * 1024,
     decompressedLimit: 50 * 1024 * 1024,
     maxParts: 10,
-  },
+ },
   execute: handleUpload,
 });
 ```
@@ -245,13 +245,13 @@ access control checks.
   accurate inventory of supported methods.
 
 ```js
-router.get("/admin/users", {
-  authorization: { strategies: [adminOnlyStrategy] },
+router.get('/admin/users', {
+  authorization: {strategies: [adminOnlyStrategy]},
   execute: listAllUsers,
 });
 
-router.get("/users/:id", {
-  authorization: { strategies: [authenticatedUserStrategy] },
+router.get('/users/:id', {
+  authorization: {strategies: [authenticatedUserStrategy]},
   execute: getUser,
 });
 ```
@@ -267,9 +267,9 @@ state-changing operations, this provides the foundational controls for
 throttling automated abuse.
 
 ```js
-router.post("/login", {
-  rateLimit: { max: 5, windowMs: 15 * 60 * 1000 },
-  csrf: { secret: process.env.CSRF_SECRET },
+router.post('/login', {
+  rateLimit: {max: 5, windowMs: 15 * 60 * 1000},
+  csrf: {secret: process.env.CSRF_SECRET},
   execute: handleLogin,
 });
 ```
@@ -339,10 +339,10 @@ Additional structural protections:
 const router = createRouter({
   transport: {
     security: {},
-    cors: { origin: "https://myapp.com" },
-    rateLimit: { max: 100, windowMs: 60_000 },
+    cors: {origin: 'https://myapp.com'},
+    rateLimit: {max: 100, windowMs: 60_000},
     requestId: {},
-  },
+ },
 });
 ```
 

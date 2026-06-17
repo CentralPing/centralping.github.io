@@ -15,7 +15,7 @@ This is the standalone equivalent of ergo-router's `auto-wrap`.
 ## Import
 
 ```js
-import { handler } from "@centralping/ergo";
+import {handler} from '@centralping/ergo';
 ```
 
 ## Arguments
@@ -111,13 +111,13 @@ alter headers, status, or body.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { handler, compose } from "@centralping/ergo";
+    import http from 'node:http';
+    import {handler, compose} from '@centralping/ergo';
 
     const pipeline = compose(
       (req, res, acc) => ({
-        response: { statusCode: 200, body: { ok: true } },
-      }),
+        response: {statusCode: 200, body: {ok: true}},
+     }),
     );
 
     const server = http.createServer(
@@ -129,9 +129,9 @@ alter headers, status, or body.
             status: responseInfo.statusCode,
             duration: responseInfo.duration,
             user: domainAcc.auth?.identity,
-          }));
-        },
-      }),
+         }));
+       },
+     }),
     );
     ```
   </TabItem>
@@ -145,9 +145,9 @@ alter headers, status, or body.
           status: responseInfo.statusCode,
           duration: responseInfo.duration,
           user: domainAcc.auth?.identity,
-        }));
-      },
-    });
+       }));
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -157,25 +157,25 @@ alter headers, status, or body.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
+    import http from 'node:http';
     import {
       handler, compose, logger, authorization, body,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
     const pipeline = compose(
       logger(),
-      authorization({ strategies }),
+      authorization({strategies}),
       body(),
       (req, res, acc) => ({
         response: {
           body: processRequest(acc),
           statusCode: 200,
-        },
-      }),
+       },
+     }),
     );
 
     const server = http.createServer(
-      handler(pipeline, { debug: true, prettify: true }),
+      handler(pipeline, {debug: true, prettify: true}),
     );
     server.listen(3000);
     ```
@@ -186,14 +186,14 @@ alter headers, status, or body.
     // handler() directly. The router's handle() method creates
     // the two-accumulator wrapper automatically.
 
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const router = createRouter();
-    router.get("/health", {
-      execute: () => ({ response: { body: { ok: true } } }),
-    });
+    router.get('/health', {
+      execute: () => ({response: {body: {ok: true}}}),
+   });
 
-    await graceful(router.handle(), { port: 3000 });
+    await graceful(router.handle(), {port: 3000});
     ```
   </TabItem>
 </Tabs>

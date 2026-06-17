@@ -93,7 +93,7 @@ configuration issue that does not warrant a thrown error.
 process.on('warning', (warning) => {
   if (warning.type === 'ErgoWarning') {
     console.error(`[${warning.code}] ${warning.message}`);
-  }
+ }
 });
 ```
 

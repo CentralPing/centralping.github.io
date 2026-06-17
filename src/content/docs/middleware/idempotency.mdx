@@ -18,7 +18,7 @@ can include the parsed body.
 ## Import
 
 ```js
-import { idempotency } from "@centralping/ergo";
+import {idempotency} from '@centralping/ergo';
 ```
 
 ## Options
@@ -37,8 +37,8 @@ Depends on the request state:
 | State | Return |
 | ----- | ------ |
 | Method not applicable or key absent (not required) | `{}` |
-| New request | `{ value: { key, fingerprint, complete(response), discard() } }` |
-| Replay (stored response exists) | `{ value: { replayed: true }, response: storedResponse }` |
+| New request | `{value: {key, fingerprint, complete(response), discard()}}` |
+| Replay (stored response exists) | `{value: {replayed: true}, response: storedResponse}` |
 
 For new requests, call `complete(response)` after your execute stage to
 store the response for future replays, or `discard()` to remove the key.
@@ -57,29 +57,29 @@ store the response for future replays, or `discard()` to remove the key.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body, idempotency } from "@centralping/ergo";
+    import {compose, body, idempotency} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
-      idempotency({ required: true }),
+      idempotency({required: true}),
       (req, res, acc) => ({
-        response: { statusCode: 201, body: { created: true } },
-      }),
+        response: {statusCode: 201, body: {created: true}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/payments", {
-      idempotency: { required: true },
+    router.post('/payments', {
+      idempotency: {required: true},
       validate: {
         body: paymentSchema,
-      },
+     },
       execute: async (req, res, acc) => {
         const result = await processPayment(acc.body.parsed);
-        return { response: { statusCode: 201, body: result } };
-      },
-    });
+        return {response: {statusCode: 201, body: result}};
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -110,48 +110,48 @@ idempotency entry (e.g. on failure).
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body, idempotency } from "@centralping/ergo";
+    import {compose, body, idempotency} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
-      idempotency({ required: true }),
+      idempotency({required: true}),
       async (req, res, acc) => {
         try {
           const result = await processPayment(acc.body.parsed);
-          const response = { statusCode: 201, body: result };
+          const response = {statusCode: 201, body: result};
 
           acc.idempotency.complete(response);
 
-          return { response };
-        } catch (err) {
+          return {response};
+       } catch (err) {
           acc.idempotency.discard();
           throw err;
-        }
-      },
+       }
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/payments", {
-      idempotency: { required: true },
+    router.post('/payments', {
+      idempotency: {required: true},
       validate: {
         body: paymentSchema,
-      },
+     },
       execute: async (req, res, acc) => {
         try {
           const result = await processPayment(acc.body.parsed);
-          const response = { statusCode: 201, body: result };
+          const response = {statusCode: 201, body: result};
 
           acc.idempotency.complete(response);
 
-          return { response };
-        } catch (err) {
+          return {response};
+       } catch (err) {
           acc.idempotency.discard();
           throw err;
-        }
-      },
-    });
+       }
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -163,7 +163,7 @@ idempotency entry (e.g. on failure).
    at `acc.idempotency`. The execute handler runs normally.
 2. **`complete(response)`** — stores the response for this key. The
    argument should be a response accumulator shape (e.g.
-   `{ statusCode, body }`).
+   `{statusCode, body}`).
 3. **Replay** — a subsequent request with the same key and fingerprint
    returns the stored response immediately. The execute handler does
    not run — the middleware handles replay automatically.

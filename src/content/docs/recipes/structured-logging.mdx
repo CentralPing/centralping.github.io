@@ -27,17 +27,17 @@ output with OpenTelemetry trace context.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import pino from "pino";
-    import { handler, compose, logger } from "@centralping/ergo";
+    import http from 'node:http';
+    import pino from 'pino';
+    import {handler, compose, logger} from '@centralping/ergo';
 
-    const log = pino({ level: "info" });
+    const log = pino({level: 'info'});
 
     const pipeline = compose(
       logger({
         log: (info) => log.info(info),
         error: (info) => log.error(info),
-      }),
+     }),
       // ... remaining middleware
     );
 
@@ -47,25 +47,25 @@ output with OpenTelemetry trace context.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import pino from "pino";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import pino from 'pino';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    const log = pino({ level: "info" });
+    const log = pino({level: 'info'});
 
     const router = createRouter({
       defaults: {
         logger: {
           log: (info) => log.info(info),
           error: (info) => log.error(info),
-        },
-      },
-    });
+       },
+     },
+   });
 
-    router.get("/users", {
-      execute: () => ({ response: { body: [] } }),
-    });
+    router.get('/users', {
+      execute: () => ({response: {body: []}}),
+   });
 
-    await graceful(router.handle(), { port: 3000, log });
+    await graceful(router.handle(), {port: 3000, log});
     ```
 
     The same pino instance satisfies both surfaces — `logger()` receives
@@ -79,21 +79,21 @@ output with OpenTelemetry trace context.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import winston from "winston";
-    import { handler, compose, logger } from "@centralping/ergo";
+    import http from 'node:http';
+    import winston from 'winston';
+    import {handler, compose, logger} from '@centralping/ergo';
 
     const log = winston.createLogger({
-      level: "info",
+      level: 'info',
       format: winston.format.json(),
       transports: [new winston.transports.Console()],
-    });
+   });
 
     const pipeline = compose(
       logger({
-        log: (info) => log.info({ message: "request completed", ...info }),
-        error: (info) => log.error({ message: "request error", ...info }),
-      }),
+        log: (info) => log.info({message: 'request completed', ...info}),
+        error: (info) => log.error({message: 'request error', ...info}),
+     }),
       // ... remaining middleware
     );
 
@@ -103,29 +103,29 @@ output with OpenTelemetry trace context.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import winston from "winston";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import winston from 'winston';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const log = winston.createLogger({
-      level: "info",
+      level: 'info',
       format: winston.format.json(),
       transports: [new winston.transports.Console()],
-    });
+   });
 
     const router = createRouter({
       defaults: {
         logger: {
-          log: (info) => log.info({ message: "request completed", ...info }),
-          error: (info) => log.error({ message: "request error", ...info }),
-        },
-      },
-    });
+          log: (info) => log.info({message: 'request completed', ...info}),
+          error: (info) => log.error({message: 'request error', ...info}),
+       },
+     },
+   });
 
-    router.get("/users", {
-      execute: () => ({ response: { body: [] } }),
-    });
+    router.get('/users', {
+      execute: () => ({response: {body: []}}),
+   });
 
-    await graceful(router.handle(), { port: 3000, log });
+    await graceful(router.handle(), {port: 3000, log});
     ```
 
     Winston instances also have `.info()`, `.warn()`, `.error()` methods,
@@ -139,32 +139,32 @@ Access the request ID from `acc.log.requestId` in your execute handler
 to correlate application-level logs with the HTTP request:
 
 ```js
-router.get("/users", {
+router.get('/users', {
   execute: async (req, res, acc) => {
-    const { requestId } = acc.log;
+    const {requestId} = acc.log;
 
-    log.info({ requestId, msg: "fetching users from database" });
-    const users = await db.query("SELECT * FROM users");
-    log.info({ requestId, msg: "query complete", count: users.length });
+    log.info({requestId, msg: 'fetching users from database'});
+    const users = await db.query('SELECT * FROM users');
+    log.info({requestId, msg: 'query complete', count: users.length});
 
-    return { response: { body: users } };
-  },
+    return {response: {body: users}};
+ },
 });
 ```
 
 For high-volume services, create a child logger scoped to the request:
 
 ```js
-router.get("/users", {
+router.get('/users', {
   execute: async (req, res, acc) => {
-    const reqLog = log.child({ requestId: acc.log.requestId });
+    const reqLog = log.child({requestId: acc.log.requestId});
 
-    reqLog.info("fetching users from database");
-    const users = await db.query("SELECT * FROM users");
-    reqLog.info({ msg: "query complete", count: users.length });
+    reqLog.info('fetching users from database');
+    const users = await db.query('SELECT * FROM users');
+    reqLog.info({msg: 'query complete', count: users.length});
 
-    return { response: { body: users } };
-  },
+    return {response: {body: users}};
+ },
 });
 ```
 
@@ -185,13 +185,13 @@ available for log enrichment:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { handler, compose, tracing, logger } from "@centralping/ergo";
+    import {handler, compose, tracing, logger} from '@centralping/ergo';
 
     const pipeline = compose(
       tracing(),
       logger({
         log: (info) => log.info(info),
-      }),
+     }),
       // ... remaining middleware
     );
     ```
@@ -202,18 +202,18 @@ available for log enrichment:
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
-        tracing: { perStage: true },
+        tracing: {perStage: true},
         logger: {
           log: (info) => log.info(info),
-        },
-      },
-    });
+       },
+     },
+   });
 
-    await graceful(router.handle(), { port: 3000, log });
+    await graceful(router.handle(), {port: 3000, log});
     ```
 
     ergo-router automatically places `tracing()` before `logger()` in
@@ -278,7 +278,7 @@ Response finish
 
 - **JSON output**: Use `pino()` (JSON by default) or
   `winston.format.json()` for machine-parseable log output
-- **Log levels**: Set `level: "info"` in production; use `"debug"` in
+- **Log levels**: Set `level: 'info'` in production; use `'debug'` in
   development for verbose output
 - **Transport separation**: Use pino transports or winston transports to
   route logs to files, external services, or stdout for container

@@ -15,7 +15,7 @@ Validates the parsed query [domain accumulator](/concepts/accumulator/) (`acc`) 
 ## Import
 
 ```js
-import { jsonApiQuery } from "@centralping/ergo";
+import {jsonApiQuery} from '@centralping/ergo';
 ```
 
 ## Options
@@ -40,7 +40,7 @@ producer.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, url, jsonApiQuery } from "@centralping/ergo";
+    import {compose, url, jsonApiQuery} from '@centralping/ergo';
 
     const pipeline = compose(
       url(),
@@ -51,14 +51,14 @@ producer.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/articles", {
+    router.get('/articles', {
       jsonApiQuery: {},
       execute: (req, res, acc) => ({
         response: {
           body: queryArticles(acc.url.query),
-        },
-      }),
-    });
+       },
+     }),
+   });
     ```
   </TabItem>
 </Tabs>

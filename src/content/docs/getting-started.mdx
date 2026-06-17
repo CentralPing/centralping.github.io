@@ -13,7 +13,7 @@ import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 <Aside type="tip" title="Using TypeScript?">
   If you are using TypeScript, read the [TypeScript guide](/typescript/) after
   installation for the required `tsconfig.json` setup (`@types/node` +
-  `"types": ["node"]`) and typed route helpers.
+  `'types': ['node']`) and typed route helpers.
 </Aside>
 
 ## Installation
@@ -54,72 +54,72 @@ stages:
 <Tabs>
   <TabItem label="JavaScript">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
-        accepts: { types: ["application/json"] },
-      },
-    });
+        accepts: {types: ['application/json']},
+     },
+   });
 
-    router.get("/users/:id", {
+    router.get('/users/:id', {
       authorization: {
         strategies: [
           {
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
-              if (!token) return { authorized: false };
-              return { authorized: true, info: { userId: token } };
-            },
-          },
+              if (!token) return {authorized: false};
+              return {authorized: true, info: {userId: token}};
+           },
+         },
         ],
-      },
+     },
       validate: {
         params: {
-          type: "object",
-          properties: { id: { type: "string", minLength: 1 } },
-          required: ["id"],
-        },
-      },
+          type: 'object',
+          properties: {id: {type: 'string', minLength: 1}},
+          required: ['id'],
+       },
+     },
       execute: (req, res, acc) => ({
         response: {
           body: {
             id: acc.route.params.id,
-            name: "Jane Doe",
+            name: 'Jane Doe',
             requestedBy: acc.auth.userId,
-          },
-        },
-      }),
-    });
+         },
+       },
+     }),
+   });
 
-    router.post("/users", {
+    router.post('/users', {
       authorization: {
         strategies: [
           {
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
-              if (!token) return { authorized: false };
-              return { authorized: true, info: { userId: token } };
-            },
-          },
+              if (!token) return {authorized: false};
+              return {authorized: true, info: {userId: token}};
+           },
+         },
         ],
-      },
+     },
       validate: {
         body: {
-          type: "object",
-          properties: { name: { type: "string", minLength: 1 } },
-          required: ["name"],
-        },
-      },
+          type: 'object',
+          properties: {name: {type: 'string', minLength: 1}},
+          required: ['name'],
+       },
+     },
       execute: (req, res, acc) => ({
         response: {
           statusCode: 201,
-          body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
-        },
-      }),
-    });
+          body: {name: acc.body.parsed.name, createdBy: acc.auth.userId},
+       },
+     }),
+   });
 
-    await graceful(router.handle(), { port: 3000 });
+    await graceful(router.handle(), {port: 3000});
     ```
   </TabItem>
   <TabItem label="TypeScript">
@@ -128,70 +128,70 @@ stages:
       defineGet,
       definePost,
       graceful,
-    } from "@centralping/ergo-router";
+   } from '@centralping/ergo-router';
 
     const bearerStrategy = {
-      type: "Bearer" as const,
+      type: 'Bearer' as const,
       authorizer: async (_: Record<string, string>, token: string) => {
-        if (!token) return { authorized: false };
-        return { authorized: true, info: { userId: token } };
-      },
-    };
+        if (!token) return {authorized: false};
+        return {authorized: true, info: {userId: token}};
+     },
+   };
 
     const router = createRouter({
       defaults: {
-        accepts: { types: ["application/json"] },
-      },
-    });
+        accepts: {types: ['application/json']},
+     },
+   });
 
     router.get(
-      "/users/:id",
+      '/users/:id',
       defineGet(
         {
-          authorization: { strategies: [bearerStrategy] },
+          authorization: {strategies: [bearerStrategy]},
           validate: {
             params: {
-              type: "object",
-              properties: { id: { type: "string", minLength: 1 } },
-              required: ["id"],
-            },
-          },
-        },
+              type: 'object',
+              properties: {id: {type: 'string', minLength: 1}},
+              required: ['id'],
+           },
+         },
+       },
         (req, res, acc) => ({
           response: {
             body: {
               id: acc.route.params.id,
-              name: "Jane Doe",
+              name: 'Jane Doe',
               requestedBy: acc.auth.userId,
-            },
-          },
-        }),
+           },
+         },
+       }),
       ),
     );
 
     router.post(
-      "/users",
+      '/users',
       definePost(
         {
-          authorization: { strategies: [bearerStrategy] },
+          authorization: {strategies: [bearerStrategy]},
           validate: {
             body: {
-              type: "object",
-              properties: { name: { type: "string", minLength: 1 } },
-              required: ["name"],
-            },
-          },
-        },
+              type: 'object',
+              properties: {name: {type: 'string', minLength: 1}},
+              required: ['name'],
+           },
+         },
+       },
         (req, res, acc) => ({
           response: {
             statusCode: 201,
-            body: { name: acc.body.parsed.name, createdBy: acc.auth.userId },
-          },
-        }),
+            body: {name: acc.body.parsed.name, createdBy: acc.auth.userId},
+         },
+       }),
       ),
     );
 
-    await graceful(router.handle(), { port: 3000 });
+    await graceful(router.handle(), {port: 3000});
     ```
   </TabItem>
 </Tabs>
@@ -243,7 +243,7 @@ stages:
 <Aside type="caution" title="Route config replaces defaults">
   When a route sets a config key that also appears in `defaults`, the route
   value **replaces** the default entirely — it does not merge. For example,
-  setting `authorization: { strategies: [basicStrategy] }` on a route discards
+  setting `authorization: {strategies: [basicStrategy]}` on a route discards
   any strategies defined in `defaults.authorization`. See
   [Config Resolution](/packages/ergo-router/#config-resolution) for the full
   resolution rules and how to extend defaults with spread.
@@ -269,23 +269,23 @@ If you chose the **ergo-only** path, you compose middleware manually using
 `compose()` and wrap the pipeline with `handler()`:
 
 ```js
-import http from "node:http";
-import { compose, handler, logger, url, accepts } from "@centralping/ergo";
+import http from 'node:http';
+import {compose, handler, logger, url, accepts} from '@centralping/ergo';
 
 const pipeline = compose(
   logger(),
-  accepts({ types: ["application/json"] }),
+  accepts({types: ['application/json']}),
   url(),
   (req, res, acc) => ({
     response: {
-      body: { path: acc.url.pathname, query: acc.url.query },
+      body: {path: acc.url.pathname, query: acc.url.query},
       statusCode: 200,
-    },
-  }),
+   },
+ }),
 );
 
 const server = http.createServer(handler(pipeline));
-server.listen(3000, () => console.log("Listening on :3000"));
+server.listen(3000, () => console.log('Listening on :3000'));
 ```
 
 Built-in middleware carries its own accumulator path — compose it as a

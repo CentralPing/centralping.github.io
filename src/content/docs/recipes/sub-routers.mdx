@@ -21,36 +21,36 @@ Create a sub-router with its own defaults and mount it at a prefix:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, authorization } from "@centralping/ergo";
+    import {compose, authorization} from '@centralping/ergo';
 
     // Each group composes its own pipeline independently
     const adminPipeline = compose(
       authorization({
-        strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-      }),
+        strategies: [{type: 'Basic', authorizer: verifyAdmin}],
+     }),
       (req, res, acc) => ({
-        response: { body: { admin: true } },
-      }),
+        response: {body: {admin: true}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const adminRouter = createRouter({
       defaults: {
         authorization: {
-          strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-        },
-      },
-    });
+          strategies: [{type: 'Basic', authorizer: verifyAdmin}],
+       },
+     },
+   });
 
-    adminRouter.get("/dashboard", { execute: getDashboard });
-    adminRouter.get("/users", { execute: listAllUsers });
+    adminRouter.get('/dashboard', {execute: getDashboard});
+    adminRouter.get('/users', {execute: listAllUsers});
 
-    const router = createRouter({ transport: { /* ... */ } });
-    router.mount("/admin", adminRouter);
+    const router = createRouter({transport: {/* ... */}});
+    router.mount('/admin', adminRouter);
     // GET /admin/dashboard, GET /admin/users — both require Basic auth
     ```
   </TabItem>
@@ -65,72 +65,72 @@ entirely:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, authorization } from "@centralping/ergo";
+    import {compose, authorization} from '@centralping/ergo';
 
     const adminPipeline = compose(
       authorization({
-        strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-      }),
+        strategies: [{type: 'Basic', authorizer: verifyAdmin}],
+     }),
       (req, res, acc) => ({
-        response: { body: { role: "admin" } },
-      }),
+        response: {body: {role: 'admin'}},
+     }),
     );
 
     const userPipeline = compose(
       authorization({
-        strategies: [{ type: "Bearer", authorizer: verifyJwt }],
-      }),
+        strategies: [{type: 'Bearer', authorizer: verifyJwt}],
+     }),
       (req, res, acc) => ({
-        response: { body: { userId: acc.auth.user.id } },
-      }),
+        response: {body: {userId: acc.auth.user.id}},
+     }),
     );
 
     const publicPipeline = compose(
       (req, res, acc) => ({
-        response: { body: { status: "healthy" } },
-      }),
+        response: {body: {status: 'healthy'}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const adminRouter = createRouter({
       defaults: {
         authorization: {
-          strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-        },
-      },
-    });
-    adminRouter.get("/stats", { execute: getStats });
+          strategies: [{type: 'Basic', authorizer: verifyAdmin}],
+       },
+     },
+   });
+    adminRouter.get('/stats', {execute: getStats});
 
     const usersRouter = createRouter({
       defaults: {
         authorization: {
-          strategies: [{ type: "Bearer", authorizer: verifyJwt }],
-        },
-      },
-    });
-    usersRouter.get("/me", { execute: getMe });
-    usersRouter.patch("/me", {
-      validate: { body: updateUserSchema },
+          strategies: [{type: 'Bearer', authorizer: verifyJwt}],
+       },
+     },
+   });
+    usersRouter.get('/me', {execute: getMe});
+    usersRouter.patch('/me', {
+      validate: {body: updateUserSchema},
       execute: updateMe,
-    });
+   });
 
     const publicRouter = createRouter();
-    publicRouter.get("/health", {
+    publicRouter.get('/health', {
       authorization: false,
       execute: (req, res, acc) => ({
-        response: { body: { status: "ok" } },
-      }),
-    });
+        response: {body: {status: 'ok'}},
+     }),
+   });
 
-    const router = createRouter({ transport: { /* ... */ } });
+    const router = createRouter({transport: {/* ... */}});
     router
-      .mount("/admin", adminRouter)
-      .mount("/users", usersRouter)
-      .mount("/public", publicRouter);
+      .mount('/admin', adminRouter)
+      .mount('/users', usersRouter)
+      .mount('/public', publicRouter);
     ```
   </TabItem>
 </Tabs>
@@ -141,23 +141,23 @@ Child router defaults do **not** merge with parent defaults. Each
 sub-router's routes use only the defaults they were registered with:
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const parent = createRouter({
   defaults: {
-    accepts: { types: ["application/json"] },
-    timeout: { ms: 5000 },
-  },
+    accepts: {types: ['application/json']},
+    timeout: {ms: 5000},
+ },
 });
 
 const child = createRouter({
   defaults: {
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 
-child.get("/items", { execute: listItems });
-parent.mount("/api", child);
+child.get('/items', {execute: listItems});
+parent.mount('/api', child);
 // GET /api/items has authorization (from child defaults)
 // but does NOT have accepts or timeout (from parent defaults)
 ```
@@ -166,20 +166,20 @@ To intentionally share defaults between parent and child, spread them:
 
 ```js
 const sharedDefaults = {
-  accepts: { types: ["application/json"] },
-  timeout: { ms: 5000 },
+  accepts: {types: ['application/json']},
+  timeout: {ms: 5000},
 };
 
 const parent = createRouter({
   defaults: sharedDefaults,
-  transport: { /* ... */ },
+  transport: {/* ... */},
 });
 
 const child = createRouter({
   defaults: {
     ...sharedDefaults,
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 ```
 
@@ -189,31 +189,31 @@ Different sub-routers can set different `rateLimit` defaults to enforce
 per-group limits at the pipeline level:
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const publicRouter = createRouter({
   defaults: {
-    rateLimit: { max: 100, windowMs: 60_000 },
-  },
+    rateLimit: {max: 100, windowMs: 60_000},
+ },
 });
-publicRouter.get("/search", { execute: search });
+publicRouter.get('/search', {execute: search});
 
 const premiumRouter = createRouter({
   defaults: {
-    authorization: { strategies: [apiKeyStrategy] },
-    rateLimit: { max: 1000, windowMs: 60_000 },
-  },
+    authorization: {strategies: [apiKeyStrategy]},
+    rateLimit: {max: 1000, windowMs: 60_000},
+ },
 });
-premiumRouter.get("/search", { execute: search });
+premiumRouter.get('/search', {execute: search});
 
 const router = createRouter({
   transport: {
-    rateLimit: { max: 10_000, windowMs: 60_000 },
-  },
+    rateLimit: {max: 10_000, windowMs: 60_000},
+ },
 });
 router
-  .mount("/v1", publicRouter)
-  .mount("/premium", premiumRouter);
+  .mount('/v1', publicRouter)
+  .mount('/premium', premiumRouter);
 ```
 
 <Aside type="tip" title="Proxy-aware rate limiting">
@@ -240,40 +240,40 @@ A practical example combining transport on the parent, per-group
 defaults on children, and mount chaining:
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 // --- Sub-routers with per-group concerns ---
 
 const projectsRouter = createRouter({
   defaults: {
-    authorization: { strategies: [bearerStrategy] },
-    accepts: { types: ["application/json"] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+    accepts: {types: ['application/json']},
+ },
 });
-projectsRouter.get("/", { execute: listProjects });
-projectsRouter.post("/", {
-  validate: { body: projectSchema },
+projectsRouter.get('/', {execute: listProjects});
+projectsRouter.post('/', {
+  validate: {body: projectSchema},
   execute: createProject,
 });
-projectsRouter.get("/:id", { execute: getProject });
+projectsRouter.get('/:id', {execute: getProject});
 
 const adminRouter = createRouter({
   defaults: {
     authorization: {
-      strategies: [{ type: "Basic", authorizer: verifyAdmin }],
-    },
-    accepts: { types: ["application/json"] },
-  },
+      strategies: [{type: 'Basic', authorizer: verifyAdmin}],
+   },
+    accepts: {types: ['application/json']},
+ },
 });
-adminRouter.get("/users", { execute: listAllUsers });
-adminRouter.delete("/users/:id", { execute: deleteUser });
+adminRouter.get('/users', {execute: listAllUsers});
+adminRouter.delete('/users/:id', {execute: deleteUser});
 
 const healthRouter = createRouter();
-healthRouter.get("/", {
+healthRouter.get('/', {
   authorization: false,
   execute: (req, res, acc) => ({
-    response: { body: { status: "ok", ts: Date.now() } },
-  }),
+    response: {body: {status: 'ok', ts: Date.now()}},
+ }),
 });
 
 // --- Parent router with transport ---
@@ -281,18 +281,18 @@ healthRouter.get("/", {
 const router = createRouter({
   transport: {
     requestId: true,
-    security: { hsts: { maxAge: 31_536_000 } },
-    cors: { origin: "https://app.example.com" },
-    rateLimit: { max: 10_000, windowMs: 60_000 },
-  },
+    security: {hsts: {maxAge: 31_536_000}},
+    cors: {origin: 'https://app.example.com'},
+    rateLimit: {max: 10_000, windowMs: 60_000},
+ },
   strictPatch: true,
   strictBody: true,
 });
 
 router
-  .mount("/projects", projectsRouter)
-  .mount("/admin", adminRouter)
-  .mount("/health", healthRouter);
+  .mount('/projects', projectsRouter)
+  .mount('/admin', adminRouter)
+  .mount('/health', healthRouter);
 ```
 
 ## Explanation

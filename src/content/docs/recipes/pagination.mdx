@@ -25,24 +25,24 @@ Link headers and `X-Total-Count`.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { compose, url, paginate, handler } from "@centralping/ergo";
+    import http from 'node:http';
+    import {compose, url, paginate, handler} from '@centralping/ergo';
 
     const pipeline = compose(
       url(),
       paginate(),
       async (req, res, acc) => {
-        const { offset, limit } = acc.paginate;
+        const {offset, limit} = acc.paginate;
         const items = await db.find(offset, limit);
         const total = await db.count();
         return {
-          response: { body: items, paginate: { total } },
-        };
-      },
+          response: {body: items, paginate: {total}},
+       };
+     },
     );
 
     const server = http.createServer(
-      handler(pipeline, { paginate: true }),
+      handler(pipeline, {paginate: true}),
     );
     // GET /articles?page=2&per_page=10
     // → Link: </articles?page=1&per_page=10>; rel="first", ...
@@ -51,17 +51,17 @@ Link headers and `X-Total-Count`.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/articles", {
+    router.get('/articles', {
       paginate: true,
       execute: async (req, res, acc) => {
-        const { offset, limit } = acc.paginate;
+        const {offset, limit} = acc.paginate;
         const items = await db.find(offset, limit);
         const total = await db.count();
         return {
-          response: { body: items, paginate: { total } },
-        };
-      },
-    });
+          response: {body: items, paginate: {total}},
+       };
+     },
+   });
     // GET /articles?page=2&per_page=10
     // → Link: </articles?page=1&per_page=10>; rel="first", ...
     // → X-Total-Count: 42
@@ -74,26 +74,26 @@ Link headers and `X-Total-Count`.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { compose, url, paginate, handler } from "@centralping/ergo";
+    import http from 'node:http';
+    import {compose, url, paginate, handler} from '@centralping/ergo';
 
     const pipeline = compose(
       url(),
-      paginate({ strategy: "cursor" }),
+      paginate({strategy: 'cursor'}),
       async (req, res, acc) => {
-        const { cursor, limit } = acc.paginate;
-        const { items, nextCursor } = await db.findAfter(cursor, limit);
+        const {cursor, limit} = acc.paginate;
+        const {items, nextCursor} = await db.findAfter(cursor, limit);
         return {
           response: {
             body: items,
-            paginate: { nextCursor },
-          },
-        };
-      },
+            paginate: {nextCursor},
+         },
+       };
+     },
     );
 
     const server = http.createServer(
-      handler(pipeline, { paginate: true }),
+      handler(pipeline, {paginate: true}),
     );
     // GET /events?cursor=abc123&limit=10
     // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
@@ -101,19 +101,19 @@ Link headers and `X-Total-Count`.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/events", {
-      paginate: { strategy: "cursor" },
+    router.get('/events', {
+      paginate: {strategy: 'cursor'},
       execute: async (req, res, acc) => {
-        const { cursor, limit } = acc.paginate;
-        const { items, nextCursor } = await db.findAfter(cursor, limit);
+        const {cursor, limit} = acc.paginate;
+        const {items, nextCursor} = await db.findAfter(cursor, limit);
         return {
           response: {
             body: items,
-            paginate: { nextCursor },
-          },
-        };
-      },
-    });
+            paginate: {nextCursor},
+         },
+       };
+     },
+   });
     // GET /events?cursor=abc123&limit=10
     // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
     ```
@@ -140,7 +140,7 @@ paginate: { total } } }` (offset) or `{ response: { body, paginate:
 
 ### The `acc.paginate` Shape
 
-**Offset strategy** (`paginate: true` or `paginate: { strategy: 'offset' }`):
+**Offset strategy** (`paginate: true` or `paginate: {strategy: 'offset'}`):
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -150,7 +150,7 @@ paginate: { total } } }` (offset) or `{ response: { body, paginate:
 | `offset` | `number` | Computed: `(page - 1) * perPage` |
 | `limit` | `number` | Same as `perPage` |
 
-**Cursor strategy** (`paginate: { strategy: 'cursor' }`):
+**Cursor strategy** (`paginate: {strategy: 'cursor'}`):
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -205,7 +205,7 @@ unknown in cursor-based schemes.
 fails. All five must be true for headers to emit:
 
 1. **`send()` `paginate` option is `true`** — standalone:
-   `handler(pipeline, { paginate: true })`; ergo-router: auto-enabled
+   `handler(pipeline, {paginate: true})`; ergo-router: auto-enabled
    when `paginate` is in the route config
 2. **`acc.paginate` is present** — the `paginate()` middleware must be
    in the pipeline
@@ -280,7 +280,7 @@ When `paginate` is set in a route config, ergo-router automatically:
 
 1. **Includes `url()` parsing** — `acc.url.query` is available without
    adding `url: true` separately
-2. **Enables `send({ paginate: true })`** — Link headers are generated
+2. **Enables `send({paginate: true})`** — Link headers are generated
    without additional handler options
 3. **Preserves other send options** — the pipeline builder uses spread
    merge (`{...(send ?? {}), paginate: true}`), so existing send options
@@ -289,14 +289,14 @@ When `paginate` is set in a route config, ergo-router automatically:
 This means the ergo-router form is fully declarative:
 
 ```js
-router.get("/articles", {
+router.get('/articles', {
   paginate: true,
-  send: { responseSchema: { 200: listSchema } },
+  send: {responseSchema: {200: listSchema}},
   execute: async (req, res, acc) => {
     // url() and send({ paginate: true }) are auto-configured
-    const { offset, limit } = acc.paginate;
+    const {offset, limit} = acc.paginate;
     // ...
-  },
+ },
 });
 ```
 

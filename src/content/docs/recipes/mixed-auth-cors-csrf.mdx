@@ -31,38 +31,38 @@ headers so browsers can send the CSRF token on cross-origin requests.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, cors } from "@centralping/ergo";
+    import {compose, cors} from '@centralping/ergo';
 
     const pipeline = compose(
       cors({
-        origins: ["https://app.example.com"],
+        origins: ['https://app.example.com'],
         allowCredentials: true,
         allowHeaders: [
-          "Content-Type",
-          "Authorization",
-          "X-CSRF-TOKEN",
+          'Content-Type',
+          'Authorization',
+          'X-CSRF-TOKEN',
         ],
-      }),
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const router = createRouter({
       transport: {
         cors: {
-          origin: "https://app.example.com",
+          origin: 'https://app.example.com',
           credentials: true,
           allowedHeaders: [
-            "Content-Type",
-            "Authorization",
-            "X-CSRF-TOKEN",
+            'Content-Type',
+            'Authorization',
+            'X-CSRF-TOKEN',
           ],
-        },
-      },
-    });
+       },
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -83,79 +83,79 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, cookie, csrf, authorization } from "@centralping/ergo";
+    import {compose, cookie, csrf, authorization} from '@centralping/ergo';
 
-    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+    const csrfMiddleware = csrf({secret: process.env.CSRF_SECRET});
 
     // Browser route — CSRF protection + Bearer auth
     const browserPipeline = compose(
       cookie(),
-      {fn: csrfMiddleware.verify, setPath: "csrf"},
+      {fn: csrfMiddleware.verify, setPath: 'csrf'},
       authorization({
         strategies: [{
-          type: "Bearer",
+          type: 'Bearer',
           authorizer: async (attributes, token) => {
             const session = await verifySessionToken(token);
             return session
-              ? { authorized: true, info: { user: session.user } }
-              : { authorized: false };
-          },
-        }],
-      }),
+              ? {authorized: true, info: {user: session.user}}
+              : {authorized: false};
+         },
+       }],
+     }),
     );
 
     // API route — Bearer auth, no CSRF
     const apiPipeline = compose(
       authorization({
         strategies: [{
-          type: "Bearer",
+          type: 'Bearer',
           authorizer: async (attributes, token) => {
             const user = await verifyJwt(token);
             return user
-              ? { authorized: true, info: { user } }
-              : { authorized: false };
-          },
-        }],
-      }),
+              ? {authorized: true, info: {user}}
+              : {authorized: false};
+         },
+       }],
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
         cookie: true,
-        csrf: { secret: process.env.CSRF_SECRET },
+        csrf: {secret: process.env.CSRF_SECRET},
         authorization: {
           strategies: [{
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
               const user = await verifyJwt(token);
               return user
-                ? { authorized: true, info: { user } }
-                : { authorized: false };
-            },
-          }],
-        },
-      },
-    });
+                ? {authorized: true, info: {user}}
+                : {authorized: false};
+           },
+         }],
+       },
+     },
+   });
 
     // Inherits CSRF from defaults — browser route
-    router.post("/account/settings", {
+    router.post('/account/settings', {
       execute: async (req, res, acc) => ({
-        response: { body: { updated: true } },
-      }),
-    });
+        response: {body: {updated: true}},
+     }),
+   });
 
     // Disables CSRF — API-only route
-    router.post("/api/webhooks", {
+    router.post('/api/webhooks', {
       csrf: false,
       execute: async (req, res, acc) => ({
-        response: { body: { received: true } },
-      }),
-    });
+        response: {body: {received: true}},
+     }),
+   });
     ```
   </TabItem>
 </Tabs>
@@ -174,117 +174,117 @@ overrides:
       cors,
       csrf,
       authorization,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
-    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+    const csrfMiddleware = csrf({secret: process.env.CSRF_SECRET});
 
     const bearerStrategy = {
-      type: "Bearer",
+      type: 'Bearer',
       authorizer: async (attributes, token) => {
         const user = await verifyJwt(token);
         return user
-          ? { authorized: true, info: { user } }
-          : { authorized: false };
-      },
-    };
+          ? {authorized: true, info: {user}}
+          : {authorized: false};
+     },
+   };
 
     const corsMiddleware = cors({
-      origins: ["https://app.example.com"],
+      origins: ['https://app.example.com'],
       allowCredentials: true,
       allowHeaders: [
-        "Content-Type",
-        "Authorization",
-        "X-CSRF-TOKEN",
+        'Content-Type',
+        'Authorization',
+        'X-CSRF-TOKEN',
       ],
-    });
+   });
 
     // Browser route: CORS + cookies + CSRF + auth
     const settingsPipeline = compose(
       corsMiddleware,
       cookie(),
-      {fn: csrfMiddleware.verify, setPath: "csrf"},
-      authorization({ strategies: [bearerStrategy] }),
+      {fn: csrfMiddleware.verify, setPath: 'csrf'},
+      authorization({strategies: [bearerStrategy]}),
       (req, res, acc) => ({
-        response: { body: { userId: acc.auth.user.id } },
-      }),
+        response: {body: {userId: acc.auth.user.id}},
+     }),
     );
 
     // API route: CORS + auth (no cookies, no CSRF)
     const webhookPipeline = compose(
       corsMiddleware,
-      authorization({ strategies: [bearerStrategy] }),
+      authorization({strategies: [bearerStrategy]}),
       (req, res, acc) => ({
-        response: { body: { received: true } },
-      }),
+        response: {body: {received: true}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const router = createRouter({
       transport: {
         requestId: {},
         security: {},
         cors: {
-          origin: "https://app.example.com",
+          origin: 'https://app.example.com',
           credentials: true,
           allowedHeaders: [
-            "Content-Type",
-            "Authorization",
-            "X-CSRF-TOKEN",
+            'Content-Type',
+            'Authorization',
+            'X-CSRF-TOKEN',
           ],
-        },
-      },
+       },
+     },
       defaults: {
         cookie: true,
-        csrf: { secret: process.env.CSRF_SECRET },
+        csrf: {secret: process.env.CSRF_SECRET},
         authorization: {
           strategies: [{
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
               const user = await verifyJwt(token);
               return user
-                ? { authorized: true, info: { user } }
-                : { authorized: false };
-            },
-          }],
-        },
-      },
-    });
+                ? {authorized: true, info: {user}}
+                : {authorized: false};
+           },
+         }],
+       },
+     },
+   });
 
     // Browser route — inherits CSRF + auth from defaults
-    router.get("/account/settings", {
+    router.get('/account/settings', {
       execute: (req, res, acc) => ({
-        response: { body: { userId: acc.auth.user.id } },
-      }),
-    });
+        response: {body: {userId: acc.auth.user.id}},
+     }),
+   });
 
-    router.post("/account/settings", {
+    router.post('/account/settings', {
       execute: async (req, res, acc) => ({
-        response: { body: { updated: true } },
-      }),
-    });
+        response: {body: {updated: true}},
+     }),
+   });
 
     // API route — disables CSRF, inherits auth
-    router.post("/api/webhooks", {
+    router.post('/api/webhooks', {
       csrf: false,
       execute: async (req, res, acc) => ({
-        response: { body: { received: true } },
-      }),
-    });
+        response: {body: {received: true}},
+     }),
+   });
 
     // Public route — disables both CSRF and auth
-    router.get("/health", {
+    router.get('/health', {
       csrf: false,
       authorization: false,
       execute: () => ({
-        response: { body: { status: "healthy" } },
-      }),
-    });
+        response: {body: {status: 'healthy'}},
+     }),
+   });
 
-    await graceful(router.handle(), { port: 3000 });
+    await graceful(router.handle(), {port: 3000});
     ```
   </TabItem>
 </Tabs>

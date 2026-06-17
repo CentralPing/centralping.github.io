@@ -38,28 +38,28 @@ ergo-router declarative configs that use the `use` key.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, logger, url, accepts } from "@centralping/ergo";
+    import {compose, logger, url, accepts} from '@centralping/ergo';
 
     const pipeline = compose(
-      [logger(), "log"],
-      [accepts({ types: ["application/json"] }), "accepts"],
-      [url(), "url"],
+      [logger(), 'log'],
+      [accepts({types: ['application/json']}), 'accepts'],
+      [url(), 'url'],
       (req, res, acc) => ({
-        response: { body: { path: acc.url.pathname } },
-      }),
+        response: {body: {path: acc.url.pathname}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/items", {
+    router.get('/items', {
       use: [
-        [customAudit(), "audit"],
+        [customAudit(), 'audit'],
       ],
       execute: (req, res, acc) => ({
-        response: { body: acc.audit },
-      }),
-    });
+        response: {body: acc.audit},
+     }),
+   });
     ```
   </TabItem>
 </Tabs>
@@ -69,28 +69,28 @@ ergo-router declarative configs that use the `use` key.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, logger, url, accepts } from "@centralping/ergo";
+    import {compose, logger, url, accepts} from '@centralping/ergo';
 
     const pipeline = compose(
-      { fn: logger(), setPath: "log" },
-      { fn: accepts({ types: ["application/json"] }), setPath: "accepts" },
-      { fn: url(), setPath: "url" },
+      {fn: logger(), setPath: 'log'},
+      {fn: accepts({types: ['application/json']}), setPath: 'accepts'},
+      {fn: url(), setPath: 'url'},
       (req, res, acc) => ({
-        response: { body: { path: acc.url.pathname } },
-      }),
+        response: {body: {path: acc.url.pathname}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/items", {
+    router.get('/items', {
       use: [
-        { fn: customAudit(), setPath: "audit" },
+        {fn: customAudit(), setPath: 'audit'},
       ],
       execute: (req, res, acc) => ({
-        response: { body: acc.audit },
-      }),
-    });
+        response: {body: acc.audit},
+     }),
+   });
     ```
   </TabItem>
 </Tabs>
@@ -122,17 +122,17 @@ The `paginate` export from `@centralping/ergo` changed from the
 **Before (0.2.x):**
 
 ```js
-import { paginate } from "@centralping/ergo";
+import {paginate} from '@centralping/ergo';
 
-const { offset, limit } = paginate.parseOffsetParams(query);
+const {offset, limit} = paginate.parseOffsetParams(query);
 ```
 
 **After (0.3.x+):**
 
 ```js
-import { parseOffsetParams } from "@centralping/ergo/lib/paginate";
+import {parseOffsetParams} from '@centralping/ergo/lib/paginate';
 
-const { offset, limit } = parseOffsetParams(query);
+const {offset, limit} = parseOffsetParams(query);
 ```
 
 The `paginate` name on the main export is now the pipeline middleware factory.
@@ -147,8 +147,8 @@ The `auth` config key was renamed to `authorization` for consistency with the
 **Before (0.1.x):**
 
 ```js
-router.get("/users", {
-  auth: { strategies: [bearerStrategy] },
+router.get('/users', {
+  auth: {strategies: [bearerStrategy]},
   execute: handler,
 });
 ```
@@ -156,8 +156,8 @@ router.get("/users", {
 **After (0.2.x+):**
 
 ```js
-router.get("/users", {
-  authorization: { strategies: [bearerStrategy] },
+router.get('/users', {
+  authorization: {strategies: [bearerStrategy]},
   execute: handler,
 });
 ```

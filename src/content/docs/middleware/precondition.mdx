@@ -14,7 +14,7 @@ by requiring clients to prove they have a current representation.
 ## Import
 
 ```js
-import { precondition } from "@centralping/ergo";
+import {precondition} from '@centralping/ergo';
 ```
 
 ## Options
@@ -59,7 +59,7 @@ enforce optimistic concurrency on write operations:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, precondition } from "@centralping/ergo";
+    import {compose, precondition} from '@centralping/ergo';
 
     // Enforce on all methods
     const pipeline = compose(
@@ -68,13 +68,13 @@ enforce optimistic concurrency on write operations:
 
     // Enforce only on PUT and PATCH
     const pipeline = compose(
-      precondition({ methods: ["PUT", "PATCH"] }),
+      precondition({methods: ['PUT', 'PATCH']}),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.put("/users/:id", {
+    router.put('/users/:id', {
       preconditionRequired: true,
       // etag: true is the send() default — no explicit config needed
       execute: async (req, res, acc) => {
@@ -82,9 +82,9 @@ enforce optimistic concurrency on write operations:
           acc.route.params.id,
           acc.body.parsed,
         );
-        return { response: { body: user } };
-      },
-    });
+        return {response: {body: user}};
+     },
+   });
     // PUT without If-Match → 428 Precondition Required
     // PUT with stale If-Match → 412 Precondition Failed
     // PUT with current If-Match → 200 OK
@@ -100,26 +100,26 @@ headers but are not required to:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, precondition } from "@centralping/ergo";
+    import {compose, precondition} from '@centralping/ergo';
 
     // Simply omit precondition() from the pipeline.
     // etag: true remains the send() default — ETags are generated,
     // If-Match is evaluated when present, but not enforced.
     const pipeline = compose(
       (req, res, acc) => ({
-        response: { body: { settings: acc.settings } },
-      }),
+        response: {body: {settings: acc.settings}},
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.put("/settings/:id", {
+    router.put('/settings/:id', {
       preconditionRequired: false,
       // etag: true remains the default — ETags are generated,
       // If-Match is evaluated when present
       execute: updateSettings,
-    });
+   });
     ```
   </TabItem>
 </Tabs>

@@ -15,14 +15,14 @@ properties; outgoing cookies are managed via `set()` and serialized by
 ## Import
 
 ```js
-import { cookie } from "@centralping/ergo";
+import {cookie} from '@centralping/ergo';
 ```
 
 ## Options
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `options` | `object` | — | Forwarded to the [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265) parser (e.g., `{ max: 50 }` for cookie count limit) |
+| `options` | `object` | — | Forwarded to the [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265) parser (e.g., `{max: 50}` for cookie count limit) |
 
 ## Return Value
 
@@ -60,29 +60,29 @@ None.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, cookie } from "@centralping/ergo";
+    import {compose, cookie} from '@centralping/ergo';
 
     const pipeline = compose(
       cookie(),
       (req, res, acc) => {
         const session = acc.cookies.session;
-        acc.cookies.set("visited", "true", {
+        acc.cookies.set('visited', 'true', {
           httpOnly: true,
-          sameSite: "Strict",
-        });
-        return { response: { body: { session } } };
-      },
+          sameSite: 'Strict',
+       });
+        return {response: {body: {session}}};
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/dashboard", {
+    router.get('/dashboard', {
       cookie: {},
       execute: (req, res, acc) => ({
-        response: { body: { session: acc.cookies.session } },
-      }),
-    });
+        response: {body: {session: acc.cookies.session}},
+     }),
+   });
     ```
   </TabItem>
 </Tabs>

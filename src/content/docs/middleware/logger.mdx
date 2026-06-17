@@ -15,7 +15,7 @@ middleware has a request ID available.
 ## Import
 
 ```js
-import { logger } from "@centralping/ergo";
+import {logger} from '@centralping/ergo';
 ```
 
 ## Options
@@ -46,19 +46,19 @@ at `acc.log`:
 
 ```js
 {
-  requestId: "550e8400-e29b-41d4-a716-446655440000",
+  requestId: '550e8400-e29b-41d4-a716-446655440000',
   timestamp: 1717041600000,
-  ip: "127.0.0.1",
-  method: "GET",
-  url: "/users",
-  httpVersion: "1.1",
-  host: { hostname, arch, platform, pid },
-  request: { headers, encrypted, remoteAddress, remotePort }
+  ip: '127.0.0.1',
+  method: 'GET',
+  url: '/users',
+  httpVersion: '1.1',
+  host: {hostname, arch, platform, pid},
+  request: {headers, encrypted, remoteAddress, remotePort}
 }
 ```
 
 On response `finish`, the log callback adds `statusCode`, `duration`,
-and `response: { headers, statusMessage, writableFinished }`.
+and `response: {headers, statusMessage, writableFinished}`.
 
 ## Error Responses
 
@@ -69,13 +69,13 @@ None. Logger is observability-only.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, logger } from "@centralping/ergo";
+    import {compose, logger} from '@centralping/ergo';
 
     const pipeline = compose(
       logger({
         log: (info) => structuredLog.info(info),
         error: (info) => structuredLog.error(info),
-      }),
+     }),
     );
     ```
   </TabItem>
@@ -85,9 +85,9 @@ None. Logger is observability-only.
       defaults: {
         logger: {
           log: (info) => structuredLog.info(info),
-        },
-      },
-    });
+       },
+     },
+   });
     ```
   </TabItem>
 </Tabs>

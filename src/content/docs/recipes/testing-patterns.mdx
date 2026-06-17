@@ -20,98 +20,98 @@ graceful shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import http from "node:http";
-    import { handler, compose, body } from "@centralping/ergo";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import http from 'node:http';
+    import {handler, compose, body} from '@centralping/ergo';
 
-    describe("POST /users", () => {
+    describe('POST /users', () => {
       let server;
       let baseUrl;
 
       after(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
-      });
+     });
 
-      it("creates a user", async () => {
+      it('creates a user', async () => {
         const pipeline = compose(
           body(),
           (req, res, acc) => ({
             response: {
               statusCode: 201,
-              body: { name: acc.body.parsed.name },
-            },
-          }),
+              body: {name: acc.body.parsed.name},
+           },
+         }),
         );
 
         server = http.createServer(handler(pipeline));
         await new Promise((resolve) => server.listen(0, resolve));
-        const { port } = server.address();
+        const {port} = server.address();
         baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(`${baseUrl}/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Jane" }),
-        });
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: 'Jane'}),
+       });
         assert.equal(res.status, 201);
         const data = await res.json();
-        assert.equal(data.name, "Jane");
-      });
-    });
+        assert.equal(data.name, 'Jane');
+     });
+   });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    describe("POST /users", () => {
+    describe('POST /users', () => {
       let shutdown;
 
       after(async () => {
-        if (shutdown) await shutdown("test-cleanup");
-      });
+        if (shutdown) await shutdown('test-cleanup');
+     });
 
-      it("creates a user", async () => {
+      it('creates a user', async () => {
         const router = createRouter();
-        router.post("/users", {
+        router.post('/users', {
           validate: {
             body: {
-              type: "object",
-              properties: { name: { type: "string" } },
-              required: ["name"],
-            },
-          },
+              type: 'object',
+              properties: {name: {type: 'string'}},
+              required: ['name'],
+           },
+         },
           execute: (req, res, acc) => ({
             response: {
               statusCode: 201,
-              body: { name: acc.body.parsed.name },
-            },
-          }),
-        });
+              body: {name: acc.body.parsed.name},
+           },
+         }),
+       });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-        });
+       });
         shutdown = result.shutdown;
 
-        const { port } = result.server.address();
+        const {port} = result.server.address();
         const baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(`${baseUrl}/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Jane" }),
-        });
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: 'Jane'}),
+       });
         assert.equal(res.status, 201);
         const data = await res.json();
-        assert.equal(data.name, "Jane");
-      });
-    });
+        assert.equal(data.name, 'Jane');
+     });
+   });
     ```
   </TabItem>
 </Tabs>
@@ -134,137 +134,137 @@ graceful shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import http from "node:http";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import http from 'node:http';
     import {
       handler,
       compose,
       authorization,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
-    describe("authorization", () => {
+    describe('authorization', () => {
       let server;
       let baseUrl;
 
       after(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
-      });
+     });
 
-      it("accepts valid Bearer token", async () => {
+      it('accepts valid Bearer token', async () => {
         const pipeline = compose(
           authorization({
             strategies: [
               {
-                type: "Bearer",
-                attributes: { realm: "API" },
+                type: 'Bearer',
+                attributes: {realm: 'API'},
                 authorizer: async (_attrs, token) =>
-                  token === "valid-token"
-                    ? { authorized: true, info: { userId: "u1" } }
-                    : { authorized: false },
-              },
+                  token === 'valid-token'
+                    ? {authorized: true, info: {userId: 'u1'}}
+                    : {authorized: false},
+             },
             ],
-          }),
-          (req, res, acc) => ({ response: { body: acc.auth } }),
+         }),
+          (req, res, acc) => ({response: {body: acc.auth}}),
         );
 
         server = http.createServer(handler(pipeline));
         await new Promise((resolve) => server.listen(0, resolve));
-        const { port } = server.address();
+        const {port} = server.address();
         baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(baseUrl, {
-          headers: { Authorization: "Bearer valid-token" },
-        });
+          headers: {Authorization: 'Bearer valid-token'},
+       });
         assert.equal(res.status, 200);
         const data = await res.json();
-        assert.equal(data.userId, "u1");
-      });
+        assert.equal(data.userId, 'u1');
+     });
 
-      it("rejects invalid token with 401 + WWW-Authenticate", async () => {
+      it('rejects invalid token with 401 + WWW-Authenticate', async () => {
         const res = await fetch(baseUrl, {
-          headers: { Authorization: "Bearer wrong-token" },
-        });
+          headers: {Authorization: 'Bearer wrong-token'},
+       });
         assert.equal(res.status, 401);
         assert.ok(
-          res.headers.get("www-authenticate"),
-          "should include WWW-Authenticate header",
+          res.headers.get('www-authenticate'),
+          'should include WWW-Authenticate header',
         );
-      });
+     });
 
-      it("rejects missing Authorization with 401", async () => {
+      it('rejects missing Authorization with 401', async () => {
         const res = await fetch(baseUrl);
         assert.ok(res.status === 401 || res.status === 403);
-      });
-    });
+     });
+   });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    describe("authorization", () => {
+    describe('authorization', () => {
       let shutdown;
       let baseUrl;
 
       after(async () => {
-        if (shutdown) await shutdown("test-cleanup");
-      });
+        if (shutdown) await shutdown('test-cleanup');
+     });
 
-      it("accepts valid Bearer token", async () => {
+      it('accepts valid Bearer token', async () => {
         const router = createRouter();
-        router.get("/protected", {
+        router.get('/protected', {
           authorization: {
             strategies: [
               {
-                type: "Bearer",
-                attributes: { realm: "API" },
+                type: 'Bearer',
+                attributes: {realm: 'API'},
                 authorizer: async (_attrs, token) =>
-                  token === "valid-token"
-                    ? { authorized: true, info: { userId: "u1" } }
-                    : { authorized: false },
-              },
+                  token === 'valid-token'
+                    ? {authorized: true, info: {userId: 'u1'}}
+                    : {authorized: false},
+             },
             ],
-          },
-          execute: (req, res, acc) => ({ response: { body: acc.auth } }),
-        });
+         },
+          execute: (req, res, acc) => ({response: {body: acc.auth}}),
+       });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-        });
+       });
         shutdown = result.shutdown;
 
-        const { port } = result.server.address();
+        const {port} = result.server.address();
         baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(`${baseUrl}/protected`, {
-          headers: { Authorization: "Bearer valid-token" },
-        });
+          headers: {Authorization: 'Bearer valid-token'},
+       });
         assert.equal(res.status, 200);
         const data = await res.json();
-        assert.equal(data.userId, "u1");
-      });
+        assert.equal(data.userId, 'u1');
+     });
 
-      it("rejects invalid token with 401 + WWW-Authenticate", async () => {
+      it('rejects invalid token with 401 + WWW-Authenticate', async () => {
         const res = await fetch(`${baseUrl}/protected`, {
-          headers: { Authorization: "Bearer wrong-token" },
-        });
+          headers: {Authorization: 'Bearer wrong-token'},
+       });
         assert.equal(res.status, 401);
         assert.ok(
-          res.headers.get("www-authenticate"),
-          "should include WWW-Authenticate header",
+          res.headers.get('www-authenticate'),
+          'should include WWW-Authenticate header',
         );
-      });
+     });
 
-      it("rejects missing Authorization with 401", async () => {
+      it('rejects missing Authorization with 401', async () => {
         const res = await fetch(`${baseUrl}/protected`);
         assert.ok(res.status === 401 || res.status === 403);
-      });
-    });
+     });
+   });
     ```
   </TabItem>
 </Tabs>
@@ -274,138 +274,138 @@ graceful shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import http from "node:http";
-    import { handler, compose, body, validate } from "@centralping/ergo";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import http from 'node:http';
+    import {handler, compose, body, validate} from '@centralping/ergo';
 
-    describe("body validation", () => {
+    describe('body validation', () => {
       let server;
       let baseUrl;
 
       after(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
-      });
+     });
 
-      it("returns 422 for invalid body", async () => {
+      it('returns 422 for invalid body', async () => {
         const schema = {
-          type: "object",
-          properties: { name: { type: "string" } },
-          required: ["name"],
-        };
+          type: 'object',
+          properties: {name: {type: 'string'}},
+          required: ['name'],
+       };
 
         const pipeline = compose(
           body(),
-          validate({ body: schema }),
+          validate({body: schema}),
           (req, res, acc) => ({
-            response: { body: { name: acc.body.parsed.name } },
-          }),
+            response: {body: {name: acc.body.parsed.name}},
+         }),
         );
 
         server = http.createServer(handler(pipeline));
         await new Promise((resolve) => server.listen(0, resolve));
-        const { port } = server.address();
+        const {port} = server.address();
         baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(baseUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: 42 }),
-        });
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: 42}),
+       });
         assert.equal(res.status, 422);
         const problem = await res.json();
         assert.equal(problem.status, 422);
-        assert.equal(problem.title, "Unprocessable Entity");
+        assert.equal(problem.title, 'Unprocessable Entity');
         assert.ok(problem.detail);
 
         // Per-field errors in the details extension member
         assert.ok(Array.isArray(problem.details));
-        assert.equal(problem.details[0].path, "/name");
-        assert.equal(problem.details[0].message, "must be string");
+        assert.equal(problem.details[0].path, '/name');
+        assert.equal(problem.details[0].message, 'must be string');
         assert.ok(problem.details[0].params);
-      });
+     });
 
-      it("passes valid body through pipeline", async () => {
+      it('passes valid body through pipeline', async () => {
         const res = await fetch(baseUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Jane" }),
-        });
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: 'Jane'}),
+       });
         assert.equal(res.status, 200);
         const data = await res.json();
-        assert.equal(data.name, "Jane");
-      });
-    });
+        assert.equal(data.name, 'Jane');
+     });
+   });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    describe("body validation", () => {
+    describe('body validation', () => {
       let shutdown;
       let baseUrl;
 
       after(async () => {
-        if (shutdown) await shutdown("test-cleanup");
-      });
+        if (shutdown) await shutdown('test-cleanup');
+     });
 
-      it("returns 422 for invalid body", async () => {
+      it('returns 422 for invalid body', async () => {
         const router = createRouter();
-        router.post("/users", {
+        router.post('/users', {
           validate: {
             body: {
-              type: "object",
-              properties: { name: { type: "string" } },
-              required: ["name"],
-            },
-          },
+              type: 'object',
+              properties: {name: {type: 'string'}},
+              required: ['name'],
+           },
+         },
           execute: (req, res, acc) => ({
-            response: { body: { name: acc.body.parsed.name } },
-          }),
-        });
+            response: {body: {name: acc.body.parsed.name}},
+         }),
+       });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-        });
+       });
         shutdown = result.shutdown;
 
-        const { port } = result.server.address();
+        const {port} = result.server.address();
         baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(`${baseUrl}/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: 42 }),
-        });
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: 42}),
+       });
         assert.equal(res.status, 422);
         const problem = await res.json();
         assert.equal(problem.status, 422);
-        assert.equal(problem.title, "Unprocessable Entity");
+        assert.equal(problem.title, 'Unprocessable Entity');
         assert.ok(problem.detail);
 
         // Per-field errors in the details extension member
         assert.ok(Array.isArray(problem.details));
-        assert.equal(problem.details[0].path, "/name");
-        assert.equal(problem.details[0].message, "must be string");
+        assert.equal(problem.details[0].path, '/name');
+        assert.equal(problem.details[0].message, 'must be string');
         assert.ok(problem.details[0].params);
-      });
+     });
 
-      it("passes valid body through pipeline", async () => {
+      it('passes valid body through pipeline', async () => {
         const res = await fetch(`${baseUrl}/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Jane" }),
-        });
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: 'Jane'}),
+       });
         assert.equal(res.status, 201);
         const data = await res.json();
-        assert.equal(data.name, "Jane");
-      });
-    });
+        assert.equal(data.name, 'Jane');
+     });
+   });
     ```
   </TabItem>
 </Tabs>
@@ -415,77 +415,77 @@ graceful shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    it("enforces rate limit", async () => {
-      const requests = Array.from({ length: 12 }, () =>
+    it('enforces rate limit', async () => {
+      const requests = Array.from({length: 12}, () =>
         fetch(`${baseUrl}/limited`),
       );
       const responses = await Promise.all(requests);
       const tooMany = responses.filter((r) => r.status === 429);
 
-      assert.ok(tooMany.length > 0, "Expected at least one 429 response");
+      assert.ok(tooMany.length > 0, 'Expected at least one 429 response');
       const problem = await tooMany[0].json();
       assert.equal(problem.status, 429);
       assert.ok(problem.retryAfter != null);
-    });
+   });
 
-    it("includes rate-limit headers on every response", async () => {
+    it('includes rate-limit headers on every response', async () => {
       const res = await fetch(`${baseUrl}/limited`);
-      assert.ok(res.headers.get("x-ratelimit-limit"));
-      assert.ok(res.headers.get("x-ratelimit-remaining"));
-      assert.ok(res.headers.get("x-ratelimit-reset"));
-    });
+      assert.ok(res.headers.get('x-ratelimit-limit'));
+      assert.ok(res.headers.get('x-ratelimit-remaining'));
+      assert.ok(res.headers.get('x-ratelimit-reset'));
+   });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    describe("rate limiting", () => {
+    describe('rate limiting', () => {
       let shutdown;
       let baseUrl;
 
       after(async () => {
-        if (shutdown) await shutdown("test-cleanup");
-      });
+        if (shutdown) await shutdown('test-cleanup');
+     });
 
-      it("enforces rate limit", async () => {
+      it('enforces rate limit', async () => {
         const router = createRouter({
-          transport: { rateLimit: { max: 5, windowMs: 60_000 } },
-        });
-        router.get("/limited", {
-          execute: () => ({ response: { body: { ok: true } } }),
-        });
+          transport: {rateLimit: {max: 5, windowMs: 60_000}},
+       });
+        router.get('/limited', {
+          execute: () => ({response: {body: {ok: true}}}),
+       });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-        });
+       });
         shutdown = result.shutdown;
 
-        const { port } = result.server.address();
+        const {port} = result.server.address();
         baseUrl = `http://localhost:${port}`;
 
-        const requests = Array.from({ length: 8 }, () =>
+        const requests = Array.from({length: 8}, () =>
           fetch(`${baseUrl}/limited`),
         );
         const responses = await Promise.all(requests);
         const tooMany = responses.filter((r) => r.status === 429);
 
-        assert.ok(tooMany.length > 0, "Expected at least one 429");
+        assert.ok(tooMany.length > 0, 'Expected at least one 429');
         const problem = await tooMany[0].json();
         assert.equal(problem.status, 429);
         assert.ok(problem.retryAfter != null);
-      });
+     });
 
-      it("includes rate-limit headers on every response", async () => {
+      it('includes rate-limit headers on every response', async () => {
         const res = await fetch(`${baseUrl}/limited`);
-        assert.ok(res.headers.get("x-ratelimit-limit"));
-        assert.ok(res.headers.get("x-ratelimit-remaining"));
-        assert.ok(res.headers.get("x-ratelimit-reset"));
-      });
-    });
+        assert.ok(res.headers.get('x-ratelimit-limit'));
+        assert.ok(res.headers.get('x-ratelimit-remaining'));
+        assert.ok(res.headers.get('x-ratelimit-reset'));
+     });
+   });
     ```
   </TabItem>
 </Tabs>
@@ -493,29 +493,29 @@ graceful shutdown.
 ### Testing Error Responses
 
 ```js
-it("returns 422 for invalid body", async () => {
+it('returns 422 for invalid body', async () => {
   const res = await fetch(`${baseUrl}/users`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: 42 }),
-  });
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: 42}),
+ });
 
   assert.equal(res.status, 422);
   const problem = await res.json();
   assert.equal(problem.status, 422);
-  assert.equal(problem.title, "Unprocessable Entity");
+  assert.equal(problem.title, 'Unprocessable Entity');
   assert.ok(problem.detail);
 });
 
-it("includes request ID in error response", async () => {
+it('includes request ID in error response', async () => {
   const res = await fetch(`${baseUrl}/users`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: 42 }),
-  });
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: 42}),
+ });
 
   const problem = await res.json();
-  assert.ok(problem.instance, "should include request ID as instance");
+  assert.ok(problem.instance, 'should include request ID as instance');
 });
 ```
 
@@ -533,17 +533,17 @@ it("includes request ID in error response", async () => {
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import http from "node:http";
-    import { handler } from "@centralping/ergo";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import http from 'node:http';
+    import {handler} from '@centralping/ergo';
 
-    describe("shutdown", () => {
-      it("stops accepting connections after close", async () => {
-        const pipeline = () => ({ response: { body: { ok: true } } });
+    describe('shutdown', () => {
+      it('stops accepting connections after close', async () => {
+        const pipeline = () => ({response: {body: {ok: true}}});
         const server = http.createServer(handler(pipeline));
         await new Promise((resolve) => server.listen(0, resolve));
-        const { port } = server.address();
+        const {port} = server.address();
         const baseUrl = `http://localhost:${port}`;
 
         const res = await fetch(baseUrl);
@@ -554,52 +554,52 @@ it("includes request ID in error response", async () => {
 
         await assert.rejects(
           () => fetch(baseUrl),
-          "should reject after server close",
+          'should reject after server close',
         );
-      });
-    });
+     });
+   });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, after } from "node:test";
-    import assert from "node:assert/strict";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {describe, it, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    describe("graceful shutdown", () => {
-      it("stops accepting connections after shutdown", async () => {
+    describe('graceful shutdown', () => {
+      it('stops accepting connections after shutdown', async () => {
         const router = createRouter();
-        router.get("/health", {
-          execute: () => ({ response: { body: { ok: true } } }),
-        });
+        router.get('/health', {
+          execute: () => ({response: {body: {ok: true}}}),
+       });
 
         const result = await graceful(router.handle(), {
           port: 0,
           signals: [],
           exit() {},
-        });
+       });
 
-        const { port } = result.server.address();
+        const {port} = result.server.address();
         const baseUrl = `http://localhost:${port}`;
 
-        const res = await fetch(baseUrl + "/health");
+        const res = await fetch(baseUrl + '/health');
         assert.equal(res.status, 200);
 
-        await result.shutdown("test-cleanup");
+        await result.shutdown('test-cleanup');
 
         await assert.rejects(
-          () => fetch(baseUrl + "/health"),
-          "should reject after shutdown",
+          () => fetch(baseUrl + '/health'),
+          'should reject after shutdown',
         );
-      });
+     });
 
-      it("runs onShutdown callback during teardown", async () => {
+      it('runs onShutdown callback during teardown', async () => {
         let cleanedUp = false;
 
         const router = createRouter();
-        router.get("/", {
-          execute: () => ({ response: { body: { ok: true } } }),
-        });
+        router.get('/', {
+          execute: () => ({response: {body: {ok: true}}}),
+       });
 
         const result = await graceful(router.handle(), {
           port: 0,
@@ -607,13 +607,13 @@ it("includes request ID in error response", async () => {
           exit() {},
           onShutdown: async () => {
             cleanedUp = true;
-          },
-        });
+         },
+       });
 
-        await result.shutdown("test-cleanup");
-        assert.ok(cleanedUp, "onShutdown should have been called");
-      });
-    });
+        await result.shutdown('test-cleanup');
+        assert.ok(cleanedUp, 'onShutdown should have been called');
+     });
+   });
     ```
   </TabItem>
 </Tabs>
@@ -621,42 +621,42 @@ it("includes request ID in error response", async () => {
 ### Testing Conditional Requests (ETag / 304)
 
 ```js
-import { describe, it, after } from "node:test";
-import assert from "node:assert/strict";
-import http from "node:http";
-import { handler } from "@centralping/ergo";
+import {describe, it, after} from 'node:test';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import {handler} from '@centralping/ergo';
 
-describe("ETag conditional requests", () => {
+describe('ETag conditional requests', () => {
   let server;
   let baseUrl;
 
   after(async () => {
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
-  });
+ });
 
-  it("generates ETag and returns 304 on match", async () => {
+  it('generates ETag and returns 304 on match', async () => {
     const pipeline = () => ({
-      response: { body: { message: "hello", value: 42 } },
-    });
+      response: {body: {message: 'hello', value: 42}},
+   });
 
     server = http.createServer(handler(pipeline));
     await new Promise((resolve) => server.listen(0, resolve));
-    const { port } = server.address();
+    const {port} = server.address();
     baseUrl = `http://localhost:${port}`;
 
     const res1 = await fetch(baseUrl);
     assert.equal(res1.status, 200);
-    const etag = res1.headers.get("etag");
-    assert.ok(etag, "should include ETag header");
+    const etag = res1.headers.get('etag');
+    assert.ok(etag, 'should include ETag header');
 
     const res2 = await fetch(baseUrl, {
-      headers: { "If-None-Match": etag },
-    });
+      headers: {'If-None-Match': etag},
+   });
     assert.equal(res2.status, 304);
     const body = await res2.text();
-    assert.equal(body, "");
-  });
+    assert.equal(body, '');
+ });
 });
 ```
 
@@ -670,35 +670,35 @@ describe("ETag conditional requests", () => {
 ### Test Isolation Tips
 
 ```js
-import { describe, it, after } from "node:test";
-import assert from "node:assert/strict";
-import createRouter, { graceful } from "@centralping/ergo-router";
+import {describe, it, after} from 'node:test';
+import assert from 'node:assert/strict';
+import createRouter, {graceful} from '@centralping/ergo-router';
 
-describe("isolated test suites", () => {
+describe('isolated test suites', () => {
   let shutdown;
 
   after(async () => {
-    if (shutdown) await shutdown("test-cleanup");
-  });
+    if (shutdown) await shutdown('test-cleanup');
+ });
 
-  it("each suite gets its own server and state", async () => {
+  it('each suite gets its own server and state', async () => {
     const router = createRouter({
-      transport: { rateLimit: { max: 100, windowMs: 60_000 } },
-    });
-    router.get("/", {
-      execute: () => ({ response: { body: { ok: true } } }),
-    });
+      transport: {rateLimit: {max: 100, windowMs: 60_000}},
+   });
+    router.get('/', {
+      execute: () => ({response: {body: {ok: true}}}),
+   });
 
     const result = await graceful(router.handle(), {
       port: 0,
       exit() {},
-    });
+   });
     shutdown = result.shutdown;
 
-    const { port } = result.server.address();
+    const {port} = result.server.address();
     const res = await fetch(`http://localhost:${port}/`);
     assert.equal(res.status, 200);
-  });
+ });
 });
 ```
 
@@ -712,7 +712,7 @@ The two tabs above illustrate the two server lifecycle strategies:
   port `0`, and tear down with `closeAllConnections()` + `close()` in
   `after()`.
 - **ergo-router** — use `graceful()` with `port: 0` and `exit() {}`.
-  `graceful()` returns `{ server, shutdown }`. Call `shutdown()` in
+  `graceful()` returns `{server, shutdown}`. Call `shutdown()` in
   `after()` to trigger the same drain sequence the production server
   uses.
 

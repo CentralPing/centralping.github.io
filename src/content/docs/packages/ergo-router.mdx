@@ -51,17 +51,17 @@ compliance and a declarative pipeline builder.
 Declaratively compose ergo middleware for each route:
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const router = createRouter({
   defaults: {
-    accepts: { types: ["application/json"] },
-  },
+    accepts: {types: ['application/json']},
+ },
 });
 
-router.post("/users", {
-  authorization: { strategies: [bearerStrategy] },
-  validate: { body: userSchema },
+router.post('/users', {
+  authorization: {strategies: [bearerStrategy]},
+  validate: {body: userSchema},
   execute: createUser,
 });
 ```
@@ -102,14 +102,14 @@ const router = createRouter({
   defaults: {
     authorization: {
       strategies: [bearerStrategy, apiKeyStrategy],
-    },
-  },
+   },
+ },
 });
 
 // ⚠️ This route loses bearerStrategy and apiKeyStrategy —
 // the route value replaces the default entirely
-router.get("/admin", {
-  authorization: { strategies: [basicStrategy] },
+router.get('/admin', {
+  authorization: {strategies: [basicStrategy]},
   execute: adminHandler,
 });
 ```
@@ -123,14 +123,14 @@ const authDefaults = {
 };
 
 const router = createRouter({
-  defaults: { authorization: authDefaults },
+  defaults: {authorization: authDefaults},
 });
 
 // ✓ This route has all three strategies
-router.get("/admin", {
+router.get('/admin', {
   authorization: {
     strategies: [...authDefaults.strategies, basicStrategy],
-  },
+ },
   execute: adminHandler,
 });
 ```
@@ -157,14 +157,14 @@ configuration objects for common API patterns. Import them from the
 package entry point and spread into `createRouter()`:
 
 ```js
-import createRouter, { presets } from "@centralping/ergo-router";
+import createRouter, {presets} from '@centralping/ergo-router';
 
 const router = createRouter({
   ...presets.jsonApi,
   defaults: {
     ...presets.jsonApi.defaults,
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 ```
 
@@ -241,8 +241,8 @@ spread explicitly when you need to extend (not replace) them:
 const router = createRouter({
   ...presets.jsonApi,
   defaults: {
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 // defaults.accepts is gone — presets.jsonApi.defaults was replaced
 
@@ -251,8 +251,8 @@ const router = createRouter({
   ...presets.jsonApi,
   defaults: {
     ...presets.jsonApi.defaults,
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 // defaults.accepts is preserved from the preset
 ```
@@ -265,12 +265,12 @@ const router = createRouter({
   ...presets.jsonApi,
   transport: {
     ...presets.jsonApi.transport,
-    cors: { origin: "https://myapp.com" },
-  },
+    cors: {origin: 'https://myapp.com'},
+ },
   defaults: {
     ...presets.jsonApi.defaults,
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 ```
 
@@ -286,10 +286,10 @@ const router = createRouter({
   must set `noSend: true` individually:
 
   ```js
-  router.get("/events", {
+  router.get('/events', {
     noSend: true,
     execute: sseHandler,
-  });
+ });
   ```
 </Aside>
 
@@ -380,9 +380,9 @@ Validation, Execution):
 
 ```js
 router.use((req, res, acc) => {
-  res.on("finish", () => {
+  res.on('finish', () => {
     console.log(`${req.method} ${req.url} ${res.statusCode}`);
-  });
+ });
 });
 ```
 
@@ -392,7 +392,7 @@ router.use((req, res, acc) => {
 router
   .use(requestLogger)
   .use(requestMetrics)
-  .get("/users", { execute: listUsers });
+  .get('/users', {execute: listUsers});
 ```
 
 <Aside type="caution" title="Array pipelines only">
@@ -435,25 +435,25 @@ Use cases: streaming responses, Server-Sent Events, file downloads, or
 any response format that `send()` does not support.
 
 ```js
-router.get("/events", {
+router.get('/events', {
   noSend: true,
-  authorization: { strategies: [bearerStrategy] },
+  authorization: {strategies: [bearerStrategy]},
   execute: (req, res, acc) => {
     res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+   });
 
     const interval = setInterval(() => {
-      res.write(`data: ${JSON.stringify({ ts: Date.now() })}\n\n`);
-    }, 1000);
+      res.write(`data: ${JSON.stringify({ts: Date.now()})}\n\n`);
+   }, 1000);
 
-    req.on("close", () => {
+    req.on('close', () => {
       clearInterval(interval);
       res.end();
-    });
-  },
+   });
+ },
 });
 ```
 
@@ -509,7 +509,7 @@ failure does not prevent the router-level hook from firing.
 #### Usage — Audit Logging + Per-Route Metrics
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const router = createRouter({
   onResponse: (req, res, responseInfo, domainAcc) => {
@@ -519,17 +519,17 @@ const router = createRouter({
       status: responseInfo.statusCode,
       duration: responseInfo.duration,
       user: domainAcc.auth?.identity,
-    });
-  },
+   });
+ },
 });
 
-router.post("/payments", {
+router.post('/payments', {
   onResponse: (req, res, responseInfo) => {
-    metrics.histogram("payments.duration", responseInfo.duration);
+    metrics.histogram('payments.duration', responseInfo.duration);
     metrics.increment(`payments.status.${responseInfo.statusCode}`);
-  },
-  authorization: { strategies: [bearerStrategy] },
-  validate: { body: paymentSchema },
+ },
+  authorization: {strategies: [bearerStrategy]},
+  validate: {body: paymentSchema},
   execute: processPayment,
 });
 ```
@@ -560,7 +560,7 @@ x-response-time: 12.345
 Content-Type: application/json
 ```
 
-The value is a **plain millisecond string** (e.g., `"12.345"`), not the
+The value is a **plain millisecond string** (e.g., `'12.345'`), not the
 [W3C Server-Timing](https://www.w3.org/TR/server-timing/) format
 (`metric;dur=12.345`). If you need the W3C format for DevTools
 integration, set a custom header name — the value format remains a
@@ -613,17 +613,17 @@ This excludes:
 </Aside>
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const router = createRouter({
   timing: true,
   defaults: {
-    accepts: { types: ["application/json"] },
-  },
+    accepts: {types: ['application/json']},
+ },
 });
 
-router.get("/health", {
-  execute: () => ({ response: { body: { ok: true } } }),
+router.get('/health', {
+  execute: () => ({response: {body: {ok: true}}}),
 });
 // GET /health → x-response-time: 0.456
 ```
@@ -642,16 +642,16 @@ The `paginate` config key wires a two-sided contract: **request parsing**
 #### Offset Pagination
 
 ```js
-router.get("/articles", {
+router.get('/articles', {
   paginate: true,
   execute: async (req, res, acc) => {
-    const { offset, limit } = acc.paginate;
+    const {offset, limit} = acc.paginate;
     const items = await db.find(offset, limit);
     const total = await db.count();
     return {
-      response: { body: items, paginate: { total } },
-    };
-  },
+      response: {body: items, paginate: {total}},
+   };
+ },
 });
 // GET /articles?page=2&per_page=10
 // → Link: </articles?page=1&per_page=10>; rel="first", ...
@@ -661,18 +661,18 @@ router.get("/articles", {
 #### Cursor Pagination
 
 ```js
-router.get("/events", {
-  paginate: { strategy: "cursor" },
+router.get('/events', {
+  paginate: {strategy: 'cursor'},
   execute: async (req, res, acc) => {
-    const { cursor, limit } = acc.paginate;
-    const { items, nextCursor } = await db.findAfter(cursor, limit);
+    const {cursor, limit} = acc.paginate;
+    const {items, nextCursor} = await db.findAfter(cursor, limit);
     return {
       response: {
         body: items,
-        paginate: { nextCursor },
-      },
-    };
-  },
+        paginate: {nextCursor},
+     },
+   };
+ },
 });
 // GET /events?cursor=abc123&limit=10
 // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
@@ -701,31 +701,31 @@ parameters, query parameters, request body schemas, security schemes,
 and content types from route configs and defaults.
 
 ```js
-import createRouter from "@centralping/ergo-router";
-import generateOpenAPI from "@centralping/ergo-router/openapi";
+import createRouter from '@centralping/ergo-router';
+import generateOpenAPI from '@centralping/ergo-router/openapi';
 
 const router = createRouter({
   defaults: {
-    accepts: { types: ["application/json"] },
-    authorization: { strategies: [bearerStrategy] },
-  },
+    accepts: {types: ['application/json']},
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 
-router.get("/users/:id", {
+router.get('/users/:id', {
   validate: {
     params: {
-      type: "object",
-      properties: { id: { type: "string" } },
-    },
-  },
-  openapi: { summary: "Get user by ID", tags: ["Users"] },
+      type: 'object',
+      properties: {id: {type: 'string'}},
+   },
+ },
+  openapi: {summary: 'Get user by ID', tags: ['Users']},
   execute: getUser,
 });
 
 const spec = generateOpenAPI(router, {
-  title: "My API",
-  version: "1.0.0",
-  description: "User management service",
+  title: 'My API',
+  version: '1.0.0',
+  description: 'User management service',
 });
 ```
 
@@ -762,16 +762,16 @@ values, so you can enrich the spec with summaries, tags, custom
 responses, and descriptions:
 
 ```js
-router.post("/users", {
-  validate: { body: userSchema },
+router.post('/users', {
+  validate: {body: userSchema},
   openapi: {
-    summary: "Create a new user",
-    tags: ["Users"],
+    summary: 'Create a new user',
+    tags: ['Users'],
     responses: {
-      201: { description: "User created" },
-      409: { description: "Email already exists" },
-    },
-  },
+      201: {description: 'User created'},
+      409: {description: 'Email already exists'},
+   },
+ },
   execute: createUser,
 });
 ```
@@ -804,23 +804,23 @@ Mounts all routes from `subRouter` at the given prefix path. Returns
 the parent router for chaining.
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const usersRouter = createRouter({
   defaults: {
-    authorization: { strategies: [bearerStrategy] },
-  },
+    authorization: {strategies: [bearerStrategy]},
+ },
 });
 
-usersRouter.get("/", { execute: listUsers });
-usersRouter.get("/:id", { execute: getUser });
-usersRouter.post("/", {
-  validate: { body: userSchema },
+usersRouter.get('/', {execute: listUsers});
+usersRouter.get('/:id', {execute: getUser});
+usersRouter.post('/', {
+  validate: {body: userSchema},
   execute: createUser,
 });
 
-const router = createRouter({ transport: { /* ... */ } });
-router.mount("/users", usersRouter);
+const router = createRouter({transport: {/* ... */}});
+router.mount('/users', usersRouter);
 // Registers: GET /users, GET /users/:id, POST /users
 ```
 
@@ -834,7 +834,7 @@ router.mount("/users", usersRouter);
 | `router.use()` | Per-router scoping | Parent `router.use()` does not apply to mounted routes; child `router.use()` is baked into child pipelines at registration time |
 | `strictPatch` / `strictBody` | Parent-governed | Content-Type enforcement is applied at parent dispatch, before route matching |
 | Ordering | Register routes before mounting | Routes must be added to the child router before calling `parent.mount()` |
-| Chainable | `mount()` returns the parent | Allows `router.mount("/a", a).mount("/b", b)` |
+| Chainable | `mount()` returns the parent | Allows `router.mount('/a', a).mount('/b', b)` |
 
 <Aside type="caution" title="Register routes before mounting">
   `mount()` copies the child's routes at call time. Routes added to the
@@ -855,20 +855,20 @@ management. It works with any `http.Server` handler — not coupled to
 ergo-router.
 
 ```js
-import createRouter, { graceful } from "@centralping/ergo-router";
+import createRouter, {graceful} from '@centralping/ergo-router';
 
-const router = createRouter({ /* ... */ });
+const router = createRouter({/* ... */});
 
-const { server, shutdown } = await graceful(router.handle(), {
+const {server, shutdown} = await graceful(router.handle(), {
   port: 3000,
-  onStartup: async ({ log }) => {
+  onStartup: async ({log}) => {
     await connectDatabase();
-    log.info("Database connected");
-  },
-  onShutdown: async ({ log, signal }) => {
+    log.info('Database connected');
+ },
+  onShutdown: async ({log, signal}) => {
     await disconnectDatabase();
-    log.info("Cleanup complete");
-  },
+    log.info('Cleanup complete');
+ },
 });
 ```
 
@@ -903,17 +903,17 @@ correlation and trace enrichment), see the
 [Structured Logging recipe](/recipes/structured-logging/).
 
 ```js
-import createRouter, { graceful } from "@centralping/ergo-router";
+import createRouter, {graceful} from '@centralping/ergo-router';
 
 const log = {
-  info: (msg) => console.log(JSON.stringify({ level: "info", msg, ts: new Date().toISOString() })),
-  warn: (msg) => console.log(JSON.stringify({ level: "warn", msg, ts: new Date().toISOString() })),
-  error: (msg) => console.log(JSON.stringify({ level: "error", msg, ts: new Date().toISOString() })),
+  info: (msg) => console.log(JSON.stringify({level: 'info', msg, ts: new Date().toISOString()})),
+  warn: (msg) => console.log(JSON.stringify({level: 'warn', msg, ts: new Date().toISOString()})),
+  error: (msg) => console.log(JSON.stringify({level: 'error', msg, ts: new Date().toISOString()})),
 };
 
-const router = createRouter({ /* ... */ });
+const router = createRouter({/* ... */});
 
-await graceful(router.handle(), { port: 3000, log });
+await graceful(router.handle(), {port: 3000, log});
 ```
 
 ##### Testing with Programmatic Shutdown
@@ -922,28 +922,28 @@ Override `exit` to prevent `process.exit` during tests, use `port: 0` for an
 ephemeral port, and call the returned `shutdown()` for cleanup:
 
 ```js
-import { describe, it, after } from "node:test";
-import assert from "node:assert/strict";
-import { graceful } from "@centralping/ergo-router";
+import {describe, it, after} from 'node:test';
+import assert from 'node:assert/strict';
+import {graceful} from '@centralping/ergo-router';
 
-describe("server lifecycle", () => {
+describe('server lifecycle', () => {
   let shutdown;
 
   after(async () => {
-    if (shutdown) await shutdown("test-cleanup");
-  });
+    if (shutdown) await shutdown('test-cleanup');
+ });
 
-  it("starts on an ephemeral port", async () => {
+  it('starts on an ephemeral port', async () => {
     const result = await graceful(
-      (req, res) => { res.writeHead(200); res.end("ok"); },
-      { port: 0, exit() {} },
+      (req, res) => {res.writeHead(200); res.end('ok');},
+      {port: 0, exit() {}},
     );
     shutdown = result.shutdown;
 
-    const { port } = result.server.address();
+    const {port} = result.server.address();
     const res = await fetch(`http://localhost:${port}/`);
     assert.equal(res.status, 200);
-  });
+ });
 });
 ```
 

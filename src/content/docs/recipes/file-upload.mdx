@@ -22,7 +22,7 @@ contains an array of part objects — one per form field or file.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body } from "@centralping/ergo";
+    import {compose, body} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
@@ -32,28 +32,28 @@ contains an array of part objects — one per form field or file.
         return {
           response: {
             statusCode: 201,
-            body: { filename: file.filename, size: file.body.length },
-          },
-        };
-      },
+            body: {filename: file.filename, size: file.body.length},
+         },
+       };
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/uploads", {
-      body: { limit: 5 * 1024 * 1024 },
+    router.post('/uploads', {
+      body: {limit: 5 * 1024 * 1024},
       execute: async (req, res, acc) => {
         const [file] = acc.body.parsed;
         await saveFile(file.filename, file.body);
         return {
           response: {
             statusCode: 201,
-            body: { filename: file.filename, size: file.body.length },
-          },
-        };
-      },
-    });
+            body: {filename: file.filename, size: file.body.length},
+         },
+       };
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -63,10 +63,10 @@ contains an array of part objects — one per form field or file.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body } from "@centralping/ergo";
+    import {compose, body} from '@centralping/ergo';
 
     const pipeline = compose(
-      body({ limit: 10 * 1024 * 1024 }),
+      body({limit: 10 * 1024 * 1024}),
       async (req, res, acc) => {
         const files = acc.body.parsed.filter((part) => part.filename);
         const results = await Promise.all(
@@ -75,17 +75,17 @@ contains an array of part objects — one per form field or file.
         return {
           response: {
             statusCode: 201,
-            body: { uploaded: results.length },
-          },
-        };
-      },
+            body: {uploaded: results.length},
+         },
+       };
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/uploads/batch", {
-      body: { limit: 10 * 1024 * 1024 },
+    router.post('/uploads/batch', {
+      body: {limit: 10 * 1024 * 1024},
       execute: async (req, res, acc) => {
         const files = acc.body.parsed.filter((part) => part.filename);
         const results = await Promise.all(
@@ -94,11 +94,11 @@ contains an array of part objects — one per form field or file.
         return {
           response: {
             statusCode: 201,
-            body: { uploaded: results.length },
-          },
-        };
-      },
-    });
+            body: {uploaded: results.length},
+         },
+       };
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -108,13 +108,13 @@ contains an array of part objects — one per form field or file.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body } from "@centralping/ergo";
+    import {compose, body} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       async (req, res, acc) => {
         const parts = acc.body.parsed;
-        const description = parts.find((p) => p.name === "description");
+        const description = parts.find((p) => p.name === 'description');
         const file = parts.find((p) => p.filename);
         return {
           response: {
@@ -122,20 +122,20 @@ contains an array of part objects — one per form field or file.
             body: {
               description: description?.body.toString(),
               filename: file?.filename,
-            },
-          },
-        };
-      },
+           },
+         },
+       };
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/documents", {
+    router.post('/documents', {
       body: true,
       execute: async (req, res, acc) => {
         const parts = acc.body.parsed;
-        const description = parts.find((p) => p.name === "description");
+        const description = parts.find((p) => p.name === 'description');
         const file = parts.find((p) => p.filename);
         return {
           response: {
@@ -143,11 +143,11 @@ contains an array of part objects — one per form field or file.
             body: {
               description: description?.body.toString(),
               filename: file?.filename,
-            },
-          },
-        };
-      },
-    });
+           },
+         },
+       };
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -181,7 +181,7 @@ not per-part. For endpoints accepting large file uploads, increase the
 limit explicitly:
 
 ```js
-body({ limit: 20 * 1024 * 1024 }); // 20 MiB
+body({limit: 20 * 1024 * 1024}); // 20 MiB
 ```
 
 ### Content Type Detection

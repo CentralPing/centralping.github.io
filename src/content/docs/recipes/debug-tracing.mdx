@@ -19,41 +19,41 @@ pipeline break.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
+    import http from 'node:http';
     import {
       handler, compose, logger, authorization, body,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
     const pipeline = compose(
       logger(),
-      authorization({ strategies }),
+      authorization({strategies}),
       body(),
       (req, res, acc) => ({
-        response: { body: acc.body.parsed, statusCode: 200 },
-      }),
+        response: {body: acc.body.parsed, statusCode: 200},
+     }),
     );
 
     const server = http.createServer(
-      handler(pipeline, { debug: true }),
+      handler(pipeline, {debug: true}),
     );
     server.listen(3000);
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    const router = createRouter({ debug: true });
+    const router = createRouter({debug: true});
 
-    router.post("/items", {
-      validate: { body: itemSchema },
+    router.post('/items', {
+      validate: {body: itemSchema},
       execute: async (req, res, acc) => {
         const item = await db.create(acc.body.parsed);
-        return { response: { statusCode: 201, body: item } };
-      },
-    });
+        return {response: {statusCode: 201, body: item}};
+     },
+   });
 
-    await graceful(router.handle(), { port: 3000 });
+    await graceful(router.handle(), {port: 3000});
     ```
   </TabItem>
 </Tabs>
@@ -81,7 +81,7 @@ When [`debug`](/middleware/handler/) is `true`, the pipeline initializes
 a trace object on the response accumulator before running middleware:
 
 ```js
-responseAcc._trace = { steps: [], breakAt: undefined };
+responseAcc._trace = {steps: [], breakAt: undefined};
 ```
 
 As each middleware executes, its label (the intrinsic `setPath` on

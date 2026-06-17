@@ -15,7 +15,7 @@ keywords (`email`, `uri`, `date-time`, `uuid`, etc.) out of the box.
 ## Import
 
 ```js
-import { validate } from "@centralping/ergo";
+import {validate} from '@centralping/ergo';
 ```
 
 ## Options
@@ -44,9 +44,9 @@ least one JSON Schema keyword and none of the targeted keys (`body`,
 
 ```js
 validate({
-  type: "object",
-  properties: { name: { type: "string" } },
-  required: ["name"],
+  type: 'object',
+  properties: {name: {type: 'string'}},
+  required: ['name'],
 });
 ```
 
@@ -80,7 +80,7 @@ are present) and produces no validators — validation is effectively skipped.
 | `undefined` or `true` | All standard formats enabled |
 | `false` | Formats disabled |
 | `['email', 'uri']` | Only listed formats enabled |
-| `{ mode: 'fast' }` | Full `ajv-formats` plugin config |
+| `{mode: 'fast'}` | Full `ajv-formats` plugin config |
 
 ### Route Parameter Resolution
 
@@ -123,7 +123,7 @@ with a `details` extension member containing per-field errors:
 
 <Aside type="note">
   `detail` (singular) is the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) human-readable summary — always
-  `"Validation failed"`. `details` (plural) is the extension member
+  `'Validation failed'`. `details` (plural) is the extension member
   array with per-field error objects.
 </Aside>
 
@@ -131,7 +131,7 @@ with a `details` extension member containing per-field errors:
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
-| `path` | `string` | JSON Pointer to the failing field (e.g., `"/name"`, `"/address/zip"`); `"/"` for root-level errors |
+| `path` | `string` | JSON Pointer to the failing field (e.g., `'/name'`, `'/address/zip'`); `'/'` for root-level errors |
 | `message` | `string` | Human-readable error description from AJV |
 | `params` | `object` | Keyword-dependent parameters from the failing AJV rule |
 
@@ -139,10 +139,10 @@ The `params` object shape depends on which JSON Schema keyword failed:
 
 | Keyword | `params` Example |
 | ------- | ---------------- |
-| `required` | `{ missingProperty: "name" }` |
-| `type` | `{ type: "string" }` |
-| `minLength` | `{ limit: 1 }` |
-| `pattern` | `{ pattern: "^[a-z]+$" }` |
+| `required` | `{missingProperty: 'name'}` |
+| `type` | `{type: 'string'}` |
+| `minLength` | `{limit: 1}` |
+| `pattern` | `{pattern: '^[a-z]+$'}` |
 
 For the complete list of keyword-specific `params`, see the
 [AJV error objects documentation](https://ajv.js.org/api.html#validation-errors).
@@ -162,46 +162,46 @@ configured and the body is invalid, only body errors appear in
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body, url, validate } from "@centralping/ergo";
+    import {compose, body, url, validate} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       url(),
       validate({
         body: {
-          type: "object",
-          properties: { name: { type: "string" } },
-          required: ["name"],
-        },
+          type: 'object',
+          properties: {name: {type: 'string'}},
+          required: ['name'],
+       },
         query: {
-          type: "object",
+          type: 'object',
           properties: {
-            page: { type: "string", pattern: "^[0-9]+$" },
-          },
-        },
-      }),
+            page: {type: 'string', pattern: '^[0-9]+$'},
+         },
+       },
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/users", {
+    router.post('/users', {
       validate: {
         body: {
-          type: "object",
-          properties: { name: { type: "string", format: "email" } },
-          required: ["name"],
-        },
+          type: 'object',
+          properties: {name: {type: 'string', format: 'email'}},
+          required: ['name'],
+       },
         params: {
-          type: "object",
-          properties: { id: { type: "string", minLength: 1 } },
-          required: ["id"],
-        },
-      },
+          type: 'object',
+          properties: {id: {type: 'string', minLength: 1}},
+          required: ['id'],
+       },
+     },
       execute: (req, res, acc) => ({
-        response: { statusCode: 201, body: { created: true } },
-      }),
-    });
+        response: {statusCode: 201, body: {created: true}},
+     }),
+   });
     ```
   </TabItem>
 </Tabs>
@@ -211,30 +211,30 @@ configured and the body is invalid, only body errors appear in
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body, validate } from "@centralping/ergo";
+    import {compose, body, validate} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       validate({
-        type: "object",
-        properties: { name: { type: "string" } },
-        required: ["name"],
-      }),
+        type: 'object',
+        properties: {name: {type: 'string'}},
+        required: ['name'],
+     }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/users", {
+    router.post('/users', {
       validate: {
-        type: "object",
-        properties: { name: { type: "string" } },
-        required: ["name"],
-      },
+        type: 'object',
+        properties: {name: {type: 'string'}},
+        required: ['name'],
+     },
       execute: (req, res, acc) => ({
-        response: { statusCode: 201, body: { created: true } },
-      }),
-    });
+        response: {statusCode: 201, body: {created: true}},
+     }),
+   });
     ```
   </TabItem>
 </Tabs>

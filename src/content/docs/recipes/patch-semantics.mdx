@@ -22,49 +22,49 @@ the patch overwrite the target; properties set to `null` are removed.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body, validate } from "@centralping/ergo";
+    import {compose, body, validate} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       validate({
         body: {
-          type: "object",
+          type: 'object',
           minProperties: 1,
           properties: {
-            name: { type: "string" },
-            email: { type: "string", format: "email" },
-            bio: { type: ["string", "null"] },
-          },
+            name: {type: 'string'},
+            email: {type: 'string', format: 'email'},
+            bio: {type: ['string', 'null']},
+         },
           additionalProperties: false,
-        },
-      }),
+       },
+     }),
       async (req, res, acc) => {
         const updated = await db.merge(acc.route.params.id, acc.body.parsed);
-        return { response: { body: updated } };
-      },
+        return {response: {body: updated}};
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.patch("/users/:id", {
+    router.patch('/users/:id', {
       validate: {
         body: {
-          type: "object",
+          type: 'object',
           minProperties: 1,
           properties: {
-            name: { type: "string" },
-            email: { type: "string", format: "email" },
-            bio: { type: ["string", "null"] },
-          },
+            name: {type: 'string'},
+            email: {type: 'string', format: 'email'},
+            bio: {type: ['string', 'null']},
+         },
           additionalProperties: false,
-        },
-      },
+       },
+     },
       execute: async (req, res, acc) => {
         const updated = await db.merge(acc.route.params.id, acc.body.parsed);
-        return { response: { body: updated } };
-      },
-    });
+        return {response: {body: updated}};
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -78,59 +78,59 @@ path in the document.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body, validate } from "@centralping/ergo";
+    import {compose, body, validate} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       validate({
         body: {
-          type: "array",
+          type: 'array',
           minItems: 1,
           items: {
-            type: "object",
-            required: ["op", "path"],
+            type: 'object',
+            required: ['op', 'path'],
             properties: {
-              op: { type: "string", enum: ["add", "remove", "replace", "move", "copy", "test"] },
-              path: { type: "string", pattern: "^/" },
+              op: {type: 'string', enum: ['add', 'remove', 'replace', 'move', 'copy', 'test']},
+              path: {type: 'string', pattern: '^/'},
               value: {},
-              from: { type: "string", pattern: "^/" },
-            },
+              from: {type: 'string', pattern: '^/'},
+           },
             additionalProperties: false,
-          },
-        },
-      }),
+         },
+       },
+     }),
       async (req, res, acc) => {
         const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
-        return { response: { body: updated } };
-      },
+        return {response: {body: updated}};
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.patch("/documents/:id", {
+    router.patch('/documents/:id', {
       validate: {
         body: {
-          type: "array",
+          type: 'array',
           minItems: 1,
           items: {
-            type: "object",
-            required: ["op", "path"],
+            type: 'object',
+            required: ['op', 'path'],
             properties: {
-              op: { type: "string", enum: ["add", "remove", "replace", "move", "copy", "test"] },
-              path: { type: "string", pattern: "^/" },
+              op: {type: 'string', enum: ['add', 'remove', 'replace', 'move', 'copy', 'test']},
+              path: {type: 'string', pattern: '^/'},
               value: {},
-              from: { type: "string", pattern: "^/" },
-            },
+              from: {type: 'string', pattern: '^/'},
+           },
             additionalProperties: false,
-          },
-        },
-      },
+         },
+       },
+     },
       execute: async (req, res, acc) => {
         const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
-        return { response: { body: updated } };
-      },
-    });
+        return {response: {body: updated}};
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -143,43 +143,43 @@ inspect `acc.body.type` to determine which format was sent:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body } from "@centralping/ergo";
+    import {compose, body} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       async (req, res, acc) => {
-        const { type, parsed } = acc.body;
+        const {type, parsed} = acc.body;
         const id = acc.route.params.id;
 
-        if (type === "application/json-patch+json") {
+        if (type === 'application/json-patch+json') {
           const updated = await db.applyPatch(id, parsed);
-          return { response: { body: updated } };
-        }
+          return {response: {body: updated}};
+       }
 
         // Default: merge-patch semantics for application/json
         // and application/merge-patch+json
         const updated = await db.merge(id, parsed);
-        return { response: { body: updated } };
-      },
+        return {response: {body: updated}};
+     },
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.patch("/resources/:id", {
+    router.patch('/resources/:id', {
       execute: async (req, res, acc) => {
-        const { type, parsed } = acc.body;
+        const {type, parsed} = acc.body;
         const id = acc.route.params.id;
 
-        if (type === "application/json-patch+json") {
+        if (type === 'application/json-patch+json') {
           const updated = await db.applyPatch(id, parsed);
-          return { response: { body: updated } };
-        }
+          return {response: {body: updated}};
+       }
 
         const updated = await db.merge(id, parsed);
-        return { response: { body: updated } };
-      },
-    });
+        return {response: {body: updated}};
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -193,10 +193,10 @@ ergo-router enforces valid PATCH content types at the transport level
 default and configured at router creation time (not per-route):
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 // strictPatch defaults to true — explicit here for clarity
-const router = createRouter({ strictPatch: true });
+const router = createRouter({strictPatch: true});
 ```
 
 When a PATCH request arrives with a content type not in the allowed set,
@@ -232,7 +232,7 @@ For APIs that accept custom PATCH content types or use PATCH for
 non-standard semantics, disable enforcement at router creation:
 
 ```js
-const router = createRouter({ strictPatch: false });
+const router = createRouter({strictPatch: false});
 ```
 
 This removes the transport-level content-type check. Your route pipeline

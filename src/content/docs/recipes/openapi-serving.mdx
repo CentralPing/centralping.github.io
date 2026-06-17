@@ -25,21 +25,21 @@ Both routes should be publicly accessible without authentication.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { compose, handler } from "@centralping/ergo";
+    import http from 'node:http';
+    import {compose, handler} from '@centralping/ergo';
 
     const spec = {
-      openapi: "3.1.0",
-      info: { title: "My API", version: "1.0.0" },
+      openapi: '3.1.0',
+      info: {title: 'My API', version: '1.0.0'},
       paths: {
-        "/health": {
-          get: { responses: { 200: { description: "OK" } } },
-        },
-      },
-    };
+        '/health': {
+          get: {responses: {200: {description: 'OK'}}},
+       },
+     },
+   };
 
     const pipeline = compose(
-      (req, res) => ({ response: { body: spec } }),
+      (req, res) => ({response: {body: spec}}),
     );
 
     const server = http.createServer(handler(pipeline));
@@ -49,39 +49,39 @@ Both routes should be publicly accessible without authentication.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
-    import generateOpenAPI from "@centralping/ergo-router/openapi";
+    import createRouter from '@centralping/ergo-router';
+    import generateOpenAPI from '@centralping/ergo-router/openapi';
 
     const router = createRouter({
       defaults: {
-        accepts: { types: ["application/json"] },
-        authorization: { strategies: [bearerStrategy] },
-      },
-    });
+        accepts: {types: ['application/json']},
+        authorization: {strategies: [bearerStrategy]},
+     },
+   });
 
     // Register all application routes first
-    router.get("/users/:id", {
+    router.get('/users/:id', {
       validate: {
         params: {
-          type: "object",
-          properties: { id: { type: "string" } },
-        },
-      },
-      openapi: { summary: "Get user by ID", tags: ["Users"] },
+          type: 'object',
+          properties: {id: {type: 'string'}},
+       },
+     },
+      openapi: {summary: 'Get user by ID', tags: ['Users']},
       execute: getUser,
-    });
+   });
 
     // Generate spec after all routes are registered
     const spec = generateOpenAPI(router, {
-      title: "My API",
-      version: "1.0.0",
-    });
+      title: 'My API',
+      version: '1.0.0',
+   });
 
     // Serve the spec without auth
-    router.get("/openapi.json", {
+    router.get('/openapi.json', {
       authorization: false,
-      execute: () => ({ response: { body: spec } }),
-    });
+      execute: () => ({response: {body: spec}}),
+   });
     ```
   </TabItem>
 </Tabs>
@@ -91,92 +91,92 @@ Both routes should be publicly accessible without authentication.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
+    import http from 'node:http';
 
     const spec = {
-      openapi: "3.1.0",
-      info: { title: "My API", version: "1.0.0" },
+      openapi: '3.1.0',
+      info: {title: 'My API', version: '1.0.0'},
       paths: {},
-    };
+   };
 
     const html = `<!doctype html>
     <html>
       <head>
         <title>API Reference</title>
-        <meta charset="utf-8" />
+        <meta charset='utf-8' />
       </head>
       <body>
         <script
-          id="api-reference"
-          data-url="/openapi.json"
+          id='api-reference'
+          data-url='/openapi.json'
         ></script>
-        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+        <script src='https://cdn.jsdelivr.net/npm/@scalar/api-reference'></script>
       </body>
     </html>`;
 
     const server = http.createServer((req, res) => {
-      if (req.url === "/docs") {
-        res.writeHead(200, { "Content-Type": "text/html" });
+      if (req.url === '/docs') {
+        res.writeHead(200, {'Content-Type': 'text/html'});
         res.end(html);
-      } else if (req.url === "/openapi.json") {
-        res.writeHead(200, { "Content-Type": "application/json" });
+     } else if (req.url === '/openapi.json') {
+        res.writeHead(200, {'Content-Type': 'application/json'});
         res.end(JSON.stringify(spec));
-      } else {
+     } else {
         res.writeHead(404);
         res.end();
-      }
-    });
+     }
+   });
 
     server.listen(3000);
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
-    import generateOpenAPI from "@centralping/ergo-router/openapi";
+    import createRouter from '@centralping/ergo-router';
+    import generateOpenAPI from '@centralping/ergo-router/openapi';
 
     const router = createRouter({
       defaults: {
-        accepts: { types: ["application/json"] },
-        authorization: { strategies: [bearerStrategy] },
-      },
-    });
+        accepts: {types: ['application/json']},
+        authorization: {strategies: [bearerStrategy]},
+     },
+   });
 
     // ... register application routes ...
 
     const spec = generateOpenAPI(router, {
-      title: "My API",
-      version: "1.0.0",
-    });
+      title: 'My API',
+      version: '1.0.0',
+   });
 
-    router.get("/openapi.json", {
+    router.get('/openapi.json', {
       authorization: false,
-      execute: () => ({ response: { body: spec } }),
-    });
+      execute: () => ({response: {body: spec}}),
+   });
 
     const docsHtml = `<!doctype html>
     <html>
       <head>
         <title>API Reference</title>
-        <meta charset="utf-8" />
+        <meta charset='utf-8' />
       </head>
       <body>
         <script
-          id="api-reference"
-          data-url="/openapi.json"
+          id='api-reference'
+          data-url='/openapi.json'
         ></script>
-        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+        <script src='https://cdn.jsdelivr.net/npm/@scalar/api-reference'></script>
       </body>
     </html>`;
 
-    router.get("/docs", {
+    router.get('/docs', {
       authorization: false,
       noSend: true,
       execute: (req, res) => {
-        res.writeHead(200, { "Content-Type": "text/html" });
+        res.writeHead(200, {'Content-Type': 'text/html'});
         res.end(docsHtml);
-      },
-    });
+     },
+   });
     ```
   </TabItem>
 </Tabs>
@@ -192,18 +192,18 @@ before starting the server:
 
 ```js
 // 1. Create router and register all routes
-const router = createRouter({ /* ... */ });
-router.get("/users", { /* ... */ });
-router.post("/users", { /* ... */ });
+const router = createRouter({/* ... */});
+router.get('/users', {/* ... */});
+router.post('/users', {/* ... */});
 
 // 2. Generate spec (captures /users GET and POST)
-const spec = generateOpenAPI(router, { title: "My API", version: "1.0.0" });
+const spec = generateOpenAPI(router, {title: 'My API', version: '1.0.0'});
 
 // 3. Register spec/docs routes (these won't appear in the spec)
-router.get("/openapi.json", { authorization: false, execute: () => ({ response: { body: spec } }) });
+router.get('/openapi.json', {authorization: false, execute: () => ({response: {body: spec}})});
 
 // 4. Start server
-const { server } = await graceful(router.handle(), { port: 3000 });
+const {server} = await graceful(router.handle(), {port: 3000});
 ```
 
 <Aside type="tip" title="Mounted sub-routers">
@@ -234,16 +234,16 @@ Annotations merge on top of derived values — any property you set in
 the annotation overrides the auto-extracted equivalent:
 
 ```js
-router.post("/users", {
-  validate: { body: userSchema },
+router.post('/users', {
+  validate: {body: userSchema},
   openapi: {
-    summary: "Create a new user",
-    tags: ["Users"],
+    summary: 'Create a new user',
+    tags: ['Users'],
     responses: {
-      201: { description: "User created" },
-      409: { description: "Email already exists" },
-    },
-  },
+      201: {description: 'User created'},
+      409: {description: 'Email already exists'},
+   },
+ },
   execute: createUser,
 });
 ```
