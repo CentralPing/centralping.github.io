@@ -4,6 +4,7 @@ dist
 .DS_Store
 /.ergo-source
 /.ergo-router-source
+/ergo
 src/content/docs/api/
 
 # Agent/editor local files
