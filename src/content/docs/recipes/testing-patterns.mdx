@@ -763,7 +763,7 @@ router for every test suite:
 import {MemoryStore} from '@centralping/ergo/lib/rate-limit';
 
 const store = new MemoryStore();
-const router = createRouter({rateLimit: {store}});
+const router = createRouter({defaults: {rateLimit: {store}}});
 
 beforeEach(() => store.reset());
 ```
