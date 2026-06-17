@@ -6,7 +6,7 @@ description: Pipeline executor — creates accumulators, runs the pipeline, hand
 import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 The HTTP request handler factory for ergo's two-accumulator model.
-Creates [domain](/concepts/accumulator/) and response accumulators per request, runs the composed
+Creates [domain accumulator](/concepts/accumulator/) and response accumulator per request, runs the composed
 pipeline, catches unexpected errors, and calls `send()` exactly once.
 This is the standalone equivalent of ergo-router's `auto-wrap`.
 
