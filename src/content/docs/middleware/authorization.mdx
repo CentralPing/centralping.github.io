@@ -14,7 +14,7 @@ scheme type, optional attribute matching, and an async authorizer function.
 ## Import
 
 ```js
-import { authorization } from "@centralping/ergo";
+import {authorization} from '@centralping/ergo';
 ```
 
 ## Options
@@ -38,9 +38,9 @@ a scheme-specific signature:
 
 | Scheme | Signature | Description |
 | ------ | --------- | ----------- |
-| `Basic` | `(attributes, username, password) => { authorized, info }` | Base64 decoded and split on `:` by the library |
-| `Bearer` | `(attributes, token) => { authorized, info }` | Raw token string (no decoding) |
-| Custom | `(attributes, credentials) => { authorized, info }` | Raw credential string for any other scheme |
+| `Basic` | `(attributes, username, password) => {authorized, info}` | Base64 decoded and split on `:` by the library |
+| `Bearer` | `(attributes, token) => {authorized, info}` | Raw token string (no decoding) |
+| Custom | `(attributes, credentials) => {authorized, info}` | Raw credential string for any other scheme |
 
 ## Return Value
 
@@ -49,7 +49,7 @@ strategy, stored on the [domain accumulator](/concepts/accumulator/) at
 `acc.auth`:
 
 ```js
-{ user: { id: "42", role: "admin" } }
+{user: {id: '42', role: 'admin'}}
 ```
 
 The shape of `acc.auth` is **opaque** — it is entirely determined by
@@ -96,7 +96,7 @@ vary by scheme:
 
 #### Bearer ([RFC 6750](https://www.rfc-editor.org/rfc/rfc6750))
 
-When the authorizer returns `{ authorized: false, info }`, ergo maps the
+When the authorizer returns `{authorized: false, info}`, ergo maps the
 `info.type` field to an HTTP status code per [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1):
 
 | `info.type` | Status | Description |
@@ -111,7 +111,7 @@ The response includes a `WWW-Authenticate: Bearer` header with `error`,
 
 #### Basic
 
-When the authorizer returns `{ authorized: false }`, ergo **always**
+When the authorizer returns `{authorized: false}`, ergo **always**
 responds with **403 Forbidden** regardless of any `statusCode` or `info`
 properties. No `WWW-Authenticate` header is included in the rejection
 response.
@@ -138,17 +138,17 @@ configured strategy:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, authorization } from "@centralping/ergo";
+    import {compose, authorization} from '@centralping/ergo';
 
     const pipeline = compose(
       authorization({
         strategies: [{
-          type: "Bearer",
+          type: 'Bearer',
           authorizer: async (attributes, token) => {
             const user = await verifyJwt(token);
             return user
-              ? { authorized: true, info: { user } }
-              : { authorized: false };
+              ? {authorized: true, info: {user}}
+              : {authorized: false};
           },
         }],
       }),
@@ -157,20 +157,20 @@ configured strategy:
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/users/:id", {
+    router.get('/users/:id', {
       authorization: {
         strategies: [{
-          type: "Bearer",
+          type: 'Bearer',
           authorizer: async (attributes, token) => {
             const user = await verifyJwt(token);
             return user
-              ? { authorized: true, info: { user } }
-              : { authorized: false };
+              ? {authorized: true, info: {user}}
+              : {authorized: false};
           },
         }],
       },
       execute: (req, res, acc) => ({
-        response: { body: { userId: acc.auth.user.id } },
+        response: {body: {userId: acc.auth.user.id}},
       }),
     });
     ```
@@ -182,18 +182,18 @@ configured strategy:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, authorization } from "@centralping/ergo";
+    import {compose, authorization} from '@centralping/ergo';
 
     const pipeline = compose(
       authorization({
         strategies: [{
-          type: "Basic",
-          attributes: { realm: "api" },
+          type: 'Basic',
+          attributes: {realm: 'api'},
           authorizer: async (attributes, username, password) => {
             const user = await validateCredentials(username, password);
             return user
-              ? { authorized: true, info: { user } }
-              : { authorized: false };
+              ? {authorized: true, info: {user}}
+              : {authorized: false};
           },
         }],
       }),
@@ -202,21 +202,21 @@ configured strategy:
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/admin", {
+    router.get('/admin', {
       authorization: {
         strategies: [{
-          type: "Basic",
-          attributes: { realm: "admin" },
+          type: 'Basic',
+          attributes: {realm: 'admin'},
           authorizer: async (attributes, username, password) => {
             const user = await validateCredentials(username, password);
             return user
-              ? { authorized: true, info: { user } }
-              : { authorized: false };
+              ? {authorized: true, info: {user}}
+              : {authorized: false};
           },
         }],
       },
       execute: (req, res, acc) => ({
-        response: { body: { admin: acc.auth.user.name } },
+        response: {body: {admin: acc.auth.user.name}},
       }),
     });
     ```

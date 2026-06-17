@@ -130,7 +130,7 @@ receives `(req, res, domainAcc, responseAcc)` at request time.
 
 ```js
 // Factory — called once at startup
-const rateLimiter = rateLimit({ max: 100, windowMs: 60_000 });
+const rateLimiter = rateLimit({max: 100, windowMs: 60_000});
 
 // Middleware — called per request
 // Returns { response: { statusCode: 429, retryAfter } } or headers
@@ -199,10 +199,10 @@ middleware to include and their options:
 
 ```js
 {
-  accepts: { types: ['application/json'] },
-  authorization: { strategies: [bearerStrategy] },
+  accepts: {types: ['application/json']},
+  authorization: {strategies: [bearerStrategy]},
   body: true,
-  validate: { body: schema },
+  validate: {body: schema},
   execute: handler
 }
 ```

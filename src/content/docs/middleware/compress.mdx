@@ -15,7 +15,7 @@ and no-body status codes.
 ## Import
 
 ```js
-import { compress } from "@centralping/ergo";
+import {compress} from '@centralping/ergo';
 ```
 
 ## Options
@@ -39,35 +39,35 @@ None. Compression is silently skipped when conditions are not met.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, compress } from "@centralping/ergo";
+    import {compose, compress} from '@centralping/ergo';
 
     const pipeline = compose(
-      compress({ threshold: 1024, encodings: ["br", "gzip"] }),
+      compress({threshold: 1024, encodings: ['br', 'gzip']}),
       (req, res, acc) => ({
-        response: { body: largePayload },
+        response: {body: largePayload},
       }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
-        compress: { threshold: 512 },
+        compress: {threshold: 512},
       },
     });
 
     // Disable compression for a specific route
-    router.get("/small", {
+    router.get('/small', {
       compress: false,
-      execute: () => ({ response: { body: { ok: true } } }),
+      execute: () => ({response: {body: {ok: true}}}),
     });
 
     // Custom threshold for a specific route
-    router.post("/upload", {
-      compress: { threshold: 2048 },
+    router.post('/upload', {
+      compress: {threshold: 2048},
       execute: handleUpload,
     });
     ```

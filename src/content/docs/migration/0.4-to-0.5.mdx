@@ -44,14 +44,14 @@ originating from `defaults` are also caught.
 ### Before (0.4.x)
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const router = createRouter();
 
 // ⚠️ This route silently produced a 500 on every request
-router.post("/items", {
+router.post('/items', {
   body: false,
-  validate: { body: itemSchema },
+  validate: {body: itemSchema},
   execute: createItem,
 });
 
@@ -61,7 +61,7 @@ router.post("/items", {
 ### After (0.5.x)
 
 ```js
-import createRouter from "@centralping/ergo-router";
+import createRouter from '@centralping/ergo-router';
 
 const router = createRouter();
 
@@ -69,9 +69,9 @@ const router = createRouter();
 // "Route config for POST /items has body: false but validate.body
 //  is configured. Body parsing must be enabled for body validation
 //  to work."
-router.post("/items", {
+router.post('/items', {
   body: false,
-  validate: { body: itemSchema },
+  validate: {body: itemSchema},
   execute: createItem,
 });
 ```
@@ -100,15 +100,15 @@ it in `{body: schema}`:
 <Tabs>
   <TabItem label="Before (targeted form)">
     ```js
-    router.post("/users", {
-      validate: { body: userSchema },
+    router.post('/users', {
+      validate: {body: userSchema},
       execute: createUser,
     });
     ```
   </TabItem>
   <TabItem label="After (shorthand form)">
     ```js
-    router.post("/users", {
+    router.post('/users', {
       validate: userSchema,
       execute: createUser,
     });
@@ -130,14 +130,14 @@ detection algorithm and precedence rules.
 before serialization — schema-based output projection:
 
 ```js
-router.get("/users/:id", {
+router.get('/users/:id', {
   send: {
     responseSchema: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          id: { type: "string" },
-          name: { type: "string" },
+          id: {type: 'string'},
+          name: {type: 'string'},
         },
       },
     },
@@ -146,7 +146,7 @@ router.get("/users/:id", {
     const user = await db.findById(acc.route.params.id);
     // Even if `user` has extra fields (email, passwordHash),
     // only `id` and `name` are sent to the client
-    return { response: { body: user } };
+    return {response: {body: user}};
   },
 });
 ```
@@ -196,7 +196,7 @@ Custom error handlers now receive the domain accumulator as a fourth
 argument:
 
 ```js
-router.post("/orders", {
+router.post('/orders', {
   catchHandler: (req, res, err, domainAcc) => {
     // domainAcc contains route params, parsed body, auth identity,
     // and other pipeline data available at the time of the error
@@ -205,11 +205,11 @@ router.post("/orders", {
       user: domainAcc.auth?.identity,
       route: domainAcc.route?.params,
     });
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Internal Server Error" }));
+    res.writeHead(500, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({error: 'Internal Server Error'}));
   },
-  authorization: { strategies: [bearerStrategy] },
-  validate: { body: orderSchema },
+  authorization: {strategies: [bearerStrategy]},
+  validate: {body: orderSchema},
   execute: processOrder,
 });
 ```
@@ -228,13 +228,13 @@ Three new presets join `presets.jsonApi`:
   rate limiting (100 req/60s), sets `Cache-Control: public, max-age=300`
 
 ```js
-import createRouter, { presets } from "@centralping/ergo-router";
+import createRouter, {presets} from '@centralping/ergo-router';
 
 const router = createRouter({
   ...presets.sse,
   defaults: {
     ...presets.sse.defaults,
-    authorization: { strategies: [bearerStrategy] },
+    authorization: {strategies: [bearerStrategy]},
   },
 });
 ```

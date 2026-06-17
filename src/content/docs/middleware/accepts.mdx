@@ -14,7 +14,7 @@ Returns `406 Not Acceptable` when any negotiation fails (configurable).
 ## Import
 
 ```js
-import { accepts } from "@centralping/ergo";
+import {accepts} from '@centralping/ergo';
 ```
 
 ## Options
@@ -34,10 +34,10 @@ On success, the middleware returns a negotiation result stored on the
 
 ```js
 {
-  type: "application/json",
-  language: "en",
-  charset: "utf-8",
-  encoding: "identity"
+  type: 'application/json',
+  language: 'en',
+  charset: 'utf-8',
+  encoding: 'identity'
 }
 ```
 
@@ -59,20 +59,20 @@ failed: `Failed to negotiate content for: [Accept].`
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, accepts } from "@centralping/ergo";
+    import {compose, accepts} from '@centralping/ergo';
 
     const pipeline = compose(
-      accepts({ types: ["application/json"] }),
+      accepts({types: ['application/json']}),
       // acc.accepts.type === "application/json"
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/users", {
-      accepts: { types: ["application/json"] },
+    router.get('/users', {
+      accepts: {types: ['application/json']},
       execute: (req, res, acc) => ({
-        response: { body: users },
+        response: {body: users},
       }),
     });
     ```

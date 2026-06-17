@@ -18,7 +18,7 @@ for the default case.
 ## Import
 
 ```js
-import { tracing } from "@centralping/ergo";
+import {tracing} from '@centralping/ergo';
 ```
 
 ## Options
@@ -41,8 +41,8 @@ Returns span metadata stored at the accumulator path (e.g., `acc.trace`):
   tracer,         // Resolved tracer (only when perStage: true)
   activeContext,  // Context with span set (only when perStage: true)
   parentContext,  // Extracted parent context from request headers
-  traceId: "abc123...",
-  spanId: "def456...",
+  traceId: 'abc123...',
+  spanId: 'def456...',
 }
 ```
 
@@ -59,10 +59,10 @@ None. Tracing is observability-only.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
+    import http from 'node:http';
     import {
       handler, compose, tracing, logger,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
     const pipeline = compose(
       tracing(),
@@ -76,19 +76,19 @@ None. Tracing is observability-only.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
-        tracing: { perStage: true },
+        tracing: {perStage: true},
       },
     });
 
-    router.get("/health", {
-      execute: () => ({ response: { body: { ok: true } } }),
+    router.get('/health', {
+      execute: () => ({response: {body: {ok: true}}}),
     });
 
-    await graceful(router.handle(), { port: 3000 });
+    await graceful(router.handle(), {port: 3000});
     ```
   </TabItem>
 </Tabs>

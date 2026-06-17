@@ -41,53 +41,53 @@ routes.
       authorization,
       body,
       idempotency,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
-    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+    const csrfMiddleware = csrf({secret: process.env.CSRF_SECRET});
 
     const bearerStrategy = {
-      type: "Bearer",
+      type: 'Bearer',
       authorizer: async (attributes, token) => {
         const user = await verifySession(token);
         return user
-          ? { authorized: true, info: { user } }
-          : { authorized: false };
+          ? {authorized: true, info: {user}}
+          : {authorized: false};
       },
     };
 
     // GET — issues CSRF token cookies for the browser
     const issuePipeline = compose(
       cookie(),
-      {fn: csrfMiddleware.issue, setPath: "csrf"},
-      authorization({ strategies: [bearerStrategy] }),
+      {fn: csrfMiddleware.issue, setPath: 'csrf'},
+      authorization({strategies: [bearerStrategy]}),
     );
 
     // POST — verifies CSRF + enforces idempotency
     const mutationPipeline = compose(
       cookie(),
-      {fn: csrfMiddleware.verify, setPath: "csrf"},
-      authorization({ strategies: [bearerStrategy] }),
+      {fn: csrfMiddleware.verify, setPath: 'csrf'},
+      authorization({strategies: [bearerStrategy]}),
       body(),
-      idempotency({ required: true }),
+      idempotency({required: true}),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
         cookie: true,
-        csrf: { secret: process.env.CSRF_SECRET },
+        csrf: {secret: process.env.CSRF_SECRET},
         authorization: {
           strategies: [{
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
               const user = await verifySession(token);
               return user
-                ? { authorized: true, info: { user } }
-                : { authorized: false };
+                ? {authorized: true, info: {user}}
+                : {authorized: false};
             },
           }],
         },
@@ -96,26 +96,26 @@ routes.
 
     // Browser route — inherits cookie + CSRF + auth from defaults.
     // GET issues CSRF token cookies; POST verifies them (auto-dispatch).
-    router.get("/account/transfer", {
+    router.get('/account/transfer', {
       execute: (req, res, acc) => ({
-        response: { body: { balance: acc.auth.user.balance } },
+        response: {body: {balance: acc.auth.user.balance}},
       }),
     });
 
-    router.post("/account/transfer", {
-      idempotency: { required: true },
-      validate: { body: transferSchema },
+    router.post('/account/transfer', {
+      idempotency: {required: true},
+      validate: {body: transferSchema},
       execute: async (req, res, acc) => {
         // ... (see Idempotent Mutation section below)
       },
     });
 
     // Bearer-only route — no CSRF, no idempotency
-    router.post("/api/webhooks", {
+    router.post('/api/webhooks', {
       csrf: false,
       cookie: false,
       execute: async (req, res, acc) => ({
-        response: { body: { received: true } },
+        response: {body: {received: true}},
       }),
     });
     ```
@@ -161,25 +161,25 @@ replay and cleans up on failure.
       authorization,
       body,
       idempotency,
-    } from "@centralping/ergo";
+   } from '@centralping/ergo';
 
-    const csrfMiddleware = csrf({ secret: process.env.CSRF_SECRET });
+    const csrfMiddleware = csrf({secret: process.env.CSRF_SECRET});
 
     const pipeline = compose(
       cookie(),
-      {fn: csrfMiddleware.verify, setPath: "csrf"},
-      authorization({ strategies: [bearerStrategy] }),
+      {fn: csrfMiddleware.verify, setPath: 'csrf'},
+      authorization({strategies: [bearerStrategy]}),
       body(),
-      idempotency({ required: true }),
+      idempotency({required: true}),
       async (req, res, acc) => {
         try {
           const result = await processTransfer(acc.body.parsed);
-          const response = { statusCode: 201, body: result };
+          const response = {statusCode: 201, body: result};
 
           acc.idempotency.complete(response);
 
-          return { response };
-        } catch (err) {
+          return {response};
+       } catch (err) {
           acc.idempotency.discard();
           throw err;
         }
@@ -189,18 +189,18 @@ replay and cleans up on failure.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/account/transfer", {
-      idempotency: { required: true },
-      validate: { body: transferSchema },
+    router.post('/account/transfer', {
+      idempotency: {required: true},
+      validate: {body: transferSchema},
       execute: async (req, res, acc) => {
         try {
           const result = await processTransfer(acc.body.parsed);
-          const response = { statusCode: 201, body: result };
+          const response = {statusCode: 201, body: result};
 
           acc.idempotency.complete(response);
 
-          return { response };
-        } catch (err) {
+          return {response};
+       } catch (err) {
           acc.idempotency.discard();
           throw err;
         }
@@ -233,17 +233,17 @@ function getCookie(name) {
 }
 
 async function secureMutation(url, body, idempotencyKey, sessionToken) {
-  const csrfToken = getCookie("CSRF-TOKEN");
+  const csrfToken = getCookie('CSRF-TOKEN');
 
   const response = await fetch(url, {
-    method: "POST",
-    credentials: "same-origin",
+    method: 'POST',
+    credentials: 'same-origin',
     headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": csrfToken,
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': csrfToken,
       // RFC 8941 sf-string: value MUST be double-quoted on the wire
-      "Idempotency-Key": `"${idempotencyKey}"`,
-      "Authorization": `Bearer ${sessionToken}`,
+      'Idempotency-Key': `"${idempotencyKey}"`,
+      'Authorization': `Bearer ${sessionToken}`,
     },
     body: JSON.stringify(body),
   });
@@ -268,12 +268,12 @@ all required headers, (3) replay POST verifying idempotent response.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { describe, it } from "node:test";
-    import assert from "node:assert/strict";
-    import http from "node:http";
-    import { fetch } from "undici";
+    import {describe, it} from 'node:test';
+    import assert from 'node:assert/strict';
+    import http from 'node:http';
+    import {fetch} from 'undici';
 
-    describe("secure mutation", () => {
+    describe('secure mutation', () => {
       let server;
       let baseUrl;
       let tokenValue;
@@ -282,63 +282,63 @@ all required headers, (3) replay POST verifying idempotent response.
       // Setup: start server with issuePipeline on GET, mutationPipeline on POST
       // (elided for brevity — see Testing Patterns recipe for server lifecycle)
 
-      it("issues CSRF tokens on GET", async () => {
+      it('issues CSRF tokens on GET', async () => {
         const res = await fetch(`${baseUrl}/account/transfer`, {
-          headers: { Authorization: "Bearer valid-token" },
+          headers: {Authorization: 'Bearer valid-token'},
         });
 
         assert.equal(res.status, 200);
 
         const cookies = res.headers.getSetCookie();
-        const csrfToken = cookies.find((c) => c.startsWith("CSRF-TOKEN="));
-        const csrfUuid = cookies.find((c) => c.startsWith("CSRF-UUID="));
+        const csrfToken = cookies.find((c) => c.startsWith('CSRF-TOKEN='));
+        const csrfUuid = cookies.find((c) => c.startsWith('CSRF-UUID='));
 
-        assert.ok(csrfToken, "CSRF-TOKEN cookie is set");
-        assert.ok(csrfUuid, "CSRF-UUID cookie is set");
+        assert.ok(csrfToken, 'CSRF-TOKEN cookie is set');
+        assert.ok(csrfUuid, 'CSRF-UUID cookie is set');
       });
 
-      it("accepts POST with CSRF + idempotency headers", async () => {
+      it('accepts POST with CSRF + idempotency headers', async () => {
         // Step 1: GET to obtain tokens
         const getRes = await fetch(`${baseUrl}/account/transfer`, {
-          headers: { Authorization: "Bearer valid-token" },
+          headers: {Authorization: 'Bearer valid-token'},
         });
         const cookies = getRes.headers.getSetCookie();
         tokenValue = cookies
-          .find((c) => c.startsWith("CSRF-TOKEN="))
-          .split("=")[1]
-          .split(";")[0];
+          .find((c) => c.startsWith('CSRF-TOKEN='))
+          .split('=')[1]
+          .split(';')[0];
         cookieHeader = cookies
-          .map((c) => c.split(";")[0])
-          .join("; ");
+          .map((c) => c.split(';')[0])
+          .join('; ');
 
         // Step 2: POST with all headers
         const postRes = await fetch(`${baseUrl}/account/transfer`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            Authorization: "Bearer valid-token",
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": tokenValue,
+            Authorization: 'Bearer valid-token',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
-            "Idempotency-Key": '"txn-abc-123"',
+            'Idempotency-Key': '"txn-abc-123"',
           },
-          body: JSON.stringify({ amount: 1000, to: "acct-456" }),
+          body: JSON.stringify({amount: 1000, to: 'acct-456'}),
         });
 
         assert.equal(postRes.status, 201);
       });
 
-      it("replays idempotent response on duplicate key", async () => {
+      it('replays idempotent response on duplicate key', async () => {
         // (after a successful POST with key "txn-abc-123")
         const replayRes = await fetch(`${baseUrl}/account/transfer`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            Authorization: "Bearer valid-token",
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": tokenValue,
+            Authorization: 'Bearer valid-token',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
-            "Idempotency-Key": '"txn-abc-123"',
+            'Idempotency-Key': '"txn-abc-123"',
           },
-          body: JSON.stringify({ amount: 1000, to: "acct-456" }),
+          body: JSON.stringify({amount: 1000, to: 'acct-456'}),
         });
 
         assert.equal(replayRes.status, 201);
@@ -351,12 +351,12 @@ all required headers, (3) replay POST verifying idempotent response.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { describe, it, before, after } from "node:test";
-    import assert from "node:assert/strict";
-    import { fetch } from "undici";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {describe, it, before, after} from 'node:test';
+    import assert from 'node:assert/strict';
+    import {fetch} from 'undici';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    describe("secure mutation (ergo-router)", () => {
+    describe('secure mutation (ergo-router)', () => {
       let shutdown;
       let baseUrl;
 
@@ -364,87 +364,87 @@ all required headers, (3) replay POST verifying idempotent response.
         const router = createRouter({
           defaults: {
             cookie: true,
-            csrf: { secret: "test-secret" },
+            csrf: {secret: 'test-secret'},
             authorization: {
               strategies: [{
-                type: "Bearer",
+                type: 'Bearer',
                 authorizer: async (attributes, token) =>
-                  token === "valid-token"
-                    ? { authorized: true, info: { user: { id: 1 } } }
-                    : { authorized: false },
+                  token === 'valid-token'
+                    ? {authorized: true, info: {user: {id: 1}}}
+                    : {authorized: false},
               }],
             },
           },
         });
 
-        router.get("/account/transfer", {
+        router.get('/account/transfer', {
           execute: () => ({
-            response: { body: { balance: 5000 } },
+            response: {body: {balance: 5000}},
           }),
         });
 
-        router.post("/account/transfer", {
-          idempotency: { required: true },
-          validate: { body: { type: "object", properties: { amount: { type: "number" } } } },
+        router.post('/account/transfer', {
+          idempotency: {required: true},
+          validate: {body: {type: 'object', properties: {amount: {type: 'number'}}}},
           execute: async (req, res, acc) => {
-            const response = { statusCode: 201, body: { transferred: true } };
+            const response = {statusCode: 201, body: {transferred: true}};
             acc.idempotency.complete(response);
-            return { response };
+            return {response};
           },
         });
 
-        ({ shutdown } = await graceful(router.handle(), { port: 0 }));
+        ({shutdown} = await graceful(router.handle(), {port: 0}));
         const addr = shutdown.server.address();
         baseUrl = `http://localhost:${addr.port}`;
       });
 
       after(() => shutdown());
 
-      it("full CSRF + idempotency flow", async () => {
+      it('full CSRF + idempotency flow', async () => {
         // Step 1: GET issues CSRF cookies
         const getRes = await fetch(`${baseUrl}/account/transfer`, {
-          headers: { Authorization: "Bearer valid-token" },
+          headers: {Authorization: 'Bearer valid-token'},
         });
         assert.equal(getRes.status, 200);
 
         const cookies = getRes.headers.getSetCookie();
         const tokenValue = cookies
-          .find((c) => c.startsWith("CSRF-TOKEN="))
-          .split("=")[1]
-          .split(";")[0];
+          .find((c) => c.startsWith('CSRF-TOKEN='))
+          .split('=')[1]
+          .split(';')[0];
         const cookieHeader = cookies
-          .map((c) => c.split(";")[0])
-          .join("; ");
+          .map((c) => c.split(';')[0])
+          .join('; ');
 
         // Step 2: POST with CSRF + Idempotency-Key
         const postRes = await fetch(`${baseUrl}/account/transfer`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            Authorization: "Bearer valid-token",
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": tokenValue,
+            Authorization: 'Bearer valid-token',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
-            "Idempotency-Key": '"txn-unique-001"',
+            'Idempotency-Key': '"txn-unique-001"',
           },
-          body: JSON.stringify({ amount: 1000 }),
+          body: JSON.stringify({amount: 1000}),
         });
         assert.equal(postRes.status, 201);
 
         // Step 3: Replay — same key returns stored response
         const replayRes = await fetch(`${baseUrl}/account/transfer`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            Authorization: "Bearer valid-token",
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": tokenValue,
+            Authorization: 'Bearer valid-token',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
-            "Idempotency-Key": '"txn-unique-001"',
+            'Idempotency-Key': '"txn-unique-001"',
           },
-          body: JSON.stringify({ amount: 1000 }),
+          body: JSON.stringify({amount: 1000}),
         });
         assert.equal(replayRes.status, 201);
         const body = await replayRes.json();
-        assert.deepEqual(body, { transferred: true });
+        assert.deepEqual(body, {transferred: true});
       });
     });
     ```
@@ -477,7 +477,7 @@ correct CSRF function based on the HTTP method:
 - **Unsafe methods** (POST, PUT, PATCH, DELETE) → `verify` — checks the
   `X-CSRF-TOKEN` header
 
-This means a single `csrf: { secret }` config handles both sides
+This means a single `csrf: {secret}` config handles both sides
 of the token flow without manual dispatch logic.
 
 ### Idempotency Fingerprint and Body

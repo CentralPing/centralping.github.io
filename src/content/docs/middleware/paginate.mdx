@@ -19,7 +19,7 @@ Supports two strategies: **offset** (page/per_page) and **cursor**
 ## Import
 
 ```js
-import { paginate } from "@centralping/ergo";
+import {paginate} from '@centralping/ergo';
 ```
 
 ## Options
@@ -42,7 +42,7 @@ depends on the active strategy:
 
 ```js
 {
-  strategy: "offset",
+  strategy: 'offset',
   page: 1,        // clamped to ≥ 1
   perPage: 20,    // clamped to ≤ maxPerPage
   offset: 0,      // computed: (page - 1) * perPage
@@ -54,7 +54,7 @@ depends on the active strategy:
 
 ```js
 {
-  strategy: "cursor",
+  strategy: 'cursor',
   cursor: undefined,  // opaque string from query, or undefined on first page
   limit: 20,          // clamped to ≤ maxLimit
 }
@@ -77,24 +77,24 @@ None. Invalid or missing query parameters fall back to defaults silently.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { compose, url, paginate, handler } from "@centralping/ergo";
+    import http from 'node:http';
+    import {compose, url, paginate, handler} from '@centralping/ergo';
 
     const pipeline = compose(
       url(),
       paginate(),
       async (req, res, acc) => {
-        const { offset, limit } = acc.paginate;
+        const {offset, limit} = acc.paginate;
         const items = await db.find(offset, limit);
         const total = await db.count();
         return {
-          response: { body: items, paginate: { total } },
+          response: {body: items, paginate: {total}},
         };
       },
     );
 
     const server = http.createServer(
-      handler(pipeline, { paginate: true }),
+      handler(pipeline, {paginate: true}),
     );
     ```
 
@@ -104,14 +104,14 @@ None. Invalid or missing query parameters fall back to defaults silently.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/articles", {
+    router.get('/articles', {
       paginate: true,
       execute: async (req, res, acc) => {
-        const { offset, limit } = acc.paginate;
+        const {offset, limit} = acc.paginate;
         const items = await db.find(offset, limit);
         const total = await db.count();
         return {
-          response: { body: items, paginate: { total } },
+          response: {body: items, paginate: {total}},
         };
       },
     });

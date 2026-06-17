@@ -10,7 +10,7 @@ On allowed requests, injects `X-RateLimit-*` response headers. On limited
 requests, returns `429 Too Many Requests` with a `Retry-After` value.
 
 The store is pluggable — any object implementing
-`hit(key, windowMs) → { count, resetMs }` can replace the built-in
+`hit(key, windowMs) → {count, resetMs}` can replace the built-in
 `MemoryStore` for Redis-backed or distributed rate limiting.
 
 **Pipeline stage:** Negotiation
@@ -18,7 +18,7 @@ The store is pluggable — any object implementing
 ## Import
 
 ```js
-import { rateLimit } from "@centralping/ergo";
+import {rateLimit} from '@centralping/ergo';
 ```
 
 ## Options
@@ -26,7 +26,7 @@ import { rateLimit } from "@centralping/ergo";
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
 | `max` | `number` | `100` | Maximum requests per window |
-| `windowMs` | `number` | `60000` (1 min) | Window duration in milliseconds |
+| `windowMs` | `number` | `60_000` (1 min) | Window duration in milliseconds |
 | `store` | `object` | `MemoryStore` | Pluggable store with `hit(key, windowMs)` interface |
 | `keyGenerator` | `function` | `defaultKeyGenerator` | `(req) => string` — client identifier (default: `req.socket.remoteAddress`) |
 
@@ -38,9 +38,9 @@ import { rateLimit } from "@centralping/ergo";
 {
   response: {
     headers: [
-      ["X-RateLimit-Limit", "100"],
-      ["X-RateLimit-Remaining", "99"],
-      ["X-RateLimit-Reset", "1717041600"]
+      ['X-RateLimit-Limit', '100'],
+      ['X-RateLimit-Remaining', '99'],
+      ['X-RateLimit-Reset', '1717041600']
     ]
   }
 }
@@ -71,44 +71,44 @@ import { rateLimit } from "@centralping/ergo";
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, rateLimit } from "@centralping/ergo";
+    import {compose, rateLimit} from '@centralping/ergo';
 
     const pipeline = compose(
-      rateLimit({ max: 100, windowMs: 60_000 }),
+      rateLimit({max: 100, windowMs: 60_000}),
       (req, res, acc) => ({
-        response: { statusCode: 200, body: { ok: true } },
+        response: {statusCode: 200, body: {ok: true}},
       }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter from "@centralping/ergo-router";
+    import createRouter from '@centralping/ergo-router';
 
     const router = createRouter({
       defaults: {
-        rateLimit: { max: 100, windowMs: 60_000 },
+        rateLimit: {max: 100, windowMs: 60_000},
       },
     });
 
     // Strict limit on login — 5 attempts per 15 minutes
-    router.post("/login", {
-      rateLimit: { max: 5, windowMs: 900_000 },
+    router.post('/login', {
+      rateLimit: {max: 5, windowMs: 900_000},
       execute: handleLogin,
     });
 
     // Relaxed limit on reads — 1000 per minute
-    router.get("/items", {
-      rateLimit: { max: 1000, windowMs: 60_000 },
+    router.get('/items', {
+      rateLimit: {max: 1000, windowMs: 60_000},
       execute: listItems,
     });
 
     // Disabled for health checks — no rate limiting
-    router.get("/health", {
+    router.get('/health', {
       rateLimit: false,
       authorization: false,
       execute: (req, res, acc) => ({
-        response: { body: { status: "ok" } },
+        response: {body: {status: 'ok'}},
       }),
     });
     ```
@@ -121,7 +121,7 @@ The `store` option accepts any object that implements a single method:
 
 | Method | Signature | Returns |
 | ------ | --------- | ------- |
-| `hit` | `(key: string, windowMs: number) => object` | `{ count: number, resetMs: number }` |
+| `hit` | `(key: string, windowMs: number) => object` | `{count: number, resetMs: number}` |
 
 | Return Field | Type | Meaning |
 | ------------ | ---- | ------- |
@@ -138,13 +138,13 @@ The built-in `MemoryStore` accepts optional configuration:
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `maxKeys` | `number` | `10000` | Maximum tracked keys before FIFO eviction. When exceeded, the oldest key is silently removed. |
+| `maxKeys` | `number` | `10_000` | Maximum tracked keys before FIFO eviction. When exceeded, the oldest key is silently removed. |
 | `now` | `function` | `Date.now` | Clock function returning current time in milliseconds. Useful for deterministic testing. |
 
 ```js
-import { MemoryStore } from "@centralping/ergo/lib/rate-limit";
+import {MemoryStore} from '@centralping/ergo/lib/rate-limit';
 
-const store = new MemoryStore({ maxKeys: 50_000 });
+const store = new MemoryStore({maxKeys: 50_000});
 ```
 
 #### Redis Store Example
@@ -159,7 +159,7 @@ This example uses [ioredis](https://www.npmjs.com/package/ioredis)
 with sorted sets:
 
 ```js
-import Redis from "ioredis";
+import Redis from 'ioredis';
 
 class RedisStore {
   #local = new Map();
@@ -189,7 +189,7 @@ class RedisStore {
 
     this.#sync(windowKey, now, cutoff, windowMs);
 
-    return { count, resetMs };
+    return {count, resetMs};
   }
 
   #sync(windowKey, now, cutoff, windowMs) {
@@ -240,9 +240,9 @@ that reads the forwarded client IP:
 ```js
 rateLimit({
   keyGenerator: (req) => {
-    const forwarded = req.headers["x-forwarded-for"];
+    const forwarded = req.headers['x-forwarded-for'];
     return forwarded
-      ? forwarded.split(",")[0].trim()
+      ? forwarded.split(',')[0].trim()
       : req.socket.remoteAddress;
   },
 })
@@ -272,10 +272,10 @@ Per-route `rateLimit` config follows
 
 | Config Level | Behavior |
 | ------------ | -------- |
-| Route `rateLimit: { max, windowMs }` | Overrides defaults for this route (shallow replace) |
+| Route `rateLimit: {max, windowMs}` | Overrides defaults for this route (shallow replace) |
 | Route `rateLimit: false` | Disables rate limiting for this route |
 | Route `rateLimit: undefined` (omitted) | Inherits from `defaults.rateLimit` |
-| `defaults.rateLimit: { max, windowMs }` | Applied to every route that does not override |
+| `defaults.rateLimit: {max, windowMs}` | Applied to every route that does not override |
 | `defaults.rateLimit: undefined` (omitted) | No pipeline-level rate limiting |
 
 <Aside type="caution" title="Transport vs. pipeline rate limiting">
@@ -303,13 +303,13 @@ defaults of 100 requests per 60 seconds). The `jsonApi`, `sse`, and
 To add pipeline-level rate limiting when using a preset:
 
 ```js
-import createRouter, { presets } from "@centralping/ergo-router";
+import createRouter, {presets} from '@centralping/ergo-router';
 
 const router = createRouter({
   ...presets.jsonApi,
   defaults: {
     ...presets.jsonApi.defaults,
-    rateLimit: { max: 200, windowMs: 60_000 },
+    rateLimit: {max: 200, windowMs: 60_000},
   },
 });
 ```

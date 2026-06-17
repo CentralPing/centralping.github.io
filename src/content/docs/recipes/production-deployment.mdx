@@ -26,8 +26,8 @@ entry point:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import pino from "pino";
-    import Redis from "ioredis";
+    import pino from 'pino';
+    import Redis from 'ioredis';
     import {
       compose,
       handler,
@@ -35,17 +35,17 @@ entry point:
       accepts,
       url,
       rateLimit,
-    } from "@centralping/ergo";
-    import { graceful } from "@centralping/ergo-router";
+   } from '@centralping/ergo';
+    import {graceful} from '@centralping/ergo-router';
 
     const {
-      PORT = "3000",
-      HOSTNAME = "0.0.0.0",
-      REDIS_URL = "redis://localhost:6379",
-      SHUTDOWN_TIMEOUT = "10000",
-    } = process.env;
+      PORT = '3000',
+      HOSTNAME = '0.0.0.0',
+      REDIS_URL = 'redis://localhost:6379',
+      SHUTDOWN_TIMEOUT = '10000',
+   } = process.env;
 
-    const log = pino({ level: "info" });
+    const log = pino({level: 'info'});
     const redis = new Redis(REDIS_URL);
 
     class RedisStore {
@@ -62,7 +62,7 @@ entry point:
         pipeline.zremrangebyscore(windowKey, 0, cutoff);
         pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
         pipeline.zcard(windowKey);
-        pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
+        pipeline.zrange(windowKey, 0, 0, 'WITHSCORES');
         pipeline.pexpire(windowKey, windowMs);
 
         const results = await pipeline.exec();
@@ -71,14 +71,14 @@ entry point:
         const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
         const resetMs = Math.max(0, oldestScore + windowMs - now);
 
-        return { count, resetMs };
+        return {count, resetMs};
       }
     }
 
     const proxyKeyGenerator = (req) => {
-      const forwarded = req.headers["x-forwarded-for"];
+      const forwarded = req.headers['x-forwarded-for'];
       return forwarded
-        ? forwarded.split(",")[0].trim()
+        ? forwarded.split(',')[0].trim()
         : req.socket.remoteAddress;
     };
 
@@ -87,16 +87,16 @@ entry point:
     const healthPipeline = handler(
       (req, res, acc) => {
         if (isShuttingDown) {
-          return { response: { statusCode: 503, body: { status: "draining" } } };
+          return {response: {statusCode: 503, body: {status: 'draining'}}};
         }
-        return { response: { body: { status: "healthy" } } };
+        return {response: {body: {status: 'healthy'}}};
       },
     );
 
     const apiPipeline = handler(
       compose(
-        logger({ log: (info) => log.info(info) }),
-        accepts({ types: ["application/json"] }),
+        logger({log: (info) => log.info(info)}),
+        accepts({types: ['application/json']}),
         url(),
         rateLimit({
           max: 100,
@@ -105,47 +105,47 @@ entry point:
           keyGenerator: proxyKeyGenerator,
         }),
         (req, res, acc) => ({
-          response: { body: { path: acc.url.pathname } },
+          response: {body: {path: acc.url.pathname}},
         }),
       ),
     );
 
     const requestListener = (req, res) => {
-      if (req.url === "/health") return healthPipeline(req, res);
+      if (req.url === '/health') return healthPipeline(req, res);
       return apiPipeline(req, res);
     };
 
-    const { server, shutdown } = await graceful(requestListener, {
+    const {server, shutdown} = await graceful(requestListener, {
       port: Number(PORT),
       hostname: HOSTNAME,
       timeout: Number(SHUTDOWN_TIMEOUT),
       log,
-      onStartup: async ({ log }) => {
+      onStartup: async ({log}) => {
         await redis.ping();
-        log.info("Redis connected");
+        log.info('Redis connected');
       },
-      onShutdown: async ({ log }) => {
+      onShutdown: async ({log}) => {
         isShuttingDown = true;
         await redis.quit();
-        log.info("Redis disconnected");
+        log.info('Redis disconnected');
       },
     });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import pino from "pino";
-    import Redis from "ioredis";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import pino from 'pino';
+    import Redis from 'ioredis';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     const {
-      PORT = "3000",
-      HOSTNAME = "0.0.0.0",
-      REDIS_URL = "redis://localhost:6379",
-      SHUTDOWN_TIMEOUT = "10000",
-    } = process.env;
+      PORT = '3000',
+      HOSTNAME = '0.0.0.0',
+      REDIS_URL = 'redis://localhost:6379',
+      SHUTDOWN_TIMEOUT = '10000',
+   } = process.env;
 
-    const log = pino({ level: "info" });
+    const log = pino({level: 'info'});
     const redis = new Redis(REDIS_URL);
 
     class RedisStore {
@@ -162,7 +162,7 @@ entry point:
         pipeline.zremrangebyscore(windowKey, 0, cutoff);
         pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
         pipeline.zcard(windowKey);
-        pipeline.zrange(windowKey, 0, 0, "WITHSCORES");
+        pipeline.zrange(windowKey, 0, 0, 'WITHSCORES');
         pipeline.pexpire(windowKey, windowMs);
 
         const results = await pipeline.exec();
@@ -171,14 +171,14 @@ entry point:
         const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
         const resetMs = Math.max(0, oldestScore + windowMs - now);
 
-        return { count, resetMs };
+        return {count, resetMs};
       }
     }
 
     const proxyKeyGenerator = (req) => {
-      const forwarded = req.headers["x-forwarded-for"];
+      const forwarded = req.headers['x-forwarded-for'];
       return forwarded
-        ? forwarded.split(",")[0].trim()
+        ? forwarded.split(',')[0].trim()
         : req.socket.remoteAddress;
     };
 
@@ -189,7 +189,7 @@ entry point:
         trustProxy: true,
       },
       defaults: {
-        accepts: { types: ["application/json"] },
+        accepts: {types: ['application/json']},
         logger: {
           log: (info) => log.info(info),
           error: (info) => log.error(info),
@@ -203,31 +203,31 @@ entry point:
       },
     });
 
-    router.get("/health", {
+    router.get('/health', {
       authorization: false,
       rateLimit: false,
       execute: () => {
         if (isShuttingDown) {
-          return { response: { statusCode: 503, body: { status: "draining" } } };
+          return {response: {statusCode: 503, body: {status: 'draining'}}};
         }
-        return { response: { body: { status: "healthy" } } };
+        return {response: {body: {status: 'healthy'}}};
       },
     });
 
-    router.get("/users", {
+    router.get('/users', {
       authorization: {
         strategies: [
           {
-            type: "Bearer",
+            type: 'Bearer',
             authorizer: async (attributes, token) => {
-              if (!token) return { authorized: false };
-              return { authorized: true, info: { userId: token } };
+              if (!token) return {authorized: false};
+              return {authorized: true, info: {userId: token}};
             },
           },
         ],
       },
       execute: () => ({
-        response: { body: [{ id: "1", name: "Jane" }] },
+        response: {body: [{id: '1', name: 'Jane'}]},
       }),
     });
 
@@ -236,14 +236,14 @@ entry point:
       hostname: HOSTNAME,
       timeout: Number(SHUTDOWN_TIMEOUT),
       log,
-      onStartup: async ({ log }) => {
+      onStartup: async ({log}) => {
         await redis.ping();
-        log.info("Redis connected");
+        log.info('Redis connected');
       },
-      onShutdown: async ({ log }) => {
+      onShutdown: async ({log}) => {
         isShuttingDown = true;
         await redis.quit();
-        log.info("Redis disconnected");
+        log.info('Redis disconnected');
       },
     });
     ```

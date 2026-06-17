@@ -30,14 +30,14 @@ Every middleware function receives four arguments and returns
       // Inner function: runs per-request
       return (req, res, domainAcc, responseAcc) => {
         // Return {value?, response?} or undefined
-        return { value: { /* domain data */ } };
+        return {value: {/* domain data */}};
       };
     }
     ```
   </TabItem>
   <TabItem label="TypeScript">
     ```ts
-    import type { IncomingMessage, ServerResponse } from "node:http";
+    import type {IncomingMessage, ServerResponse} from 'node:http';
 
     interface MiddlewareResult {
       value?: Record<string, unknown>;
@@ -57,7 +57,7 @@ Every middleware function receives four arguments and returns
         domainAcc: Record<string, unknown>,
         responseAcc: Record<string, unknown>,
       ): MiddlewareResult => {
-        return { value: { /* domain data */ } };
+        return {value: {/* domain data */}};
       };
     }
     ```
@@ -87,22 +87,22 @@ on the domain accumulator:
 <Tabs>
   <TabItem label="Standalone (JS)">
     ```js
-    import { compose, handler } from "@centralping/ergo";
+    import {compose, handler} from '@centralping/ergo';
 
     function featureFlags(options) {
       const flagService = createFlagClient(options);
       return async (req, res, acc) => {
         const flags = await flagService.evaluate(acc.auth?.sub);
-        return { value: flags };
+        return {value: flags};
       };
     }
 
     const pipeline = compose(
-      {fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"},
+      {fn: featureFlags({endpoint: 'https://flags.internal'}), setPath: 'flags'},
       // acc.flags is now available to subsequent middleware
       (req, res, acc) => ({
         response: {
-          body: { features: acc.flags, user: acc.auth?.sub },
+          body: {features: acc.flags, user: acc.auth?.sub},
         },
       }),
     );
@@ -112,28 +112,28 @@ on the domain accumulator:
   </TabItem>
   <TabItem label="Standalone (TS)">
     ```ts
-    import { compose, handler } from "@centralping/ergo";
-    import type { IncomingMessage, ServerResponse } from "node:http";
+    import {compose, handler} from '@centralping/ergo';
+    import type {IncomingMessage, ServerResponse} from 'node:http';
 
-    interface Flags { [flag: string]: boolean }
+    interface Flags {[flag: string]: boolean}
 
-    function featureFlags(options: { endpoint: string }) {
+    function featureFlags(options: {endpoint: string}) {
       const flagService = createFlagClient(options);
       return async (
         req: IncomingMessage,
         res: ServerResponse,
-        acc: { auth?: { sub?: string } },
-      ): Promise<{ value: Flags }> => {
+        acc: {auth?: {sub?: string}},
+      ): Promise<{value: Flags}> => {
         const flags = await flagService.evaluate(acc.auth?.sub);
-        return { value: flags };
+        return {value: flags};
       };
     }
 
     const pipeline = compose(
-      {fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"},
-      (req: IncomingMessage, res: ServerResponse, acc: { flags: Flags; auth?: { sub?: string } }) => ({
+      {fn: featureFlags({endpoint: 'https://flags.internal'}), setPath: 'flags'},
+      (req: IncomingMessage, res: ServerResponse, acc: {flags: Flags; auth?: {sub?: string}}) => ({
         response: {
-          body: { features: acc.flags, user: acc.auth?.sub },
+          body: {features: acc.flags, user: acc.auth?.sub},
         },
       }),
     );
@@ -147,15 +147,15 @@ on the domain accumulator:
       const flagService = createFlagClient(options);
       return async (req, res, acc) => {
         const flags = await flagService.evaluate(acc.auth?.sub);
-        return { value: flags };
+        return {value: flags};
       };
     }
 
-    router.get("/dashboard", {
-      use: [{fn: featureFlags({ endpoint: "https://flags.internal" }), setPath: "flags"}],
+    router.get('/dashboard', {
+      use: [{fn: featureFlags({endpoint: 'https://flags.internal'}), setPath: 'flags'}],
       execute: (req, res, acc) => ({
         response: {
-          body: { features: acc.flags, user: acc.auth?.sub },
+          body: {features: acc.flags, user: acc.auth?.sub},
         },
       }),
     });
@@ -172,7 +172,7 @@ function requestMetadata() {
   return (req, res, acc) => ({
     value: {
       receivedAt: Date.now(),
-      correlationId: req.headers["x-correlation-id"] ?? crypto.randomUUID(),
+      correlationId: req.headers['x-correlation-id'] ?? crypto.randomUUID(),
     },
   });
 }
@@ -185,9 +185,9 @@ other response metadata:
 
 ```js
 function apiVersion(version) {
-  const header = ["X-API-Version", version];
+  const header = ['X-API-Version', version];
   return () => ({
-    response: { headers: [header] },
+    response: {headers: [header]},
   });
 }
 ```
@@ -202,25 +202,25 @@ function apiVersion(version) {
 
 Measuring response time via the accumulator requires a two-step pattern
 because middleware return values are captured *before* `send()` writes
-the response. Register the timer with `setPath: "timing"` so downstream
+the response. Register the timer with `setPath: 'timing'` so downstream
 middleware reads `acc.timing.startedAt`:
 
 ```js
 function responseTimer() {
   return (req, res, acc) => {
-    return { value: { startedAt: performance.now() } };
+    return {value: {startedAt: performance.now()}};
   };
 }
 
 const pipeline = compose(
-  {fn: responseTimer(), setPath: "timing"},
+  {fn: responseTimer(), setPath: 'timing'},
   // ... other middleware ...
   (req, res, acc) => {
     const elapsed = (performance.now() - acc.timing.startedAt).toFixed(2);
     return {
       response: {
-        headers: [["X-Response-Time", `${elapsed}ms`]],
-        body: { result: "ok" },
+        headers: [['X-Response-Time', `${elapsed}ms`]],
+        body: {result: 'ok'},
       },
     };
   },
@@ -248,7 +248,7 @@ only for the current request:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, handler } from "@centralping/ergo";
+    import {compose, handler} from '@centralping/ergo';
 
     function tenantResolver(options) {
       const db = createDbClient(options);
@@ -262,19 +262,19 @@ only for the current request:
           }
           return result;
         };
-        return { value: { resolve } };
+        return {value: {resolve}};
       };
     }
 
     const pipeline = compose(
       // ... auth middleware populates acc.auth ...
-      {fn: tenantResolver({ connectionString: DB_URL }), setPath: "tenant"},
+      {fn: tenantResolver({connectionString: DB_URL}), setPath: 'tenant'},
       // Both permissions check and execute can call acc.tenant.resolve()
       // without redundant DB queries
       async (req, res, acc) => {
         const tenant = await acc.tenant.resolve();
         return {
-          response: { body: { name: tenant.name, plan: tenant.plan } },
+          response: {body: {name: tenant.name, plan: tenant.plan}},
         };
       },
     );
@@ -296,16 +296,16 @@ only for the current request:
           }
           return result;
         };
-        return { value: { resolve } };
+        return {value: {resolve}};
       };
     }
 
-    router.get("/tenant/profile", {
-      use: [{fn: tenantResolver({ connectionString: DB_URL }), setPath: "tenant"}],
+    router.get('/tenant/profile', {
+      use: [{fn: tenantResolver({connectionString: DB_URL}), setPath: 'tenant'}],
       execute: async (req, res, acc) => {
         const tenant = await acc.tenant.resolve();
         return {
-          response: { body: { name: tenant.name, plan: tenant.plan } },
+          response: {body: {name: tenant.name, plan: tenant.plan}},
         };
       },
     });
@@ -328,7 +328,7 @@ accumulator; the execute handler (or a downstream logger) flushes them:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, handler } from "@centralping/ergo";
+    import {compose, handler} from '@centralping/ergo';
 
     function auditLog(options) {
       const sink = createAuditSink(options);
@@ -340,16 +340,16 @@ accumulator; the execute handler (or a downstream logger) flushes them:
           ip: req.socket.remoteAddress,
         };
         sink.record(entry);
-        return { value: entry };
+        return {value: entry};
       };
     }
 
     const pipeline = compose(
       // ... auth + url middleware ...
-      {fn: auditLog({ stream: "api-audit" }), setPath: "audit"},
+      {fn: auditLog({stream: 'api-audit'}), setPath: 'audit'},
       (req, res, acc) => ({
         response: {
-          body: { result: "ok", auditId: acc.audit.timestamp },
+          body: {result: 'ok', auditId: acc.audit.timestamp},
         },
       }),
     );
@@ -369,21 +369,21 @@ accumulator; the execute handler (or a downstream logger) flushes them:
           ip: req.socket.remoteAddress,
         };
         sink.record(entry);
-        return { value: entry };
+        return {value: entry};
       };
     }
 
     const router = createRouter({
       defaults: {
-        use: [{fn: auditLog({ stream: "api-audit" }), setPath: "audit"}],
+        use: [{fn: auditLog({stream: 'api-audit'}), setPath: 'audit'}],
       },
     });
 
-    router.post("/accounts", {
+    router.post('/accounts', {
       execute: (req, res, acc) => ({
         response: {
           statusCode: 201,
-          body: { created: true, auditId: acc.audit.timestamp },
+          body: {created: true, auditId: acc.audit.timestamp},
         },
       }),
     });
@@ -407,7 +407,7 @@ handler:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, handler } from "@centralping/ergo";
+    import {compose, handler} from '@centralping/ergo';
 
     function requireAuditContext() {
       return (req, res, acc) => {
@@ -416,23 +416,23 @@ handler:
             response: {
               statusCode: 401,
               body: {
-                type: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
-                title: "Unauthorized",
-                detail: "Audit context requires authenticated identity.",
+                type: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401',
+                title: 'Unauthorized',
+                detail: 'Audit context requires authenticated identity.',
               },
             },
           };
         }
-        return { value: { auditActor: acc.auth.sub } };
+        return {value: {auditActor: acc.auth.sub}};
       };
     }
 
     const pipeline = compose(
       // ... auth middleware ...
-      {fn: requireAuditContext(), setPath: "audit"},
+      {fn: requireAuditContext(), setPath: 'audit'},
       // Only reached if auth context exists
       (req, res, acc) => ({
-        response: { body: { actor: acc.audit.auditActor } },
+        response: {body: {actor: acc.audit.auditActor}},
       }),
     );
 
@@ -448,21 +448,21 @@ handler:
             response: {
               statusCode: 401,
               body: {
-                type: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
-                title: "Unauthorized",
-                detail: "Audit context requires authenticated identity.",
+                type: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401',
+                title: 'Unauthorized',
+                detail: 'Audit context requires authenticated identity.',
               },
             },
           };
         }
-        return { value: { auditActor: acc.auth.sub } };
+        return {value: {auditActor: acc.auth.sub}};
       };
     }
 
-    router.get("/admin/audit-log", {
-      use: [{fn: requireAuditContext(), setPath: "audit"}],
+    router.get('/admin/audit-log', {
+      use: [{fn: requireAuditContext(), setPath: 'audit'}],
       execute: (req, res, acc) => ({
-        response: { body: { actor: acc.audit.auditActor } },
+        response: {body: {actor: acc.audit.auditActor}},
       }),
     });
     ```
@@ -475,8 +475,8 @@ handler:
 middleware for use in an ergo pipeline:
 
 ```js
-import { compose, handler, fromConnect } from "@centralping/ergo";
-import helmet from "helmet";
+import {compose, handler, fromConnect} from '@centralping/ergo';
+import helmet from 'helmet';
 
 const pipeline = compose(
   fromConnect(helmet()),
@@ -497,14 +497,14 @@ export default handler(pipeline);
 middleware for accumulator contribution:
 
 ```js
-import { compose, handler, fromConnect } from "@centralping/ergo";
-import someExpressMiddleware from "some-express-middleware";
+import {compose, handler, fromConnect} from '@centralping/ergo';
+import someExpressMiddleware from 'some-express-middleware';
 
 const pipeline = compose(
   // Side effects (sets res headers)
   fromConnect(someExpressMiddleware()),
   // Native middleware reads/writes accumulators
-  {fn: myNativeMiddleware(), setPath: "enrichment"},
+  {fn: myNativeMiddleware(), setPath: 'enrichment'},
 );
 
 export default handler(pipeline);
@@ -521,12 +521,12 @@ stages — URL parsing, body parsing, authentication, cookies, and
 validated parameters:
 
 ```js
-router.get("/resource/:id", {
-  validate: { params: paramsSchema },
-  use: [{fn: myMiddleware(), setPath: "custom"}],
+router.get('/resource/:id', {
+  validate: {params: paramsSchema},
+  use: [{fn: myMiddleware(), setPath: 'custom'}],
   // acc.url, acc.body, acc.auth, acc.cookies, acc.route.params
   // are all available inside myMiddleware
-  execute: (req, res, acc) => ({ /* ... */ }),
+  execute: (req, res, acc) => ({/* ... */}),
 });
 ```
 
@@ -536,14 +536,14 @@ concatenated — defaults run first, then route-specific middleware:
 ```js
 const router = createRouter({
   defaults: {
-    use: [{fn: globalMiddleware(), setPath: "global"}],
+    use: [{fn: globalMiddleware(), setPath: 'global'}],
   },
 });
 
-router.get("/endpoint", {
+router.get('/endpoint', {
   // Pipeline runs: ...defaults.use → ...route.use → execute
-  use: [{fn: routeMiddleware(), setPath: "route"}],
-  execute: (req, res, acc) => ({ /* ... */ }),
+  use: [{fn: routeMiddleware(), setPath: 'route'}],
+  execute: (req, res, acc) => ({/* ... */}),
 });
 ```
 
@@ -551,9 +551,9 @@ router.get("/endpoint", {
 all custom middleware (both defaults and route-level):
 
 ```js
-router.get("/health", {
+router.get('/health', {
   use: false,
-  execute: () => ({ response: { body: { status: "ok" } } }),
+  execute: () => ({response: {body: {status: 'ok'}}}),
 });
 ```
 
@@ -602,14 +602,14 @@ directives).
 // ❌ Express habit — mutates shared state
 function bad(req, res, acc) {
   req.user = acc.auth?.sub;
-  res.setHeader("X-Custom", "value");
+  res.setHeader('X-Custom', 'value');
 }
 
 // ✅ Return values — composable and testable
 function good(req, res, acc) {
   return {
-    value: { user: acc.auth?.sub },
-    response: { headers: [["X-Custom", "value"]] },
+    value: {user: acc.auth?.sub},
+    response: {headers: [['X-Custom', 'value']]},
   };
 }
 ```
@@ -623,12 +623,12 @@ If you intend to contribute headers or a status code, wrap in `response`:
 ```js
 // ❌ This merges {headers: [...]} into the DOMAIN accumulator
 function bad() {
-  return { headers: [["X-Timing", "42ms"]] };
+  return {headers: [['X-Timing', '42ms']]};
 }
 
 // ✅ Explicit response — headers go to the response accumulator
 function good() {
-  return { response: { headers: [["X-Timing", "42ms"]] } };
+  return {response: {headers: [['X-Timing', '42ms']]}};
 }
 ```
 
@@ -645,14 +645,14 @@ function bad() {
   return (req, res, acc) => {
     doSetup();
     // If earlier middleware set statusCode, this never executes
-    return { value: { ready: true } };
+    return {value: {ready: true}};
   };
 }
 
 // ✅ If cleanup is needed, attach to res events at request time
 function good() {
   return (req, res) => {
-    res.on("close", () => releaseResources());
+    res.on('close', () => releaseResources());
     return undefined;
   };
 }
@@ -688,7 +688,7 @@ must be independent — use factory closures or the domain accumulator:
 const requestCache = new Map();
 function bad() {
   return (req, res, acc) => {
-    requestCache.set(req, { /* data */ });
+    requestCache.set(req, {/* data */});
     // Who deletes this entry? When?
   };
 }
@@ -706,7 +706,7 @@ function good(options) {
       }
       return result;
     };
-    return { value: { resolve } };
+    return {value: {resolve}};
   };
 }
 ```

@@ -23,18 +23,18 @@ and orderly shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { handler } from "@centralping/ergo";
-    import { graceful } from "@centralping/ergo-router";
+    import {handler} from '@centralping/ergo';
+    import {graceful} from '@centralping/ergo-router';
 
     const pipeline = handler(/* ... your pipeline ... */);
 
-    const { server, shutdown } = await graceful(pipeline, {
+    const {server, shutdown} = await graceful(pipeline, {
       port: 3000,
-      onStartup: async ({ log }) => {
+      onStartup: async ({log}) => {
         await db.connect();
-        log.info("Database connected");
+        log.info('Database connected');
       },
-      onShutdown: async ({ log, signal }) => {
+      onShutdown: async ({log, signal}) => {
         await db.disconnect();
         log.info(`Database disconnected (${signal})`);
       },
@@ -43,18 +43,18 @@ and orderly shutdown.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    const router = createRouter({ /* ...options... */ });
-    router.get("/users", { /* ...routes... */ });
+    const router = createRouter({/* ...options... */});
+    router.get('/users', {/* ...routes... */});
 
-    const { server, shutdown } = await graceful(router.handle(), {
+    const {server, shutdown} = await graceful(router.handle(), {
       port: 3000,
-      onStartup: async ({ log }) => {
+      onStartup: async ({log}) => {
         await db.connect();
-        log.info("Database connected");
+        log.info('Database connected');
       },
-      onShutdown: async ({ log, signal }) => {
+      onShutdown: async ({log, signal}) => {
         await db.disconnect();
         log.info(`Database disconnected (${signal})`);
       },
@@ -68,41 +68,41 @@ and orderly shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { NodeSDK } from "@opentelemetry/sdk-node";
-    import { graceful } from "@centralping/ergo-router";
+    import {NodeSDK} from '@opentelemetry/sdk-node';
+    import {graceful} from '@centralping/ergo-router';
 
-    const sdk = new NodeSDK({ /* ...config... */ });
+    const sdk = new NodeSDK({/* ...config... */});
 
-    const { server, shutdown } = await graceful(pipeline, {
+    const {server, shutdown} = await graceful(pipeline, {
       port: 3000,
-      onStartup: async ({ log }) => {
+      onStartup: async ({log}) => {
         sdk.start();
-        log.info("OpenTelemetry SDK started");
+        log.info('OpenTelemetry SDK started');
       },
-      onShutdown: async ({ log }) => {
+      onShutdown: async ({log}) => {
         await sdk.shutdown();
-        log.info("OpenTelemetry SDK flushed and shut down");
+        log.info('OpenTelemetry SDK flushed and shut down');
       },
     });
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import { NodeSDK } from "@opentelemetry/sdk-node";
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import {NodeSDK} from '@opentelemetry/sdk-node';
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
-    const sdk = new NodeSDK({ /* ...config... */ });
-    const router = createRouter({ /* ...options... */ });
+    const sdk = new NodeSDK({/* ...config... */});
+    const router = createRouter({/* ...options... */});
 
-    const { server, shutdown } = await graceful(router.handle(), {
+    const {server, shutdown} = await graceful(router.handle(), {
       port: 3000,
-      onStartup: async ({ log }) => {
+      onStartup: async ({log}) => {
         sdk.start();
-        log.info("OpenTelemetry SDK started");
+        log.info('OpenTelemetry SDK started');
       },
-      onShutdown: async ({ log }) => {
+      onShutdown: async ({log}) => {
         await sdk.shutdown();
-        log.info("OpenTelemetry SDK flushed and shut down");
+        log.info('OpenTelemetry SDK flushed and shut down');
       },
     });
     ```
@@ -114,13 +114,13 @@ and orderly shutdown.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { graceful } from "@centralping/ergo-router";
+    import {graceful} from '@centralping/ergo-router';
 
     let isShuttingDown = false;
 
-    const { server, shutdown } = await graceful(pipeline, {
+    const {server, shutdown} = await graceful(pipeline, {
       port: 3000,
-      onShutdown: async ({ log }) => {
+      onShutdown: async ({log}) => {
         isShuttingDown = true;
         await db.disconnect();
       },
@@ -130,33 +130,33 @@ and orderly shutdown.
     // check the closure variable `isShuttingDown` in your handler
     function healthCheck() {
       if (isShuttingDown) {
-        return { response: { statusCode: 503, body: { status: "draining" } } };
+        return {response: {statusCode: 503, body: {status: 'draining'}}};
       }
-      return { response: { body: { status: "healthy" } } };
+      return {response: {body: {status: 'healthy'}}};
     }
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    import createRouter, { graceful } from "@centralping/ergo-router";
+    import createRouter, {graceful} from '@centralping/ergo-router';
 
     let isShuttingDown = false;
 
     const router = createRouter();
 
-    router.get("/health", {
+    router.get('/health', {
       authorization: false,
       execute: (req, res, acc) => {
         if (isShuttingDown) {
-          return { response: { statusCode: 503, body: { status: "draining" } } };
+          return {response: {statusCode: 503, body: {status: 'draining'}}};
         }
-        return { response: { body: { status: "healthy" } } };
+        return {response: {body: {status: 'healthy'}}};
       },
     });
 
-    const { server, shutdown } = await graceful(router.handle(), {
+    const {server, shutdown} = await graceful(router.handle(), {
       port: 3000,
-      onShutdown: async ({ log }) => {
+      onShutdown: async ({log}) => {
         isShuttingDown = true;
         await db.disconnect();
       },
@@ -229,7 +229,7 @@ timeout to match your load balancer's drain timeout.
 
 ### Programmatic Shutdown
 
-`graceful()` returns `{ server, shutdown }`. Call `shutdown(signal)`
+`graceful()` returns `{server, shutdown}`. Call `shutdown(signal)`
 programmatically to initiate the same graceful shutdown flow without
 waiting for an OS signal. This is useful for health-check-driven
 shutdown or integration tests.
@@ -250,7 +250,7 @@ Chain cleanup operations in `onShutdown`. Errors in `onShutdown` are
 caught and logged — they do not prevent the shutdown from completing:
 
 ```js
-onShutdown: async ({ log, signal }) => {
+onShutdown: async ({log, signal}) => {
   await db.disconnect();
   await cache.quit();
   await sdk.shutdown();

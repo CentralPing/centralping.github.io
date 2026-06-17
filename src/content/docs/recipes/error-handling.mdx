@@ -22,13 +22,13 @@ automatically formats it as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose } from "@centralping/ergo";
+    import {compose} from '@centralping/ergo';
 
     const pipeline = compose(
       (req, res, acc) => ({
         response: {
           statusCode: 409,
-          detail: "Resource version conflict",
+          detail: 'Resource version conflict',
         },
       }),
     );
@@ -44,14 +44,14 @@ automatically formats it as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.put("/articles/:id", {
+    router.put('/articles/:id', {
       execute: async (req, res, acc) => {
         const current = await db.get(acc.route.params.id);
         if (current.version !== acc.body.parsed.version) {
           return {
             response: {
               statusCode: 409,
-              detail: "Resource version conflict",
+              detail: 'Resource version conflict',
             },
           };
         }
@@ -73,10 +73,10 @@ member in the error response body:
 (req, res, acc) => ({
   response: {
     statusCode: 422,
-    detail: "Validation failed",
+    detail: 'Validation failed',
     errors: [
-      { field: "email", message: "must be a valid email address" },
-      { field: "age", message: "must be a positive integer" },
+      {field: 'email', message: 'must be a valid email address'},
+      {field: 'age', message: 'must be a positive integer'},
     ],
   },
 });
@@ -123,7 +123,7 @@ error body:
 (req, res, acc) => ({
   response: {
     statusCode: 429,
-    detail: "Rate limit exceeded",
+    detail: 'Rate limit exceeded',
     retryAfter: 60,
   },
 });

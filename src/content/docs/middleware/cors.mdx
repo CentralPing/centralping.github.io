@@ -14,7 +14,7 @@ No-op when the `Origin` header is absent (same-origin requests). Preflight
 ## Import
 
 ```js
-import { cors } from "@centralping/ergo";
+import {cors} from '@centralping/ergo';
 ```
 
 ## Options
@@ -33,9 +33,9 @@ import { cors } from "@centralping/ergo";
 The middleware returns one of three results:
 
 - **No `Origin` header:** `undefined` (no-op, same-origin request)
-- **CORS allowed:** `{ response: { headers: [...] } }` with
+- **CORS allowed:** `{response: {headers: [...]}}` with
   `Access-Control-Allow-Origin` and related headers
-- **CORS denied:** `{ response: { statusCode: 403 } }`
+- **CORS denied:** `{response: {statusCode: 403}}`
 
 ## Error Responses
 
@@ -48,14 +48,14 @@ The middleware returns one of three results:
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, cors } from "@centralping/ergo";
+    import {compose, cors} from '@centralping/ergo';
 
     const pipeline = compose(
       [cors({
-        origins: ["https://app.example.com"],
-        allowMethods: ["GET", "POST"],
-        allowHeaders: ["Authorization", "Content-Type"],
-      }), "cors"],
+        origins: ['https://app.example.com'],
+        allowMethods: ['GET', 'POST'],
+        allowHeaders: ['Authorization', 'Content-Type'],
+     }), 'cors'],
     );
     ```
   </TabItem>
@@ -63,8 +63,8 @@ The middleware returns one of three results:
     ```js
     const router = createRouter({
       cors: {
-        origins: ["https://app.example.com"],
-        allowMethods: ["GET", "POST", "PUT", "DELETE"],
+        origins: ['https://app.example.com'],
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
         allowCredentials: true,
       },
     });

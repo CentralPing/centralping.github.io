@@ -14,7 +14,7 @@ overhead. Accepts either a raw directive string or structured options.
 ## Import
 
 ```js
-import { cacheControl } from "@centralping/ergo";
+import {cacheControl} from '@centralping/ergo';
 ```
 
 ## Options
@@ -42,7 +42,7 @@ Pass `directives` as a raw string to bypass structured options.
 Always returns response headers:
 
 ```js
-{ response: { headers: [["Cache-Control", "private, no-cache"]] } }
+{response: {headers: [['Cache-Control', 'private, no-cache']]}}
 ```
 
 ## Error Responses
@@ -54,11 +54,11 @@ None. This middleware always injects headers.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, cacheControl } from "@centralping/ergo";
+    import {compose, cacheControl} from '@centralping/ergo';
 
     // String shorthand
     const pipeline = compose(
-      cacheControl({ directives: "public, max-age=3600" }),
+      cacheControl({directives: 'public, max-age=3600'}),
     );
 
     // Structured options
@@ -73,10 +73,10 @@ None. This middleware always injects headers.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/static/:id", {
-      cacheControl: { public: true, maxAge: 86400, immutable: true },
+    router.get('/static/:id', {
+      cacheControl: {public: true, maxAge: 86400, immutable: true},
       execute: (req, res, acc) => ({
-        response: { body: staticContent },
+        response: {body: staticContent},
       }),
     });
     ```

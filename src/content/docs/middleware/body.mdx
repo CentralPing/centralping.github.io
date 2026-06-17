@@ -16,7 +16,7 @@ full stream pipeline.
 ## Import
 
 ```js
-import { body } from "@centralping/ergo";
+import {body} from '@centralping/ergo';
 ```
 
 ## Options
@@ -44,13 +44,13 @@ On success, the middleware returns a body descriptor stored on the
 
 ```js
 {
-  type: "application/json",
-  charset: "utf-8",
-  encoding: "identity",
+  type: 'application/json',
+  charset: 'utf-8',
+  encoding: 'identity',
   length: 42,
   received: 42,
   raw: '{"name":"Jane"}',
-  parsed: { name: "Jane" }
+  parsed: {name: 'Jane'}
 }
 ```
 
@@ -61,16 +61,16 @@ and `parsed` is an array of part objects — one per form field or file:
 
 ```js
 {
-  type: "multipart/form-data",
-  charset: "utf-8",
-  encoding: "identity",
+  type: 'multipart/form-data',
+  charset: 'utf-8',
+  encoding: 'identity',
   length: 4096,
   received: 4096,
-  boundary: "----WebKitFormBoundary7MA4YWxkTrZu0gW",
-  raw: "...",
+  boundary: '----WebKitFormBoundary7MA4YWxkTrZu0gW',
+  raw: '...',
   parsed: [
-    { headers: { ... }, name: "avatar", filename: "photo.png", body: Buffer },
-    { headers: { ... }, name: "description", filename: undefined, body: Buffer },
+    {headers: {...}, name: 'avatar', filename: 'photo.png', body: Buffer},
+    {headers: {...}, name: 'description', filename: undefined, body: Buffer},
   ],
 }
 ```
@@ -101,29 +101,29 @@ contexts.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, body } from "@centralping/ergo";
+    import {compose, body} from '@centralping/ergo';
 
     const pipeline = compose(
-      body({ limit: 2 * 1024 * 1024 }),
+      body({limit: 2 * 1024 * 1024}),
       // acc.body.parsed === { name: "Jane" }
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.post("/users", {
-      body: { limit: 2 * 1024 * 1024 },
+    router.post('/users', {
+      body: {limit: 2 * 1024 * 1024},
       validate: {
         body: {
-          type: "object",
-          properties: { name: { type: "string" } },
-          required: ["name"],
+          type: 'object',
+          properties: {name: {type: 'string'}},
+          required: ['name'],
         },
       },
       execute: (req, res, acc) => ({
         response: {
           statusCode: 201,
-          body: { id: "1", name: acc.body.parsed.name },
+          body: {id: '1', name: acc.body.parsed.name},
         },
       }),
     });

@@ -15,7 +15,7 @@ parameters automatically become arrays.
 ## Import
 
 ```js
-import { url } from "@centralping/ergo";
+import {url} from '@centralping/ergo';
 ```
 
 ## Options
@@ -29,11 +29,11 @@ at `acc.url`:
 
 ```js
 {
-  pathname: "/users",
-  search: "?page=1&filter=a&filter=b",
+  pathname: '/users',
+  search: '?page=1&filter=a&filter=b',
   query: {
-    page: "1",
-    filter: ["a", "b"]
+    page: '1',
+    filter: ['a', 'b']
   }
 }
 ```
@@ -56,7 +56,7 @@ None.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, url } from "@centralping/ergo";
+    import {compose, url} from '@centralping/ergo';
 
     const pipeline = compose(
       url(),
@@ -76,7 +76,7 @@ None.
     // ergo-router automatically includes URL parsing.
     // acc.url.query is available in your execute handler.
 
-    router.get("/articles", {
+    router.get('/articles', {
       execute: (req, res, acc) => ({
         response: {
           body: queryArticles({

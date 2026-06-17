@@ -21,15 +21,15 @@ array. `send()` applies them to the response before writing the body.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose } from "@centralping/ergo";
+    import {compose} from '@centralping/ergo';
 
     const pipeline = compose(
       (req, res, acc) => ({
         response: {
-          body: { ok: true },
+          body: {ok: true},
           headers: [
-            ["X-Custom-Header", "my-value"],
-            ["X-Request-Start", String(Date.now())],
+            ['X-Custom-Header', 'my-value'],
+            ['X-Request-Start', String(Date.now())],
           ],
         },
       }),
@@ -38,13 +38,13 @@ array. `send()` applies them to the response before writing the body.
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/health", {
+    router.get('/health', {
       execute: (req, res, acc) => ({
         response: {
-          body: { status: "ok" },
+          body: {status: 'ok'},
           headers: [
-            ["X-Custom-Header", "my-value"],
-            ["X-Request-Start", String(Date.now())],
+            ['X-Custom-Header', 'my-value'],
+            ['X-Request-Start', String(Date.now())],
           ],
         },
       }),
@@ -69,7 +69,7 @@ attaches to `res.on('finish')` and records total time from middleware entry
 to response completion:
 
 ```js
-import { compose, logger } from "@centralping/ergo";
+import {compose, logger} from '@centralping/ergo';
 
 const pipeline = compose(
   logger({
@@ -83,15 +83,15 @@ If you need response time logging without the logger middleware, attach a
 `finish` listener before calling the handler:
 
 ```js
-import http from "node:http";
-import { handler, compose } from "@centralping/ergo";
+import http from 'node:http';
+import {handler, compose} from '@centralping/ergo';
 
 const pipeline = compose(/* ... */);
 const app = handler(pipeline);
 
 http.createServer((req, res) => {
   const start = performance.now();
-  res.on("finish", () => {
+  res.on('finish', () => {
     console.log(`${req.method} ${req.url} ${(performance.now() - start).toFixed(2)}ms`);
   });
   app(req, res);
@@ -105,7 +105,7 @@ Set a header value to `undefined` to clear it from the response:
 ```js
 (req, res, acc) => ({
   response: {
-    headers: [["X-Powered-By", undefined]],
+    headers: [['X-Powered-By', undefined]],
   },
 });
 ```

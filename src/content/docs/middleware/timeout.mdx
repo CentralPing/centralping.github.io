@@ -14,14 +14,14 @@ The timer is cleared automatically when the response finishes.
 ## Import
 
 ```js
-import { timeout } from "@centralping/ergo";
+import {timeout} from '@centralping/ergo';
 ```
 
 ## Options
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `ms` | `number` | `30000` (30s) | Timeout duration in milliseconds |
+| `ms` | `number` | `30_000` (30s) | Timeout duration in milliseconds |
 | `statusCode` | `number` | `408` | HTTP status on timeout (typically `408` or `504`) |
 
 ## Return Value
@@ -45,22 +45,22 @@ The error `detail` is: `Request timed out after ${ms}ms`.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import { compose, timeout } from "@centralping/ergo";
+    import {compose, timeout} from '@centralping/ergo';
 
     const pipeline = compose(
-      timeout({ ms: 10_000, statusCode: 504 }),
+      timeout({ms: 10_000, statusCode: 504}),
       async (req, res, acc) => ({
-        response: { body: await slowOperation(), statusCode: 200 },
+        response: {body: await slowOperation(), statusCode: 200},
       }),
     );
     ```
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/slow-report", {
-      timeout: { ms: 60_000 },
+    router.get('/slow-report', {
+      timeout: {ms: 60_000},
       execute: async (req, res, acc) => ({
-        response: { body: await generateReport() },
+        response: {body: await generateReport()},
       }),
     });
     ```

@@ -86,8 +86,8 @@ discriminated union based on the active strategy.
 
 ```ts
 type PaginateResult =
-  | { strategy: 'offset'; page: number; perPage: number; offset: number; limit: number }
-  | { strategy: 'cursor'; cursor: string | undefined; limit: number };
+  | {strategy: 'offset'; page: number; perPage: number; offset: number; limit: number}
+  | {strategy: 'cursor'; cursor: string | undefined; limit: number};
 ```
 
 **Offset strategy:**
@@ -191,7 +191,7 @@ interface LogEntry {
     arch: string;
     platform: string;
     pid: number;
-  }>;
+ }>;
   request: {
     headers: Record<string, string | string[] | undefined>;
     encrypted: boolean;
@@ -246,7 +246,7 @@ interface PreferResult {
 ```
 
 Preference names map to their value string, or `true` for bare tokens.
-Example: `{ return: 'minimal', 'respond-async': true }`.
+Example: `{return: 'minimal', 'respond-async': true}`.
 
 [Full documentation →](/middleware/prefer/)
 
@@ -314,15 +314,15 @@ result — a discriminated union with three variants.
 ```ts
 type IdempotencyResult =
   | Record<string, never>
-  | { key: string; fingerprint: string; complete: (response: unknown) => void; discard: () => void }
-  | { replayed: true };
+  | {key: string; fingerprint: string; complete: (response: unknown) => void; discard: () => void}
+  | {replayed: true};
 ```
 
 | Variant | When | Shape |
 | --- | --- | --- |
 | Empty object `{}` | No `Idempotency-Key` header present (and not required) | `Record<string, never>` |
-| Active key | First request with this key — store the response when done | `{ key, fingerprint, complete(), discard() }` |
-| Replayed | Subsequent request with a completed key — response was replayed | `{ replayed: true }` |
+| Active key | First request with this key — store the response when done | `{key, fingerprint, complete(), discard()}` |
+| Replayed | Subsequent request with a completed key — response was replayed | `{replayed: true}` |
 
 [Full documentation →](/middleware/idempotency/)
 

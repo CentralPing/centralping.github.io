@@ -14,7 +14,7 @@ Parses the `Prefer` request header per [RFC 7240](https://www.rfc-editor.org/rfc
 ## Import
 
 ```js
-import { prefer } from "@centralping/ergo";
+import {prefer} from '@centralping/ergo';
 ```
 
 ## Options
@@ -28,7 +28,7 @@ at `acc.prefer`:
 
 ```js
 {
-  return: "minimal",
+  return: 'minimal',
   // other preferences as key-value pairs
 }
 ```
@@ -47,19 +47,19 @@ None.
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { compose, prefer, handler } from "@centralping/ergo";
+    import http from 'node:http';
+    import {compose, prefer, handler} from '@centralping/ergo';
 
     const pipeline = compose(
       prefer(),
       (req, res, acc) => ({
-        response: { body: { id: 1, name: "item" } },
+        response: {body: {id: 1, name: 'item'}},
       }),
     );
 
     // With send's prefer option enabled
     const server = http.createServer(
-      handler(pipeline, { prefer: true }),
+      handler(pipeline, {prefer: true}),
     );
     // Client: Prefer: return=minimal
     // Response: 204 No Content + Preference-Applied: return=minimal
@@ -69,13 +69,13 @@ None.
     ```js
     const router = createRouter({
       defaults: {
-        send: { prefer: true },
+        send: {prefer: true},
       },
     });
 
-    router.get("/items/:id", {
+    router.get('/items/:id', {
       execute: (req, res, acc) => ({
-        response: { body: { id: 1, name: "item" } },
+        response: {body: {id: 1, name: 'item'}},
       }),
     });
     ```

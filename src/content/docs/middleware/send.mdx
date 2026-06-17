@@ -19,7 +19,7 @@ via `handler()`.
 ## Import
 
 ```js
-import { send } from "@centralping/ergo";
+import {send} from '@centralping/ergo';
 ```
 
 ## Options
@@ -40,7 +40,7 @@ import { send } from "@centralping/ergo";
 | Value | Behavior |
 | ----- | -------- |
 | `false` | No envelope (default) |
-| `true` | Built-in `{ id, status, data, count? }` — `id` is read from the `x-request-id` response header |
+| `true` | Built-in `{id, status, data, count?}` — `id` is read from the `x-request-id` response header |
 | `function` | Custom `(body, ctx) => wrappedBody` |
 
 ### Response Schema Resolution
@@ -83,14 +83,14 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { handler, compose } from "@centralping/ergo";
+    import http from 'node:http';
+    import {handler, compose} from '@centralping/ergo';
 
     const pipeline = compose(
       async (req, res, acc) => {
-        const user = await db.findUser("42");
+        const user = await db.findUser('42');
         return {
-          response: { statusCode: 200, body: user },
+          response: {statusCode: 200, body: user},
         };
       },
     );
@@ -99,11 +99,11 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
       handler(pipeline, {
         responseSchema: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              id: { type: "number" },
-              name: { type: "string" },
-              email: { type: "string" },
+              id: {type: 'number'},
+              name: {type: 'string'},
+              email: {type: 'string'},
             },
           },
         },
@@ -119,12 +119,12 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
       defaults: {
         send: {
           responseSchema: {
-            "2xx": {
-              type: "object",
+            '2xx': {
+              type: 'object',
               properties: {
-                id: { type: "number" },
-                name: { type: "string" },
-                email: { type: "string" },
+                id: {type: 'number'},
+                name: {type: 'string'},
+                email: {type: 'string'},
               },
             },
           },
@@ -185,12 +185,12 @@ values are silently ignored (no header set, no conditional evaluation).
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { handler, compose } from "@centralping/ergo";
+    import http from 'node:http';
+    import {handler, compose} from '@centralping/ergo';
 
     const pipeline = compose(
       async (req, res, acc) => {
-        const todo = await db.findById("42");
+        const todo = await db.findById('42');
         return {
           response: {
             statusCode: 200,
@@ -209,7 +209,7 @@ values are silently ignored (no header set, no conditional evaluation).
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.get("/todos/:id", {
+    router.get('/todos/:id', {
       execute: async (req, res, acc) => {
         const todo = await db.findById(acc.route.params.id);
         return {
@@ -250,13 +250,13 @@ modified after the condition date, the request is rejected with
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { handler, compose, body } from "@centralping/ergo";
+    import http from 'node:http';
+    import {handler, compose, body} from '@centralping/ergo';
 
     const pipeline = compose(
       body(),
       async (req, res, acc) => {
-        const todo = await db.findAndUpdate("42", acc.body.parsed);
+        const todo = await db.findAndUpdate('42', acc.body.parsed);
         return {
           response: {
             statusCode: 200,
@@ -276,7 +276,7 @@ modified after the condition date, the request is rejected with
   </TabItem>
   <TabItem label="ergo-router">
     ```js
-    router.put("/todos/:id", {
+    router.put('/todos/:id', {
       execute: async (req, res, acc) => {
         const todo = await db.findAndUpdate(
           acc.route.params.id,
@@ -313,17 +313,17 @@ modified after the condition date, the request is rejected with
 <Tabs>
   <TabItem label="Standalone">
     ```js
-    import http from "node:http";
-    import { handler, compose, send } from "@centralping/ergo";
+    import http from 'node:http';
+    import {handler, compose, send} from '@centralping/ergo';
 
     const pipeline = compose(
       (req, res, acc) => ({
-        response: { statusCode: 200, body: { hello: "world" } },
+        response: {statusCode: 200, body: {hello: 'world'}},
       }),
     );
 
     const server = http.createServer(
-      handler(pipeline, { etag: true, prettify: true }),
+      handler(pipeline, {etag: true, prettify: true}),
     );
     ```
   </TabItem>
@@ -331,7 +331,7 @@ modified after the condition date, the request is rejected with
     ```js
     const router = createRouter({
       defaults: {
-        send: { etag: true, prefer: true },
+        send: {etag: true, prefer: true},
       },
     });
     ```
