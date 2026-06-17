@@ -12,7 +12,7 @@ reference for all possible error responses — organized by the pipeline
 stage that produces them.
 
 <Aside type="note">
-  All error responses include a standard RFC 9457 body with `type`,
+  All error responses include a standard [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) body with `type`,
   `title`, `status`, and optionally `detail`, `instance`, and extension
   members. See the [Error Handling recipe](/recipes/error-handling/) for
   the full format specification and customization options.
@@ -72,7 +72,7 @@ parameters, and idempotency keys.
 | Status | Source | Condition | RFC |
 | --- | --- | --- | --- |
 | **400 Bad Request** | [`body()`](/middleware/body/) | Content-Length mismatch, malformed body, or parse failure | [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) |
-| **400 Bad Request** | [`idempotency()`](/middleware/idempotency/) | `Idempotency-Key` header present but not a valid RFC 8941 sf-string | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) |
+| **400 Bad Request** | [`idempotency()`](/middleware/idempotency/) | `Idempotency-Key` header present but not a valid [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) sf-string | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) |
 | **400 Bad Request** | [`idempotency()`](/middleware/idempotency/) | `Idempotency-Key` header absent and `required: true` | [IETF draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/) |
 | **400 Bad Request** | [`jsonApiQuery()`](/middleware/json-api-query/) | Query parameters fail JSON:API schema validation | [JSON:API](https://jsonapi.org/format/) |
 | **409 Conflict** | [`idempotency()`](/middleware/idempotency/) | Same key with different request fingerprint, or concurrent request still processing | [IETF draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/) |
@@ -101,5 +101,5 @@ request evaluation, and uncaught pipeline errors.
 
 - [Fast Fail Pipeline](/concepts/fast-fail/) — the four-stage ordering model
 - [Architecture](/concepts/architecture/) — the two-accumulator pipeline model
-- [Error Handling recipe](/recipes/error-handling/) — custom error details, extension members, and RFC 9457 format
+- [Error Handling recipe](/recipes/error-handling/) — custom error details, extension members, and [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) format
 - [Accumulator Reference](/concepts/accumulator/) — the companion cross-cutting reference for success-path data flow

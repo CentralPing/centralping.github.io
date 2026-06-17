@@ -181,7 +181,7 @@ Correctly ordered pipelines are unaffected — this only surfaces when
 
 `idempotency()` now distinguishes **missing** from **malformed**
 `Idempotency-Key` headers. A malformed header (present but not a valid
-RFC 8941 sf-string) always returns **400** with format guidance, regardless
+[RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) sf-string) always returns **400** with format guidance, regardless
 of the `required` option.
 
 Previously, a malformed header with `required: false` silently passed

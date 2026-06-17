@@ -7,14 +7,14 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Problem
 
-You need PATCH endpoints that distinguish between RFC 7386 JSON Merge
-Patch (partial object merge) and RFC 6902 JSON Patch (operations array),
+You need PATCH endpoints that distinguish between [RFC 7386](https://www.rfc-editor.org/rfc/rfc7386) JSON Merge
+Patch (partial object merge) and [RFC 6902](https://www.rfc-editor.org/rfc/rfc6902) JSON Patch (operations array),
 with proper content-type enforcement and validation schemas for partial
 updates.
 
 ## Solution
 
-### JSON Merge Patch (RFC 7386)
+### JSON Merge Patch ([RFC 7386](https://www.rfc-editor.org/rfc/rfc7386))
 
 A merge-patch request sends a partial JSON object. Properties present in
 the patch overwrite the target; properties set to `null` are removed.
@@ -69,7 +69,7 @@ the patch overwrite the target; properties set to `null` are removed.
   </TabItem>
 </Tabs>
 
-### JSON Patch (RFC 6902)
+### JSON Patch ([RFC 6902](https://www.rfc-editor.org/rfc/rfc6902))
 
 A JSON Patch request sends an array of operations (`add`, `remove`,
 `replace`, `move`, `copy`, `test`). Each operation targets a specific
@@ -208,8 +208,8 @@ the router immediately responds with `415 Unsupported Media Type` and an
 | Content-Type | RFC | Semantics |
 | ------------ | --- | --------- |
 | `application/json` | — | Generic JSON (treated as merge-patch by convention) |
-| `application/merge-patch+json` | RFC 7386 | Explicit merge-patch semantics |
-| `application/json-patch+json` | RFC 6902 | Operations array |
+| `application/merge-patch+json` | [RFC 7386](https://www.rfc-editor.org/rfc/rfc7386) | Explicit merge-patch semantics |
+| `application/json-patch+json` | [RFC 6902](https://www.rfc-editor.org/rfc/rfc6902) | Operations array |
 
 All three types are parsed as JSON by the body middleware (included in
 the default `types` array). The distinction is semantic — the parsed
@@ -223,7 +223,7 @@ Merge-patch schemas differ from creation schemas:
 | ------- | ------------- | ---------------------- |
 | `required` | List mandatory fields | Omit entirely — any subset is valid |
 | `minProperties` | Optional | `1` — reject empty patches |
-| `null` values | Typically disallowed | Allow for field removal (RFC 7386 §2) |
+| `null` values | Typically disallowed | Allow for field removal ([RFC 7386 §2](https://www.rfc-editor.org/rfc/rfc7386#section-2)) |
 | `additionalProperties` | `false` | `false` — reject unknown fields |
 
 ### Disabling `strictPatch`

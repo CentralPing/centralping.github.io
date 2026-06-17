@@ -28,12 +28,12 @@ is wasted.
 
 <CardGrid>
   <Card title="1. Negotiation" icon="approve-check">
-    Content type, language, and encoding negotiation per RFC 9110 §12.5.
+    Content type, language, and encoding negotiation per [RFC 9110 §12.5](https://www.rfc-editor.org/rfc/rfc9110#section-12.5).
     Rate limiting and security headers run here — resource exhaustion is
     prevented before any processing begins.
   </Card>
   <Card title="2. Authorization" icon="warning">
-    Bearer/Basic authentication per RFC 6750 / RFC 7617. Unauthorized requests
+    Bearer/Basic authentication per [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) / [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617). Unauthorized requests
     are rejected before body parsing, preventing DoS from large payloads on
     unauthenticated requests.
   </Card>
@@ -44,7 +44,7 @@ is wasted.
   </Card>
   <Card title="4. Execution" icon="rocket">
     Only valid, authorized, properly-negotiated requests reach your handler.
-    Responses use RFC 9457 Problem Details for errors.
+    Responses use [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details for errors.
   </Card>
 </CardGrid>
 

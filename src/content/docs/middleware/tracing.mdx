@@ -7,7 +7,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 Integrates OpenTelemetry distributed tracing into the ergo pipeline.
 Extracts W3C trace context from incoming request headers, starts a root
-`ergo.pipeline` span, and returns span metadata on the domain accumulator
+`ergo.pipeline` span, and returns span metadata on the [domain accumulator](/concepts/accumulator/) (`acc`)
 for downstream correlation (e.g., log enrichment via logger).
 
 When no OTEL SDK is registered, all operations are no-ops — zero overhead

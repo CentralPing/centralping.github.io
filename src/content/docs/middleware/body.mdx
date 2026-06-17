@@ -6,7 +6,7 @@ description: Request body parsing middleware — JSON, form-urlencoded, and mult
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 Reads and parses the request body based on `Content-Type`. Supports JSON
-variants (including RFC 7386 merge-patch and RFC 6902 json-patch),
+variants (including [RFC 7386](https://www.rfc-editor.org/rfc/rfc7386) merge-patch and [RFC 6902](https://www.rfc-editor.org/rfc/rfc6902) json-patch),
 `application/x-www-form-urlencoded`, and `multipart/form-data`. Includes
 a fast path for identity-encoded `application/json` that bypasses the
 full stream pipeline.
@@ -32,14 +32,15 @@ import { body } from "@centralping/ergo";
 
 - `application/vnd.api+json`
 - `application/json`
-- `application/merge-patch+json` (RFC 7386)
-- `application/json-patch+json` (RFC 6902)
+- `application/merge-patch+json` ([RFC 7386](https://www.rfc-editor.org/rfc/rfc7386))
+- `application/json-patch+json` ([RFC 6902](https://www.rfc-editor.org/rfc/rfc6902))
 - `application/x-www-form-urlencoded`
 - `multipart/form-data`
 
 ## Return Value
 
-On success, the middleware returns a body descriptor stored at `acc.body`:
+On success, the middleware returns a body descriptor stored on the
+[domain accumulator](/concepts/accumulator/) at `acc.body`:
 
 ```js
 {
@@ -76,7 +77,7 @@ and `parsed` is an array of part objects — one per form field or file:
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
-| `headers` | `object` | RFC 7578 §4.8 headers (`content-disposition`, `content-type`, `content-transfer-encoding`) as `{type, parameters}` entries |
+| `headers` | `object` | [RFC 7578 §4.8](https://www.rfc-editor.org/rfc/rfc7578#section-4.8) headers (`content-disposition`, `content-type`, `content-transfer-encoding`) as `{type, parameters}` entries |
 | `name` | `string` | The form field name from `Content-Disposition` |
 | `filename` | `string \| undefined` | The original filename (present only for file fields) |
 | `body` | `Buffer` | The raw binary content of the part |
@@ -139,7 +140,7 @@ contexts.
 ## Related Recipes
 
 - [File Upload](/recipes/file-upload/) — Multipart file uploads with size limits and accessing parsed file content
-- [PATCH Semantics](/recipes/patch-semantics/) — RFC 7386 merge-patch and RFC 6902 JSON Patch with content-type enforcement
+- [PATCH Semantics](/recipes/patch-semantics/) — [RFC 7386](https://www.rfc-editor.org/rfc/rfc7386) merge-patch and [RFC 6902](https://www.rfc-editor.org/rfc/rfc6902) JSON Patch with content-type enforcement
 
 ## API Reference
 

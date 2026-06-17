@@ -29,8 +29,8 @@ import { accepts } from "@centralping/ergo";
 
 ## Return Value
 
-On success, the middleware returns a negotiation result stored at
-`acc.accepts`:
+On success, the middleware returns a negotiation result stored on the
+[domain accumulator](/concepts/accumulator/) at `acc.accepts`:
 
 ```js
 {
@@ -51,7 +51,7 @@ top preference.
 | ------ | --------- |
 | **406 Not Acceptable** | Any negotiated value is `undefined` and `throwIfFail` is `true` |
 
-The `detail` field in the RFC 9457 response identifies which header
+The `detail` field in the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) response identifies which header
 failed: `Failed to negotiate content for: [Accept].`
 
 ## Usage

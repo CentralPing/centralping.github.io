@@ -7,8 +7,9 @@ import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 The terminal response writer in ergo's two-accumulator model. Called once
 by `handler()` (or ergo-router's `auto-wrap`) after the pipeline
-completes. Reads from both the response accumulator and domain
-accumulator to serialize the HTTP response.
+completes. Reads from both the response accumulator and
+[domain accumulator](/concepts/accumulator/) (`acc`) to serialize the
+HTTP response.
 
 `send` is **not** placed inside the pipeline — it runs after the pipeline
 via `handler()`.
@@ -28,10 +29,10 @@ import { send } from "@centralping/ergo";
 | `prettify` | `boolean` | `false` | Pretty-print JSON output |
 | `vary` | `string[]` | `['Accept']` | Vary header values to append |
 | `etag` | `boolean` | `true` | Generate ETags and evaluate conditional headers |
-| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation`. When `true`, appends `Prefer` to the `Vary` header |
-| `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate RFC 8288 Link headers and `X-Total-Count` for paginated responses |
+| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240) `return=minimal` / `return=representation`. When `true`, appends `Prefer` to the `Vary` header |
+| `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Link headers and `X-Total-Count` for paginated responses |
 | `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope |
-| `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the RFC 9457 Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json` |
+| `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json` |
 | `responseSchema` | `Record<number\|string, object>` | — | Map of status code (or range key like `'2xx'`, `'2XX'`, `'default'`) to JSON Schema object. When provided, response bodies for matching success status codes are projected through a compiled schema projector that strips undeclared properties before serialization |
 
 ### Envelope Values

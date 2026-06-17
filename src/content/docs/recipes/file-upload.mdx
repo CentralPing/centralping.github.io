@@ -161,7 +161,7 @@ When the body middleware parses a `multipart/form-data` request,
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
-| `headers` | `object` | RFC 7578 §4.8 headers (`content-disposition`, `content-type`, `content-transfer-encoding`) |
+| `headers` | `object` | [RFC 7578 §4.8](https://www.rfc-editor.org/rfc/rfc7578#section-4.8) headers (`content-disposition`, `content-type`, `content-transfer-encoding`) |
 | `name` | `string` | The form field name from `Content-Disposition` |
 | `filename` | `string \| undefined` | The original filename (present only for file fields) |
 | `body` | `Buffer` | The raw binary content of the part |

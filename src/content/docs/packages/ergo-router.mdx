@@ -10,7 +10,7 @@ import { Aside, Badge } from "@astrojs/starlight/components";
   <img class="dark" src="/assets/router-wordmark-dark.svg" alt="ergo-router" width="340" />
 </div>
 
-[![npm version](https://img.shields.io/npm/v/@centralping/ergo-router/beta)](https://www.npmjs.com/package/@centralping/ergo-router)
+[![npm version](https://img.shields.io/npm/v/@centralping/ergo-router)](https://www.npmjs.com/package/@centralping/ergo-router)
 <Badge text="Node.js ≥ 22" variant="tip" />
 <Badge text="Pure ESM" variant="caution" />
 
@@ -327,7 +327,7 @@ config objects internally when assembling the pipeline.
 | `url` | `acc.url` | Negotiation | Fast URL parser; auto-included for GET/DELETE |
 | `paginate` | `acc.paginate` | Negotiation | Parsed pagination params; auto-includes `url` |
 | `jsonApiQuery` | `acc.jsonApiQuery` | Negotiation | JSON:API query parameter parsing |
-| `prefer` | `acc.prefer` | Negotiation | RFC 7240 Prefer header |
+| `prefer` | `acc.prefer` | Negotiation | [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240) Prefer header |
 | `securityHeaders` | `acc.security` | Negotiation | HSTS, CSP, X-Content-Type-Options — response headers only |
 | `cacheControl` | `acc.cache` | Negotiation | Cache-Control directive — response headers only |
 | `csrf` | `acc.csrf` | Authorization | CSRF token issue/verify |
@@ -636,7 +636,7 @@ For standalone (non-router) usage of the `timing` option, see the
 The `paginate` config key wires a two-sided contract: **request parsing**
 (the `paginate()` middleware stores structured query parameters at
 `acc.paginate`) and **response metadata** (`send()` reads your handler's
-`response.paginate` to auto-generate RFC 8288 Link headers and
+`response.paginate` to auto-generate [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Link headers and
 `X-Total-Count`).
 
 #### Offset Pagination

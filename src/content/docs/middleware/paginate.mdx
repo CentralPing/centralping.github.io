@@ -5,9 +5,10 @@ description: Pagination parameter parsing middleware — offset and cursor strat
 
 import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
-Parses pagination query parameters into structured shapes on the domain
-accumulator. Works in concert with `send()`'s `paginate: true` option
-to automatically generate RFC 8288 `Link` headers and `X-Total-Count`
+Parses pagination query parameters into structured shapes on the
+[domain accumulator](/concepts/accumulator/) (`acc`). Works in concert
+with `send()`'s `paginate: true` option
+to automatically generate [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` headers and `X-Total-Count`
 for paginated responses.
 
 Supports two strategies: **offset** (page/per_page) and **cursor**

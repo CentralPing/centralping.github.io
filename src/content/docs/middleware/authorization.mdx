@@ -45,7 +45,8 @@ a scheme-specific signature:
 ## Return Value
 
 On success, the middleware returns the `info` object from the matching
-strategy, stored at `acc.auth`:
+strategy, stored on the [domain accumulator](/concepts/accumulator/) at
+`acc.auth`:
 
 ```js
 { user: { id: "42", role: "admin" } }
@@ -93,10 +94,10 @@ When a strategy provides an `authenticate` value, ergo includes a
 The status code and `WWW-Authenticate` challenge on authorization failure
 vary by scheme:
 
-#### Bearer (RFC 6750)
+#### Bearer ([RFC 6750](https://www.rfc-editor.org/rfc/rfc6750))
 
 When the authorizer returns `{ authorized: false, info }`, ergo maps the
-`info.type` field to an HTTP status code per RFC 6750 §3.1:
+`info.type` field to an HTTP status code per [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1):
 
 | `info.type` | Status | Description |
 | ----------- | ------ | ----------- |

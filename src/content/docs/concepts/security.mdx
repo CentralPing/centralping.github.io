@@ -105,7 +105,7 @@ attackers to assume other users' identities.
 
 **ergo mitigation:**
 
-- `authorization()` implements RFC 6750 (Bearer) and RFC 7617 (Basic) with
+- `authorization()` implements [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) (Bearer) and [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) (Basic) with
   correct `WWW-Authenticate` challenge responses, including `realm` and
   `error` attributes formatted per the RFCs.
 - CSRF protection uses `crypto.timingSafeEqual()` for token comparison,
@@ -226,7 +226,7 @@ router.post("/upload", {
 ```
 
 When rate limiting triggers, ergo returns `429 Too Many Requests` with a
-`Retry-After` header and an RFC 9457 Problem Details body — no custom error
+`Retry-After` header and an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details body — no custom error
 handling needed.
 
 ### API5: Broken Function Level Authorization
@@ -329,7 +329,7 @@ Additional structural protections:
   spread) because client JavaScript must read it for the double-submit
   header.
 - **Cookie-octet grammar enforcement.** Cookie values and names are validated
-  against RFC 6265 §4.1.1, preventing `Set-Cookie` attribute injection via
+  against [RFC 6265 §4.1.1](https://www.rfc-editor.org/rfc/rfc6265#section-4.1.1), preventing `Set-Cookie` attribute injection via
   semicolons or other special characters in values.
 - **Error detail redaction.** 5xx error responses never expose internal error
   messages. The raw error is available to the logger but the API consumer sees
@@ -385,7 +385,7 @@ security concerns:
 
 | Protection | Description |
 | ---------- | ----------- |
-| `sanitizeQuotedString` | Escapes backslashes, double-quotes, and strips all CTL characters (except HTAB) per RFC 7230 §3.2.6. Used in `WWW-Authenticate`, `Link`, and `Set-Cookie` headers. |
+| `sanitizeQuotedString` | Escapes backslashes, double-quotes, and strips all CTL characters (except HTAB) per [RFC 7230 §3.2.6](https://www.rfc-editor.org/rfc/rfc7230#section-3.2.6). Used in `WWW-Authenticate`, `Link`, and `Set-Cookie` headers. |
 | Prefer header ReDoS mitigation | The `lib/prefer.js` parser uses a two-alternative regex pattern that avoids catastrophic backtracking on adversarial input. |
 | Sensitive header redaction | The structured logger redacts `authorization`, `cookie`, `proxy-authorization`, and `set-cookie` header values from log output. |
 | Safe URI decoding | `lib/query.js` wraps `decodeURIComponent` in a `safeDecode()` helper that catches `URIError` on malformed percent-encoded sequences, preventing 500 crashes. |
