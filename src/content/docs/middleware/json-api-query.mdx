@@ -5,7 +5,7 @@ description: JSON:API query validation middleware — validates filter, sort, fi
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-Validates the parsed query accumulator against a
+Validates the parsed query [domain accumulator](/concepts/accumulator/) (`acc`) against a
 [JSON:API](https://jsonapi.org/) query schema, covering `filter`, `sort`,
 `fields`, `include`, and `page` parameters. Uses AJV 8 with JSON Schema
 2020-12. Must run after `url()`.

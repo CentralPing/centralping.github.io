@@ -18,7 +18,7 @@ Your browser-facing API needs a mutation endpoint that combines:
 
 Each middleware is documented individually, but wiring them together
 requires understanding the pipeline stage ordering, cookie
-prerequisites, RFC 8941 header quoting, and `complete()`/`discard()`
+prerequisites, [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) header quoting, and `complete()`/`discard()`
 lifecycle. This recipe shows the full integration — from CSRF token
 issuance on GET, through verification + idempotency on POST, to
 client-side header wiring.
@@ -221,7 +221,7 @@ replay and cleans up on failure.
 ### Client-Side Fetch Helper
 
 A framework-agnostic helper that reads the CSRF token from cookies,
-constructs all required headers, and applies RFC 8941 quoting to the
+constructs all required headers, and applies [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) quoting to the
 Idempotency-Key:
 
 ```js
@@ -253,7 +253,7 @@ async function secureMutation(url, body, idempotencyKey, sessionToken) {
 ```
 
 <Aside type="caution" title="RFC 8941 double-quoting is required">
-  The `Idempotency-Key` header value must be an RFC 8941 structured
+  The `Idempotency-Key` header value must be an [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) structured
   field string — double-quoted on the wire. Unquoted values (e.g.,
   `Idempotency-Key: my-key`) are rejected with a `400` response. In
   JavaScript, this means wrapping in escaped quotes:

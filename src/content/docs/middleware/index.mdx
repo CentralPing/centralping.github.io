@@ -18,7 +18,7 @@ both standalone composition and declarative ergo-router configuration.
 | Negotiation | [cookie](/middleware/cookie/) | Cookie parsing |
 | Negotiation | [url](/middleware/url/) | URL and query string parsing |
 | Negotiation | [paginate](/middleware/paginate/) | Pagination parameter parsing (offset + cursor) |
-| Negotiation | [prefer](/middleware/prefer/) | Prefer header parsing (RFC 7240) |
+| Negotiation | [prefer](/middleware/prefer/) | Prefer header parsing ([RFC 7240](https://www.rfc-editor.org/rfc/rfc7240)) |
 | Negotiation | [precondition](/middleware/precondition/) | Conditional request enforcement |
 | Negotiation | [rate-limit](/middleware/rate-limit/) | Per-client rate limiting |
 | Authorization | [authorization](/middleware/authorization/) | Bearer / Basic / API-key auth |
@@ -42,7 +42,7 @@ both standalone composition and declarative ergo-router configuration.
 
 ## Custom Middleware
 
-Need to write your own middleware? ergo's accumulator-based return-value
+Need to write your own middleware? ergo's [domain accumulator](/concepts/accumulator/)-based return-value
 contract lets you build middleware that composes cleanly with the
 pipeline — feature flags, audit logging, request enrichment, or
 third-party integrations.

@@ -26,8 +26,9 @@ import { timeout } from "@centralping/ergo";
 
 ## Return Value
 
-The middleware is side-effect only — it does not produce an accumulator
-value. On timeout it sets `responseAcc.statusCode` and
+The middleware is side-effect only — it does not produce a
+[domain accumulator](/concepts/accumulator/) value. On timeout it sets
+`responseAcc.statusCode` and
 `responseAcc.detail` directly.
 
 ## Error Responses

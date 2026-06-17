@@ -5,7 +5,7 @@ description: Prefer header parsing middleware — RFC 7240 return=minimal and re
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-Parses the `Prefer` request header per RFC 7240. Works in concert with
+Parses the `Prefer` request header per [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240). Works in concert with
 `send()`'s `prefer: true` option to automatically handle
 `return=minimal` (200 → 204) and `return=representation` behaviors.
 
@@ -23,7 +23,8 @@ None. The `prefer()` factory takes no parameters.
 
 ## Return Value
 
-Returns parsed preferences stored at `acc.prefer`:
+Returns parsed preferences stored on the [domain accumulator](/concepts/accumulator/)
+at `acc.prefer`:
 
 ```js
 {

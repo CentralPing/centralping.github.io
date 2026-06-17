@@ -6,7 +6,7 @@ description: Pipeline executor — creates accumulators, runs the pipeline, hand
 import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 The HTTP request handler factory for ergo's two-accumulator model.
-Creates domain and response accumulators per request, runs the composed
+Creates [domain](/concepts/accumulator/) and response accumulators per request, runs the composed
 pipeline, catches unexpected errors, and calls `send()` exactly once.
 This is the standalone equivalent of ergo-router's `auto-wrap`.
 
@@ -28,17 +28,17 @@ import { handler } from "@centralping/ergo";
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an RFC 9457 extension member. |
+| `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) extension member. |
 | `onResponse` | `function` | — | Post-send lifecycle observation hook. Called after `send()` completes with `(req, res, responseInfo, domainAcc)`. Errors thrown by the hook are swallowed — the hook cannot affect the response. Async hooks are awaited. |
-| `redactErrors` | `boolean` | `true` | Control whether caught 5xx exception messages appear in the RFC 9457 response `detail` field. When `true`, `detail` is set to generic status text. When `false`, `err.message` is passed through for 5xx only — 4xx always uses generic text. Stack traces are never exposed. Only set to `false` in development. |
+| `redactErrors` | `boolean` | `true` | Control whether caught 5xx exception messages appear in the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) response `detail` field. When `true`, `detail` is set to generic status text. When `false`, `err.message` is passed through for 5xx only — 4xx always uses generic text. Stack traces are never exposed. Only set to `false` in development. |
 | `timing` | `boolean \| object` | `false` | Inject an `X-Response-Time` header measuring the full request lifecycle (pipeline + error handling + send). Pass `true` for defaults (`x-response-time` header, 3 decimal places), or `{header?: string, precision?: number}` for custom configuration. Zero overhead when disabled. For router-level timing, see [Response Timing](/packages/ergo-router/#response-timing). |
 | `prettify` | `boolean` | `false` | Pretty-print JSON output (forwarded to [send](/middleware/send/)) |
 | `vary` | `string[]` | `['Accept']` | Vary header values to append (forwarded to [send](/middleware/send/)) |
 | `etag` | `boolean` | `true` | Generate ETags and evaluate conditional headers (forwarded to [send](/middleware/send/)) |
-| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for RFC 7240 `return=minimal` / `return=representation` (forwarded to [send](/middleware/send/)) |
-| `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate RFC 8288 Link headers and `X-Total-Count` for paginated responses (forwarded to [send](/middleware/send/)) |
+| `prefer` | `boolean` | `false` | Read `domainAcc.prefer` for [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240) `return=minimal` / `return=representation` (forwarded to [send](/middleware/send/)) |
+| `paginate` | `boolean` | `false` | Read `domainAcc.paginate` and `responseAcc.paginate` to auto-generate [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Link headers and `X-Total-Count` for paginated responses (forwarded to [send](/middleware/send/)) |
 | `envelope` | `boolean \| function` | `false` | Wrap 2xx Object bodies in a response envelope (forwarded to [send](/middleware/send/)) |
-| `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the RFC 9457 Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json`. (forwarded to [send](/middleware/send/)) |
+| `errorFormatter` | `function` | — | Custom error body formatter for 4xx/5xx responses. Receives the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details object and `{requestId, statusCode, method}` context. Return value becomes the response body as `application/json` instead of `application/problem+json`. (forwarded to [send](/middleware/send/)) |
 | `responseSchema` | `Record<number\|string, object>` | — | Map of status code to JSON Schema for response body projection (forwarded to [send](/middleware/send/)) |
 
 <Aside type="caution" title="Header collision with custom middleware">

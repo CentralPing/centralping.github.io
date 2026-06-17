@@ -37,8 +37,9 @@ import { csrf } from "@centralping/ergo";
 | `cookieOptions` | `object` | `{}` | Cookie directives (note: `httpOnly` and `sameSite` are locked) |
 
 <Aside type="caution" title="Cookie middleware is required">
-  Both `issue` and `verify` read from `acc.cookies` — the cookie jar
-  populated by the [cookie](/middleware/cookie/) middleware. Cookie
+  Both `issue` and `verify` read from the [domain accumulator](/concepts/accumulator/)
+  at `acc.cookies` — the cookie jar populated by the [cookie](/middleware/cookie/)
+  middleware. Cookie
   middleware must run before CSRF in the pipeline. In ergo-router, set
   `cookie: true` (or a cookie options object) in `defaults` or per-route
   config alongside `csrf`. In standalone `compose()`, place `cookie()`

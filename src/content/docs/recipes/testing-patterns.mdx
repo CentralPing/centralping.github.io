@@ -744,9 +744,9 @@ no polyfill needed). This validates the full middleware pipeline —
 content negotiation, body parsing, validation, auth, and response
 serialization — without coupling tests to internal middleware structure.
 
-### RFC 9457 Problem Details
+### [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details
 
-All ergo error responses follow RFC 9457 format with `type`, `title`,
+All ergo error responses follow [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) format with `type`, `title`,
 `status`, and `detail` fields. Assert on these structured fields rather
 than parsing error message strings — the format is stable across all
 ergo middleware.

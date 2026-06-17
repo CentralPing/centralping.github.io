@@ -95,10 +95,10 @@ break, `breakAt` records that middleware's label.
 | `steps` | `string[]` | Middleware labels in execution order |
 | `breakAt` | `string \| undefined` | Label of the middleware that caused the pipeline break |
 
-### RFC 9457 Extension Member
+### [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Extension Member
 
 `_trace` is not in `send()`'s reserved key set. On error responses
-(statusCode ≥ 400), it appears as an RFC 9457 extension member in the
+(statusCode ≥ 400), it appears as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) extension member in the
 response body alongside `type`, `title`, `status`, and `detail`.
 On success responses (2xx), `_trace` is not included in the body.
 

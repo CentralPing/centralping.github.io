@@ -47,7 +47,7 @@ store the response for future replays, or `discard()` to remove the key.
 
 | Status | Condition |
 | ------ | --------- |
-| **400 Bad Request** | Header is present but not a valid RFC 8941 sf-string (always, regardless of `required`) |
+| **400 Bad Request** | Header is present but not a valid [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) sf-string (always, regardless of `required`) |
 | **400 Bad Request** | Header is absent and `required: true` |
 | **409 Conflict** | Same key with a different request fingerprint |
 | **409 Conflict** | Concurrent request with the same key still processing |
@@ -159,8 +159,8 @@ idempotency entry (e.g. on failure).
 #### Lifecycle
 
 1. **New request** — the middleware returns `{ key, fingerprint,
-   complete, discard }` on `acc.idempotency`. The execute handler runs
-   normally.
+   complete, discard }` on the [domain accumulator](/concepts/accumulator/)
+   at `acc.idempotency`. The execute handler runs normally.
 2. **`complete(response)`** — stores the response for this key. The
    argument should be a response accumulator shape (e.g.
    `{ statusCode, body }`).

@@ -35,7 +35,7 @@ Request → Negotiation → Authorization → Validation → Execution → Respo
 ```
 
 Each stage either succeeds (passes the request forward) or fails (returns an
-RFC 9457 Problem Details error response). Failures are _immediate_ — no
+[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details error response). Failures are _immediate_ — no
 downstream middleware executes.
 
 ### Why This Matters
@@ -46,7 +46,7 @@ originates from Jim Shore's influential essay
 (IEEE Software, 2004), which argues that bugs are easier to find when software
 fails immediately and visibly rather than producing incorrect results silently.
 
-In the HTTP context, this principle maps directly to RFC 9110's status code
+In the HTTP context, this principle maps directly to [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)'s status code
 semantics: a `401 Unauthorized` should be returned _before_ attempting to parse
 a request body, and a `406 Not Acceptable` should be returned _before_
 executing business logic. ergo makes this the only possible execution path.
@@ -104,8 +104,8 @@ recommendations and address multiple risks in the
   IEEE Software, Sept/Oct 2004
 - Mark Nottingham,
   ["Building Protocols with HTTP"](https://www.rfc-editor.org/rfc/rfc9205)
-  (RFC 9205) — best practices for HTTP-based APIs
-- ["HTTP Semantics"](https://www.rfc-editor.org/rfc/rfc9110) (RFC 9110) — the
+  ([RFC 9205](https://www.rfc-editor.org/rfc/rfc9205)) — best practices for HTTP-based APIs
+- ["HTTP Semantics"](https://www.rfc-editor.org/rfc/rfc9110) ([RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)) — the
   authoritative specification for HTTP methods, status codes, and headers
 - [OWASP API Security Top 10](https://owasp.org/API-Security/) — the most
   critical API security risks

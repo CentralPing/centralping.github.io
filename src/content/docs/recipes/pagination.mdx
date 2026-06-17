@@ -8,7 +8,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## Problem
 
-You need paginated list endpoints that return RFC 8288 `Link` headers
+You need paginated list endpoints that return [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) `Link` headers
 (`first`, `prev`, `next`, `last`) and `X-Total-Count`, with bounded
 page sizes to prevent unbounded queries.
 
@@ -131,7 +131,7 @@ The pagination flow has two sides:
    data at `acc.paginate`.
 2. **Response generation** — `send()` reads `acc.paginate` (parsed
    params) and `response.paginate` (your response metadata) to
-   auto-generate RFC 8288 Link headers.
+   auto-generate [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Link headers.
 
 Your `execute` handler bridges the two: read `acc.paginate` for query
 parameters, run your data query, then return `{ response: { body,
@@ -186,7 +186,7 @@ The shape depends on the strategy:
 
 For **offset** pagination, `send()` generates:
 
-- **`Link` header** — RFC 8288 links for `first`, `prev` (when
+- **`Link` header** — [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) links for `first`, `prev` (when
   `page > 1`), `next` (when `page < lastPage`), and `last`
 - **`X-Total-Count` header** — total item count
 

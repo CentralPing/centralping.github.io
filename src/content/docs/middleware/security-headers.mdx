@@ -60,7 +60,7 @@ defaults (HSTS on, CSP off). See the
 
 HSTS defaults to `false` because this middleware returns pre-computed
 header tuples with no access to the request object, so it cannot verify
-HTTPS. Per RFC 6797 §7.2, HSTS MUST only be sent over secure transport.
+HTTPS. Per [RFC 6797 §7.2](https://www.rfc-editor.org/rfc/rfc6797#section-7.2), HSTS MUST only be sent over secure transport.
 ergo-router's transport-level middleware performs the HTTPS check and
 enables HSTS appropriately.
 

@@ -236,7 +236,7 @@ interface AcceptsResult {
 
 ### `acc.prefer`
 
-Stored at `acc.prefer` by the `prefer()` middleware. Parsed RFC 7240 Prefer header as a
+Stored at `acc.prefer` by the `prefer()` middleware. Parsed [RFC 7240](https://www.rfc-editor.org/rfc/rfc7240) Prefer header as a
 flat map.
 
 ```ts
@@ -375,12 +375,12 @@ interface ResponseAccumulator {
 | `statusCode` | `number` | HTTP status code — setting this breaks the pipeline |
 | `headers` | `[string, string][]` | Response headers as `[name, value]` tuples (appended, not overwritten) |
 | `body` | `unknown` | Response body (serialized by `send()`) |
-| `detail` | `string` | RFC 9457 Problem Details `detail` field |
+| `detail` | `string` | [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details `detail` field |
 | `retryAfter` | `number` | `Retry-After` header value in seconds |
-| `instance` | `string` | RFC 9457 `instance` URI |
+| `instance` | `string` | [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) `instance` URI |
 | `location` | `string` | `Location` header value (redirects, 201 Created) |
 | `lastModified` | `Date` | `Last-Modified` header value |
-| `type` | `string` | RFC 9457 `type` URI |
+| `type` | `string` | [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) `type` URI |
 
 ## Further Reading
 
