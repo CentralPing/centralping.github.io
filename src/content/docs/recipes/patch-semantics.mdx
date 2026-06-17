@@ -34,14 +34,14 @@ the patch overwrite the target; properties set to `null` are removed.
             name: {type: 'string'},
             email: {type: 'string', format: 'email'},
             bio: {type: ['string', 'null']},
-         },
+          },
           additionalProperties: false,
-       },
-     }),
+        },
+      }),
       async (req, res, acc) => {
         const updated = await db.merge(acc.route.params.id, acc.body.parsed);
         return {response: {body: updated}};
-     },
+      },
     );
     ```
   </TabItem>
@@ -56,15 +56,15 @@ the patch overwrite the target; properties set to `null` are removed.
             name: {type: 'string'},
             email: {type: 'string', format: 'email'},
             bio: {type: ['string', 'null']},
-         },
+          },
           additionalProperties: false,
-       },
-     },
+        },
+      },
       execute: async (req, res, acc) => {
         const updated = await db.merge(acc.route.params.id, acc.body.parsed);
         return {response: {body: updated}};
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -94,15 +94,15 @@ path in the document.
               path: {type: 'string', pattern: '^/'},
               value: {},
               from: {type: 'string', pattern: '^/'},
-           },
+            },
             additionalProperties: false,
-         },
-       },
-     }),
+          },
+        },
+      }),
       async (req, res, acc) => {
         const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
         return {response: {body: updated}};
-     },
+      },
     );
     ```
   </TabItem>
@@ -121,16 +121,16 @@ path in the document.
               path: {type: 'string', pattern: '^/'},
               value: {},
               from: {type: 'string', pattern: '^/'},
-           },
+            },
             additionalProperties: false,
-         },
-       },
-     },
+          },
+        },
+      },
       execute: async (req, res, acc) => {
         const updated = await db.applyPatch(acc.route.params.id, acc.body.parsed);
         return {response: {body: updated}};
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -154,13 +154,13 @@ inspect `acc.body.type` to determine which format was sent:
         if (type === 'application/json-patch+json') {
           const updated = await db.applyPatch(id, parsed);
           return {response: {body: updated}};
-       }
+        }
 
         // Default: merge-patch semantics for application/json
         // and application/merge-patch+json
         const updated = await db.merge(id, parsed);
         return {response: {body: updated}};
-     },
+      },
     );
     ```
   </TabItem>
@@ -174,12 +174,12 @@ inspect `acc.body.type` to determine which format was sent:
         if (type === 'application/json-patch+json') {
           const updated = await db.applyPatch(id, parsed);
           return {response: {body: updated}};
-       }
+        }
 
         const updated = await db.merge(id, parsed);
         return {response: {body: updated}};
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>

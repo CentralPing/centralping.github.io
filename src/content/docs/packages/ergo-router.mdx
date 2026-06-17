@@ -56,7 +56,7 @@ import createRouter from '@centralping/ergo-router';
 const router = createRouter({
   defaults: {
     accepts: {types: ['application/json']},
- },
+  },
 });
 
 router.post('/users', {
@@ -102,8 +102,8 @@ const router = createRouter({
   defaults: {
     authorization: {
       strategies: [bearerStrategy, apiKeyStrategy],
-   },
- },
+    },
+  },
 });
 
 // ⚠️ This route loses bearerStrategy and apiKeyStrategy —
@@ -130,7 +130,7 @@ const router = createRouter({
 router.get('/admin', {
   authorization: {
     strategies: [...authDefaults.strategies, basicStrategy],
- },
+  },
   execute: adminHandler,
 });
 ```
@@ -164,7 +164,7 @@ const router = createRouter({
   defaults: {
     ...presets.jsonApi.defaults,
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 ```
 
@@ -242,7 +242,7 @@ const router = createRouter({
   ...presets.jsonApi,
   defaults: {
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 // defaults.accepts is gone — presets.jsonApi.defaults was replaced
 
@@ -252,7 +252,7 @@ const router = createRouter({
   defaults: {
     ...presets.jsonApi.defaults,
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 // defaults.accepts is preserved from the preset
 ```
@@ -266,11 +266,11 @@ const router = createRouter({
   transport: {
     ...presets.jsonApi.transport,
     cors: {origin: 'https://myapp.com'},
- },
+  },
   defaults: {
     ...presets.jsonApi.defaults,
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 ```
 
@@ -289,7 +289,7 @@ const router = createRouter({
   router.get('/events', {
     noSend: true,
     execute: sseHandler,
- });
+  });
   ```
 </Aside>
 
@@ -382,7 +382,7 @@ Validation, Execution):
 router.use((req, res, acc) => {
   res.on('finish', () => {
     console.log(`${req.method} ${req.url} ${res.statusCode}`);
- });
+  });
 });
 ```
 
@@ -443,7 +443,7 @@ router.get('/events', {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-   });
+    });
 
     const interval = setInterval(() => {
       res.write(`data: ${JSON.stringify({ts: Date.now()})}\n\n`);
@@ -452,8 +452,8 @@ router.get('/events', {
     req.on('close', () => {
       clearInterval(interval);
       res.end();
-   });
- },
+    });
+  },
 });
 ```
 
@@ -519,15 +519,15 @@ const router = createRouter({
       status: responseInfo.statusCode,
       duration: responseInfo.duration,
       user: domainAcc.auth?.identity,
-   });
- },
+    });
+  },
 });
 
 router.post('/payments', {
   onResponse: (req, res, responseInfo) => {
     metrics.histogram('payments.duration', responseInfo.duration);
     metrics.increment(`payments.status.${responseInfo.statusCode}`);
- },
+  },
   authorization: {strategies: [bearerStrategy]},
   validate: {body: paymentSchema},
   execute: processPayment,
@@ -619,7 +619,7 @@ const router = createRouter({
   timing: true,
   defaults: {
     accepts: {types: ['application/json']},
- },
+  },
 });
 
 router.get('/health', {
@@ -650,8 +650,8 @@ router.get('/articles', {
     const total = await db.count();
     return {
       response: {body: items, paginate: {total}},
-   };
- },
+    };
+  },
 });
 // GET /articles?page=2&per_page=10
 // → Link: </articles?page=1&per_page=10>; rel="first", ...
@@ -670,9 +670,9 @@ router.get('/events', {
       response: {
         body: items,
         paginate: {nextCursor},
-     },
-   };
- },
+      },
+    };
+  },
 });
 // GET /events?cursor=abc123&limit=10
 // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
@@ -708,7 +708,7 @@ const router = createRouter({
   defaults: {
     accepts: {types: ['application/json']},
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 
 router.get('/users/:id', {
@@ -716,8 +716,8 @@ router.get('/users/:id', {
     params: {
       type: 'object',
       properties: {id: {type: 'string'}},
-   },
- },
+    },
+  },
   openapi: {summary: 'Get user by ID', tags: ['Users']},
   execute: getUser,
 });
@@ -770,8 +770,8 @@ router.post('/users', {
     responses: {
       201: {description: 'User created'},
       409: {description: 'Email already exists'},
-   },
- },
+    },
+  },
   execute: createUser,
 });
 ```
@@ -809,7 +809,7 @@ import createRouter from '@centralping/ergo-router';
 const usersRouter = createRouter({
   defaults: {
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 
 usersRouter.get('/', {execute: listUsers});
@@ -864,11 +864,11 @@ const {server, shutdown} = await graceful(router.handle(), {
   onStartup: async ({log}) => {
     await connectDatabase();
     log.info('Database connected');
- },
+  },
   onShutdown: async ({log, signal}) => {
     await disconnectDatabase();
     log.info('Cleanup complete');
- },
+  },
 });
 ```
 
@@ -931,7 +931,7 @@ describe('server lifecycle', () => {
 
   after(async () => {
     if (shutdown) await shutdown('test-cleanup');
- });
+  });
 
   it('starts on an ephemeral port', async () => {
     const result = await graceful(
@@ -943,7 +943,7 @@ describe('server lifecycle', () => {
     const {port} = result.server.address();
     const res = await fetch(`http://localhost:${port}/`);
     assert.equal(res.status, 200);
- });
+  });
 });
 ```
 

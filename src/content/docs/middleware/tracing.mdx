@@ -81,12 +81,12 @@ None. Tracing is observability-only.
     const router = createRouter({
       defaults: {
         tracing: {perStage: true},
-     },
-   });
+      },
+    });
 
     router.get('/health', {
       execute: () => ({response: {body: {ok: true}}}),
-   });
+    });
 
     await graceful(router.handle(), {port: 3000});
     ```

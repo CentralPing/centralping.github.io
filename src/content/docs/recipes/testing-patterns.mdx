@@ -32,7 +32,7 @@ graceful shutdown.
       after(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
-     });
+      });
 
       it('creates a user', async () => {
         const pipeline = compose(
@@ -41,8 +41,8 @@ graceful shutdown.
             response: {
               statusCode: 201,
               body: {name: acc.body.parsed.name},
-           },
-         }),
+            },
+          }),
         );
 
         server = http.createServer(handler(pipeline));
@@ -54,12 +54,12 @@ graceful shutdown.
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: 'Jane'}),
-       });
+        });
         assert.equal(res.status, 201);
         const data = await res.json();
         assert.equal(data.name, 'Jane');
-     });
-   });
+      });
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -73,7 +73,7 @@ graceful shutdown.
 
       after(async () => {
         if (shutdown) await shutdown('test-cleanup');
-     });
+      });
 
       it('creates a user', async () => {
         const router = createRouter();
@@ -83,20 +83,20 @@ graceful shutdown.
               type: 'object',
               properties: {name: {type: 'string'}},
               required: ['name'],
-           },
-         },
+            },
+          },
           execute: (req, res, acc) => ({
             response: {
               statusCode: 201,
               body: {name: acc.body.parsed.name},
-           },
-         }),
-       });
+            },
+          }),
+        });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-       });
+        });
         shutdown = result.shutdown;
 
         const {port} = result.server.address();
@@ -106,12 +106,12 @@ graceful shutdown.
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: 'Jane'}),
-       });
+        });
         assert.equal(res.status, 201);
         const data = await res.json();
         assert.equal(data.name, 'Jane');
-     });
-   });
+      });
+    });
     ```
   </TabItem>
 </Tabs>
@@ -150,7 +150,7 @@ graceful shutdown.
       after(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
-     });
+      });
 
       it('accepts valid Bearer token', async () => {
         const pipeline = compose(
@@ -163,9 +163,9 @@ graceful shutdown.
                   token === 'valid-token'
                     ? {authorized: true, info: {userId: 'u1'}}
                     : {authorized: false},
-             },
+              },
             ],
-         }),
+          }),
           (req, res, acc) => ({response: {body: acc.auth}}),
         );
 
@@ -176,28 +176,28 @@ graceful shutdown.
 
         const res = await fetch(baseUrl, {
           headers: {Authorization: 'Bearer valid-token'},
-       });
+        });
         assert.equal(res.status, 200);
         const data = await res.json();
         assert.equal(data.userId, 'u1');
-     });
+      });
 
       it('rejects invalid token with 401 + WWW-Authenticate', async () => {
         const res = await fetch(baseUrl, {
           headers: {Authorization: 'Bearer wrong-token'},
-       });
+        });
         assert.equal(res.status, 401);
         assert.ok(
           res.headers.get('www-authenticate'),
           'should include WWW-Authenticate header',
         );
-     });
+      });
 
       it('rejects missing Authorization with 401', async () => {
         const res = await fetch(baseUrl);
         assert.ok(res.status === 401 || res.status === 403);
-     });
-   });
+      });
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -212,7 +212,7 @@ graceful shutdown.
 
       after(async () => {
         if (shutdown) await shutdown('test-cleanup');
-     });
+      });
 
       it('accepts valid Bearer token', async () => {
         const router = createRouter();
@@ -226,16 +226,16 @@ graceful shutdown.
                   token === 'valid-token'
                     ? {authorized: true, info: {userId: 'u1'}}
                     : {authorized: false},
-             },
+              },
             ],
-         },
+          },
           execute: (req, res, acc) => ({response: {body: acc.auth}}),
-       });
+        });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-       });
+        });
         shutdown = result.shutdown;
 
         const {port} = result.server.address();
@@ -243,28 +243,28 @@ graceful shutdown.
 
         const res = await fetch(`${baseUrl}/protected`, {
           headers: {Authorization: 'Bearer valid-token'},
-       });
+        });
         assert.equal(res.status, 200);
         const data = await res.json();
         assert.equal(data.userId, 'u1');
-     });
+      });
 
       it('rejects invalid token with 401 + WWW-Authenticate', async () => {
         const res = await fetch(`${baseUrl}/protected`, {
           headers: {Authorization: 'Bearer wrong-token'},
-       });
+        });
         assert.equal(res.status, 401);
         assert.ok(
           res.headers.get('www-authenticate'),
           'should include WWW-Authenticate header',
         );
-     });
+      });
 
       it('rejects missing Authorization with 401', async () => {
         const res = await fetch(`${baseUrl}/protected`);
         assert.ok(res.status === 401 || res.status === 403);
-     });
-   });
+      });
+    });
     ```
   </TabItem>
 </Tabs>
@@ -286,21 +286,21 @@ graceful shutdown.
       after(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
-     });
+      });
 
       it('returns 422 for invalid body', async () => {
         const schema = {
           type: 'object',
           properties: {name: {type: 'string'}},
           required: ['name'],
-       };
+        };
 
         const pipeline = compose(
           body(),
           validate({body: schema}),
           (req, res, acc) => ({
             response: {body: {name: acc.body.parsed.name}},
-         }),
+          }),
         );
 
         server = http.createServer(handler(pipeline));
@@ -312,7 +312,7 @@ graceful shutdown.
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: 42}),
-       });
+        });
         assert.equal(res.status, 422);
         const problem = await res.json();
         assert.equal(problem.status, 422);
@@ -324,19 +324,19 @@ graceful shutdown.
         assert.equal(problem.details[0].path, '/name');
         assert.equal(problem.details[0].message, 'must be string');
         assert.ok(problem.details[0].params);
-     });
+      });
 
       it('passes valid body through pipeline', async () => {
         const res = await fetch(baseUrl, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: 'Jane'}),
-       });
+        });
         assert.equal(res.status, 200);
         const data = await res.json();
         assert.equal(data.name, 'Jane');
-     });
-   });
+      });
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -351,7 +351,7 @@ graceful shutdown.
 
       after(async () => {
         if (shutdown) await shutdown('test-cleanup');
-     });
+      });
 
       it('returns 422 for invalid body', async () => {
         const router = createRouter();
@@ -361,17 +361,17 @@ graceful shutdown.
               type: 'object',
               properties: {name: {type: 'string'}},
               required: ['name'],
-           },
-         },
+            },
+          },
           execute: (req, res, acc) => ({
             response: {body: {name: acc.body.parsed.name}},
-         }),
-       });
+          }),
+        });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-       });
+        });
         shutdown = result.shutdown;
 
         const {port} = result.server.address();
@@ -381,7 +381,7 @@ graceful shutdown.
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: 42}),
-       });
+        });
         assert.equal(res.status, 422);
         const problem = await res.json();
         assert.equal(problem.status, 422);
@@ -393,19 +393,19 @@ graceful shutdown.
         assert.equal(problem.details[0].path, '/name');
         assert.equal(problem.details[0].message, 'must be string');
         assert.ok(problem.details[0].params);
-     });
+      });
 
       it('passes valid body through pipeline', async () => {
         const res = await fetch(`${baseUrl}/users`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: 'Jane'}),
-       });
+        });
         assert.equal(res.status, 201);
         const data = await res.json();
         assert.equal(data.name, 'Jane');
-     });
-   });
+      });
+    });
     ```
   </TabItem>
 </Tabs>
@@ -426,14 +426,14 @@ graceful shutdown.
       const problem = await tooMany[0].json();
       assert.equal(problem.status, 429);
       assert.ok(problem.retryAfter != null);
-   });
+    });
 
     it('includes rate-limit headers on every response', async () => {
       const res = await fetch(`${baseUrl}/limited`);
       assert.ok(res.headers.get('x-ratelimit-limit'));
       assert.ok(res.headers.get('x-ratelimit-remaining'));
       assert.ok(res.headers.get('x-ratelimit-reset'));
-   });
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -448,20 +448,20 @@ graceful shutdown.
 
       after(async () => {
         if (shutdown) await shutdown('test-cleanup');
-     });
+      });
 
       it('enforces rate limit', async () => {
         const router = createRouter({
           transport: {rateLimit: {max: 5, windowMs: 60_000}},
-       });
+        });
         router.get('/limited', {
           execute: () => ({response: {body: {ok: true}}}),
-       });
+        });
 
         const result = await graceful(router.handle(), {
           port: 0,
           exit() {},
-       });
+        });
         shutdown = result.shutdown;
 
         const {port} = result.server.address();
@@ -477,15 +477,15 @@ graceful shutdown.
         const problem = await tooMany[0].json();
         assert.equal(problem.status, 429);
         assert.ok(problem.retryAfter != null);
-     });
+      });
 
       it('includes rate-limit headers on every response', async () => {
         const res = await fetch(`${baseUrl}/limited`);
         assert.ok(res.headers.get('x-ratelimit-limit'));
         assert.ok(res.headers.get('x-ratelimit-remaining'));
         assert.ok(res.headers.get('x-ratelimit-reset'));
-     });
-   });
+      });
+    });
     ```
   </TabItem>
 </Tabs>
@@ -498,7 +498,7 @@ it('returns 422 for invalid body', async () => {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({name: 42}),
- });
+  });
 
   assert.equal(res.status, 422);
   const problem = await res.json();
@@ -512,7 +512,7 @@ it('includes request ID in error response', async () => {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({name: 42}),
- });
+  });
 
   const problem = await res.json();
   assert.ok(problem.instance, 'should include request ID as instance');
@@ -556,8 +556,8 @@ it('includes request ID in error response', async () => {
           () => fetch(baseUrl),
           'should reject after server close',
         );
-     });
-   });
+      });
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -571,13 +571,13 @@ it('includes request ID in error response', async () => {
         const router = createRouter();
         router.get('/health', {
           execute: () => ({response: {body: {ok: true}}}),
-       });
+        });
 
         const result = await graceful(router.handle(), {
           port: 0,
           signals: [],
           exit() {},
-       });
+        });
 
         const {port} = result.server.address();
         const baseUrl = `http://localhost:${port}`;
@@ -591,7 +591,7 @@ it('includes request ID in error response', async () => {
           () => fetch(baseUrl + '/health'),
           'should reject after shutdown',
         );
-     });
+      });
 
       it('runs onShutdown callback during teardown', async () => {
         let cleanedUp = false;
@@ -599,7 +599,7 @@ it('includes request ID in error response', async () => {
         const router = createRouter();
         router.get('/', {
           execute: () => ({response: {body: {ok: true}}}),
-       });
+        });
 
         const result = await graceful(router.handle(), {
           port: 0,
@@ -607,13 +607,13 @@ it('includes request ID in error response', async () => {
           exit() {},
           onShutdown: async () => {
             cleanedUp = true;
-         },
-       });
+          },
+        });
 
         await result.shutdown('test-cleanup');
         assert.ok(cleanedUp, 'onShutdown should have been called');
-     });
-   });
+      });
+    });
     ```
   </TabItem>
 </Tabs>
@@ -633,12 +633,12 @@ describe('ETag conditional requests', () => {
   after(async () => {
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
- });
+  });
 
   it('generates ETag and returns 304 on match', async () => {
     const pipeline = () => ({
       response: {body: {message: 'hello', value: 42}},
-   });
+    });
 
     server = http.createServer(handler(pipeline));
     await new Promise((resolve) => server.listen(0, resolve));
@@ -652,11 +652,11 @@ describe('ETag conditional requests', () => {
 
     const res2 = await fetch(baseUrl, {
       headers: {'If-None-Match': etag},
-   });
+    });
     assert.equal(res2.status, 304);
     const body = await res2.text();
     assert.equal(body, '');
- });
+  });
 });
 ```
 
@@ -679,26 +679,26 @@ describe('isolated test suites', () => {
 
   after(async () => {
     if (shutdown) await shutdown('test-cleanup');
- });
+  });
 
   it('each suite gets its own server and state', async () => {
     const router = createRouter({
       transport: {rateLimit: {max: 100, windowMs: 60_000}},
-   });
+    });
     router.get('/', {
       execute: () => ({response: {body: {ok: true}}}),
-   });
+    });
 
     const result = await graceful(router.handle(), {
       port: 0,
       exit() {},
-   });
+    });
     shutdown = result.shutdown;
 
     const {port} = result.server.address();
     const res = await fetch(`http://localhost:${port}/`);
     assert.equal(res.status, 200);
- });
+  });
 });
 ```
 

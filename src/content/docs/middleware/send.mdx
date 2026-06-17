@@ -91,8 +91,8 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
         const user = await db.findUser('42');
         return {
           response: {statusCode: 200, body: user},
-       };
-     },
+        };
+      },
     );
 
     const server = http.createServer(
@@ -104,10 +104,10 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
               id: {type: 'number'},
               name: {type: 'string'},
               email: {type: 'string'},
-           },
-         },
-       },
-     }),
+            },
+          },
+        },
+      }),
     );
     // GET /users/42
     // Body { id, name, email } — internal fields (passwordHash, etc.) stripped
@@ -125,12 +125,12 @@ the response accumulator's `statusCode`, `detail`, `retryAfter`,
                 id: {type: 'number'},
                 name: {type: 'string'},
                 email: {type: 'string'},
-             },
-           },
-         },
-       },
-     },
-   });
+              },
+            },
+          },
+        },
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -196,9 +196,9 @@ values are silently ignored (no header set, no conditional evaluation).
             statusCode: 200,
             body: todo,
             lastModified: todo.updatedAt,
-         },
-       };
-     },
+          },
+        };
+      },
     );
 
     const server = http.createServer(handler(pipeline));
@@ -217,10 +217,10 @@ values are silently ignored (no header set, no conditional evaluation).
             statusCode: 200,
             body: todo,
             lastModified: todo.updatedAt,
-         },
-       };
-     },
-   });
+          },
+        };
+      },
+    });
     // GET /todos/42
     // → 200 OK
     // → Last-Modified: Thu, 05 Jun 2025 12:00:00 GMT
@@ -262,9 +262,9 @@ modified after the condition date, the request is rejected with
             statusCode: 200,
             body: todo,
             lastModified: todo.updatedAt,
-         },
-       };
-     },
+          },
+        };
+      },
     );
 
     const server = http.createServer(handler(pipeline));
@@ -287,10 +287,10 @@ modified after the condition date, the request is rejected with
             statusCode: 200,
             body: todo,
             lastModified: todo.updatedAt,
-         },
-       };
-     },
-   });
+          },
+        };
+      },
+    });
     // PUT /todos/42
     // If-Unmodified-Since: Thu, 05 Jun 2025 11:00:00 GMT
     // (resource modified at 12:00:00 — after the condition date)
@@ -319,7 +319,7 @@ modified after the condition date, the request is rejected with
     const pipeline = compose(
       (req, res, acc) => ({
         response: {statusCode: 200, body: {hello: 'world'}},
-     }),
+      }),
     );
 
     const server = http.createServer(
@@ -332,8 +332,8 @@ modified after the condition date, the request is rejected with
     const router = createRouter({
       defaults: {
         send: {etag: true, prefer: true},
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>

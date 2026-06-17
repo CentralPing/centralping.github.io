@@ -52,8 +52,8 @@ routes.
         return user
           ? {authorized: true, info: {user}}
           : {authorized: false};
-     },
-   };
+      },
+    };
 
     // GET — issues CSRF token cookies for the browser
     const issuePipeline = compose(
@@ -88,27 +88,27 @@ routes.
               return user
                 ? {authorized: true, info: {user}}
                 : {authorized: false};
-           },
-         }],
-       },
-     },
-   });
+            },
+          }],
+        },
+      },
+    });
 
     // Browser route — inherits cookie + CSRF + auth from defaults.
     // GET issues CSRF token cookies; POST verifies them (auto-dispatch).
     router.get('/account/transfer', {
       execute: (req, res, acc) => ({
         response: {body: {balance: acc.auth.user.balance}},
-     }),
-   });
+      }),
+    });
 
     router.post('/account/transfer', {
       idempotency: {required: true},
       validate: {body: transferSchema},
       execute: async (req, res, acc) => {
         // ... (see Idempotent Mutation section below)
-     },
-   });
+      },
+    });
 
     // Bearer-only route — no CSRF, no idempotency
     router.post('/api/webhooks', {
@@ -116,8 +116,8 @@ routes.
       cookie: false,
       execute: async (req, res, acc) => ({
         response: {body: {received: true}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -182,8 +182,8 @@ replay and cleans up on failure.
        } catch (err) {
           acc.idempotency.discard();
           throw err;
-       }
-     },
+        }
+      },
     );
     ```
   </TabItem>
@@ -203,9 +203,9 @@ replay and cleans up on failure.
        } catch (err) {
           acc.idempotency.discard();
           throw err;
-       }
-     },
-   });
+        }
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -244,9 +244,9 @@ async function secureMutation(url, body, idempotencyKey, sessionToken) {
       // RFC 8941 sf-string: value MUST be double-quoted on the wire
       'Idempotency-Key': `"${idempotencyKey}"`,
       'Authorization': `Bearer ${sessionToken}`,
-   },
+    },
     body: JSON.stringify(body),
- });
+  });
 
   return response.json();
 }
@@ -285,7 +285,7 @@ all required headers, (3) replay POST verifying idempotent response.
       it('issues CSRF tokens on GET', async () => {
         const res = await fetch(`${baseUrl}/account/transfer`, {
           headers: {Authorization: 'Bearer valid-token'},
-       });
+        });
 
         assert.equal(res.status, 200);
 
@@ -295,13 +295,13 @@ all required headers, (3) replay POST verifying idempotent response.
 
         assert.ok(csrfToken, 'CSRF-TOKEN cookie is set');
         assert.ok(csrfUuid, 'CSRF-UUID cookie is set');
-     });
+      });
 
       it('accepts POST with CSRF + idempotency headers', async () => {
         // Step 1: GET to obtain tokens
         const getRes = await fetch(`${baseUrl}/account/transfer`, {
           headers: {Authorization: 'Bearer valid-token'},
-       });
+        });
         const cookies = getRes.headers.getSetCookie();
         tokenValue = cookies
           .find((c) => c.startsWith('CSRF-TOKEN='))
@@ -320,12 +320,12 @@ all required headers, (3) replay POST verifying idempotent response.
             'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
             'Idempotency-Key': '"txn-abc-123"',
-         },
+          },
           body: JSON.stringify({amount: 1000, to: 'acct-456'}),
-       });
+        });
 
         assert.equal(postRes.status, 201);
-     });
+      });
 
       it('replays idempotent response on duplicate key', async () => {
         // (after a successful POST with key "txn-abc-123")
@@ -337,16 +337,16 @@ all required headers, (3) replay POST verifying idempotent response.
             'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
             'Idempotency-Key': '"txn-abc-123"',
-         },
+          },
           body: JSON.stringify({amount: 1000, to: 'acct-456'}),
-       });
+        });
 
         assert.equal(replayRes.status, 201);
         const body = await replayRes.json();
         // Same response as the original — replayed from store
         assert.ok(body);
-     });
-   });
+      });
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -372,16 +372,16 @@ all required headers, (3) replay POST verifying idempotent response.
                   token === 'valid-token'
                     ? {authorized: true, info: {user: {id: 1}}}
                     : {authorized: false},
-             }],
-           },
-         },
-       });
+              }],
+            },
+          },
+        });
 
         router.get('/account/transfer', {
           execute: () => ({
             response: {body: {balance: 5000}},
-         }),
-       });
+          }),
+        });
 
         router.post('/account/transfer', {
           idempotency: {required: true},
@@ -390,13 +390,13 @@ all required headers, (3) replay POST verifying idempotent response.
             const response = {statusCode: 201, body: {transferred: true}};
             acc.idempotency.complete(response);
             return {response};
-         },
-       });
+          },
+        });
 
         ({shutdown} = await graceful(router.handle(), {port: 0}));
         const addr = shutdown.server.address();
         baseUrl = `http://localhost:${addr.port}`;
-     });
+      });
 
       after(() => shutdown());
 
@@ -404,7 +404,7 @@ all required headers, (3) replay POST verifying idempotent response.
         // Step 1: GET issues CSRF cookies
         const getRes = await fetch(`${baseUrl}/account/transfer`, {
           headers: {Authorization: 'Bearer valid-token'},
-       });
+        });
         assert.equal(getRes.status, 200);
 
         const cookies = getRes.headers.getSetCookie();
@@ -425,9 +425,9 @@ all required headers, (3) replay POST verifying idempotent response.
             'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
             'Idempotency-Key': '"txn-unique-001"',
-         },
+          },
           body: JSON.stringify({amount: 1000}),
-       });
+        });
         assert.equal(postRes.status, 201);
 
         // Step 3: Replay — same key returns stored response
@@ -439,14 +439,14 @@ all required headers, (3) replay POST verifying idempotent response.
             'X-CSRF-TOKEN': tokenValue,
             Cookie: cookieHeader,
             'Idempotency-Key': '"txn-unique-001"',
-         },
+          },
           body: JSON.stringify({amount: 1000}),
-       });
+        });
         assert.equal(replayRes.status, 201);
         const body = await replayRes.json();
         assert.deepEqual(body, {transferred: true});
-     });
-   });
+      });
+    });
     ```
   </TabItem>
 </Tabs>

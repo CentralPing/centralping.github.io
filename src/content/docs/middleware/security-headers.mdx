@@ -84,7 +84,7 @@ Always returns response headers:
       ['Referrer-Policy', 'no-referrer'],
       ['X-XSS-Protection', '0']
     ]
- }
+  }
 }
 ```
 
@@ -109,7 +109,7 @@ None.
         xFrameOptions: 'SAMEORIGIN',
         permissionsPolicy: 'camera=(), microphone=()',
         xXssProtection: false,
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -120,9 +120,9 @@ None.
         securityHeaders: {
           contentSecurityPolicy: "default-src 'self'",
           xFrameOptions: 'SAMEORIGIN',
-       },
-     },
-   });
+        },
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -157,7 +157,7 @@ health check dashboards, or documentation endpoints), override
     const pipeline = compose(
       securityHeaders({
         contentSecurityPolicy: "default-src 'self'; style-src 'self' 'unsafe-inline'",
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -167,11 +167,11 @@ health check dashboards, or documentation endpoints), override
     router.get('/dashboard', {
       securityHeaders: {
         contentSecurityPolicy: "default-src 'self'; style-src 'self' 'unsafe-inline'",
-     },
+      },
       execute: (req, res, acc) => ({
         response: {body: '<html>...</html>'},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -191,8 +191,8 @@ const router = createRouter({
   transport: {
     security: {
       csp: "default-src 'self'",
-   },
- },
+    },
+  },
 });
 ```
 

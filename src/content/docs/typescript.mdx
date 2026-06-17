@@ -118,7 +118,7 @@ import createRouter, {defineGet, definePost} from '@centralping/ergo-router';
 const router = createRouter({
   defaults: {
     accepts: {types: ['application/json']},
- },
+  },
 });
 
 router.get(
@@ -130,7 +130,7 @@ router.get(
       acc.url.query;    // Record<string, string | string[]> — typed
       acc.route.params; // Record<string, string> — always present
       return {response: {body: {id: acc.route.params.id}}};
-   },
+    },
   ),
 );
 
@@ -142,7 +142,7 @@ router.post(
       acc.auth;        // AuthorizationResult — typed
       acc.body.parsed; // unknown — typed
       return {response: {statusCode: 201, body: acc.body.parsed}};
-   },
+    },
   ),
 );
 ```
@@ -181,8 +181,8 @@ const pipeline = compose(
   (req, res, acc: Acc) => ({
     response: {
       body: {path: acc.url.pathname, query: acc.url.query},
-   },
- }),
+    },
+  }),
 );
 ```
 

@@ -89,8 +89,8 @@ None. Invalid or missing query parameters fall back to defaults silently.
         const total = await db.count();
         return {
           response: {body: items, paginate: {total}},
-       };
-     },
+        };
+      },
     );
 
     const server = http.createServer(
@@ -112,9 +112,9 @@ None. Invalid or missing query parameters fall back to defaults silently.
         const total = await db.count();
         return {
           response: {body: items, paginate: {total}},
-       };
-     },
-   });
+        };
+      },
+    });
     ```
 
     ergo-router automatically includes `url()` parsing and enables

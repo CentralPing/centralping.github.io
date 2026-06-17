@@ -51,7 +51,7 @@ The error `detail` is: `Request timed out after ${ms}ms`.
       timeout({ms: 10_000, statusCode: 504}),
       async (req, res, acc) => ({
         response: {body: await slowOperation(), statusCode: 200},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -61,8 +61,8 @@ The error `detail` is: `Request timed out after ${ms}ms`.
       timeout: {ms: 60_000},
       execute: async (req, res, acc) => ({
         response: {body: await generateReport()},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

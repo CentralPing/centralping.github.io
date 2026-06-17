@@ -64,7 +64,7 @@ store the response for future replays, or `discard()` to remove the key.
       idempotency({required: true}),
       (req, res, acc) => ({
         response: {statusCode: 201, body: {created: true}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -74,12 +74,12 @@ store the response for future replays, or `discard()` to remove the key.
       idempotency: {required: true},
       validate: {
         body: paymentSchema,
-     },
+      },
       execute: async (req, res, acc) => {
         const result = await processPayment(acc.body.parsed);
         return {response: {statusCode: 201, body: result}};
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -126,8 +126,8 @@ idempotency entry (e.g. on failure).
        } catch (err) {
           acc.idempotency.discard();
           throw err;
-       }
-     },
+        }
+      },
     );
     ```
   </TabItem>
@@ -137,7 +137,7 @@ idempotency entry (e.g. on failure).
       idempotency: {required: true},
       validate: {
         body: paymentSchema,
-     },
+      },
       execute: async (req, res, acc) => {
         try {
           const result = await processPayment(acc.body.parsed);
@@ -149,9 +149,9 @@ idempotency entry (e.g. on failure).
        } catch (err) {
           acc.idempotency.discard();
           throw err;
-       }
-     },
-   });
+        }
+      },
+    });
     ```
   </TabItem>
 </Tabs>

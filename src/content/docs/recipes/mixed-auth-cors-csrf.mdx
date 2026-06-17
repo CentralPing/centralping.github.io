@@ -42,7 +42,7 @@ headers so browsers can send the CSRF token on cross-origin requests.
           'Authorization',
           'X-CSRF-TOKEN',
         ],
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -60,9 +60,9 @@ headers so browsers can send the CSRF token on cross-origin requests.
             'Authorization',
             'X-CSRF-TOKEN',
           ],
-       },
-     },
-   });
+        },
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -99,9 +99,9 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
             return session
               ? {authorized: true, info: {user: session.user}}
               : {authorized: false};
-         },
-       }],
-     }),
+          },
+        }],
+      }),
     );
 
     // API route — Bearer auth, no CSRF
@@ -114,9 +114,9 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
-     }),
+          },
+        }],
+      }),
     );
     ```
   </TabItem>
@@ -136,26 +136,26 @@ cookie-based auth, and `csrf: false` on routes that use Bearer tokens.
               return user
                 ? {authorized: true, info: {user}}
                 : {authorized: false};
-           },
-         }],
-       },
-     },
-   });
+            },
+          }],
+        },
+      },
+    });
 
     // Inherits CSRF from defaults — browser route
     router.post('/account/settings', {
       execute: async (req, res, acc) => ({
         response: {body: {updated: true}},
-     }),
-   });
+      }),
+    });
 
     // Disables CSRF — API-only route
     router.post('/api/webhooks', {
       csrf: false,
       execute: async (req, res, acc) => ({
         response: {body: {received: true}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -185,8 +185,8 @@ overrides:
         return user
           ? {authorized: true, info: {user}}
           : {authorized: false};
-     },
-   };
+      },
+    };
 
     const corsMiddleware = cors({
       origins: ['https://app.example.com'],
@@ -196,7 +196,7 @@ overrides:
         'Authorization',
         'X-CSRF-TOKEN',
       ],
-   });
+    });
 
     // Browser route: CORS + cookies + CSRF + auth
     const settingsPipeline = compose(
@@ -206,7 +206,7 @@ overrides:
       authorization({strategies: [bearerStrategy]}),
       (req, res, acc) => ({
         response: {body: {userId: acc.auth.user.id}},
-     }),
+      }),
     );
 
     // API route: CORS + auth (no cookies, no CSRF)
@@ -215,7 +215,7 @@ overrides:
       authorization({strategies: [bearerStrategy]}),
       (req, res, acc) => ({
         response: {body: {received: true}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -235,8 +235,8 @@ overrides:
             'Authorization',
             'X-CSRF-TOKEN',
           ],
-       },
-     },
+        },
+      },
       defaults: {
         cookie: true,
         csrf: {secret: process.env.CSRF_SECRET},
@@ -248,32 +248,32 @@ overrides:
               return user
                 ? {authorized: true, info: {user}}
                 : {authorized: false};
-           },
-         }],
-       },
-     },
-   });
+            },
+          }],
+        },
+      },
+    });
 
     // Browser route — inherits CSRF + auth from defaults
     router.get('/account/settings', {
       execute: (req, res, acc) => ({
         response: {body: {userId: acc.auth.user.id}},
-     }),
-   });
+      }),
+    });
 
     router.post('/account/settings', {
       execute: async (req, res, acc) => ({
         response: {body: {updated: true}},
-     }),
-   });
+      }),
+    });
 
     // API route — disables CSRF, inherits auth
     router.post('/api/webhooks', {
       csrf: false,
       execute: async (req, res, acc) => ({
         response: {body: {received: true}},
-     }),
-   });
+      }),
+    });
 
     // Public route — disables both CSRF and auth
     router.get('/health', {
@@ -281,8 +281,8 @@ overrides:
       authorization: false,
       execute: () => ({
         response: {body: {status: 'healthy'}},
-     }),
-   });
+      }),
+    });
 
     await graceful(router.handle(), {port: 3000});
     ```

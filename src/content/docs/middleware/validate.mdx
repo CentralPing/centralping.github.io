@@ -172,14 +172,14 @@ configured and the body is invalid, only body errors appear in
           type: 'object',
           properties: {name: {type: 'string'}},
           required: ['name'],
-       },
+        },
         query: {
           type: 'object',
           properties: {
             page: {type: 'string', pattern: '^[0-9]+$'},
-         },
-       },
-     }),
+          },
+        },
+      }),
     );
     ```
   </TabItem>
@@ -191,17 +191,17 @@ configured and the body is invalid, only body errors appear in
           type: 'object',
           properties: {name: {type: 'string', format: 'email'}},
           required: ['name'],
-       },
+        },
         params: {
           type: 'object',
           properties: {id: {type: 'string', minLength: 1}},
           required: ['id'],
-       },
-     },
+        },
+      },
       execute: (req, res, acc) => ({
         response: {statusCode: 201, body: {created: true}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -219,7 +219,7 @@ configured and the body is invalid, only body errors appear in
         type: 'object',
         properties: {name: {type: 'string'}},
         required: ['name'],
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -230,11 +230,11 @@ configured and the body is invalid, only body errors appear in
         type: 'object',
         properties: {name: {type: 'string'}},
         required: ['name'],
-     },
+      },
       execute: (req, res, acc) => ({
         response: {statusCode: 201, body: {created: true}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

@@ -31,8 +31,8 @@ array. `send()` applies them to the response before writing the body.
             ['X-Custom-Header', 'my-value'],
             ['X-Request-Start', String(Date.now())],
           ],
-       },
-     }),
+        },
+      }),
     );
     ```
   </TabItem>
@@ -46,9 +46,9 @@ array. `send()` applies them to the response before writing the body.
             ['X-Custom-Header', 'my-value'],
             ['X-Request-Start', String(Date.now())],
           ],
-       },
-     }),
-   });
+        },
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -74,7 +74,7 @@ import {compose, logger} from '@centralping/ergo';
 const pipeline = compose(
   logger({
     log: (info) => console.log(`${info.method} ${info.url} ${info.duration}ms`),
- }),
+  }),
   // ... remaining middleware
 );
 ```
@@ -93,7 +93,7 @@ http.createServer((req, res) => {
   const start = performance.now();
   res.on('finish', () => {
     console.log(`${req.method} ${req.url} ${(performance.now() - start).toFixed(2)}ms`);
- });
+  });
   app(req, res);
 }).listen(3000);
 ```
@@ -106,7 +106,7 @@ Set a header value to `undefined` to clear it from the response:
 (req, res, acc) => ({
   response: {
     headers: [['X-Powered-By', undefined]],
- },
+  },
 });
 ```
 

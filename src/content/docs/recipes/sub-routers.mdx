@@ -27,10 +27,10 @@ Create a sub-router with its own defaults and mount it at a prefix:
     const adminPipeline = compose(
       authorization({
         strategies: [{type: 'Basic', authorizer: verifyAdmin}],
-     }),
+      }),
       (req, res, acc) => ({
         response: {body: {admin: true}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -42,9 +42,9 @@ Create a sub-router with its own defaults and mount it at a prefix:
       defaults: {
         authorization: {
           strategies: [{type: 'Basic', authorizer: verifyAdmin}],
-       },
-     },
-   });
+        },
+      },
+    });
 
     adminRouter.get('/dashboard', {execute: getDashboard});
     adminRouter.get('/users', {execute: listAllUsers});
@@ -70,25 +70,25 @@ entirely:
     const adminPipeline = compose(
       authorization({
         strategies: [{type: 'Basic', authorizer: verifyAdmin}],
-     }),
+      }),
       (req, res, acc) => ({
         response: {body: {role: 'admin'}},
-     }),
+      }),
     );
 
     const userPipeline = compose(
       authorization({
         strategies: [{type: 'Bearer', authorizer: verifyJwt}],
-     }),
+      }),
       (req, res, acc) => ({
         response: {body: {userId: acc.auth.user.id}},
-     }),
+      }),
     );
 
     const publicPipeline = compose(
       (req, res, acc) => ({
         response: {body: {status: 'healthy'}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -100,31 +100,31 @@ entirely:
       defaults: {
         authorization: {
           strategies: [{type: 'Basic', authorizer: verifyAdmin}],
-       },
-     },
-   });
+        },
+      },
+    });
     adminRouter.get('/stats', {execute: getStats});
 
     const usersRouter = createRouter({
       defaults: {
         authorization: {
           strategies: [{type: 'Bearer', authorizer: verifyJwt}],
-       },
-     },
-   });
+        },
+      },
+    });
     usersRouter.get('/me', {execute: getMe});
     usersRouter.patch('/me', {
       validate: {body: updateUserSchema},
       execute: updateMe,
-   });
+    });
 
     const publicRouter = createRouter();
     publicRouter.get('/health', {
       authorization: false,
       execute: (req, res, acc) => ({
         response: {body: {status: 'ok'}},
-     }),
-   });
+      }),
+    });
 
     const router = createRouter({transport: {/* ... */}});
     router
@@ -147,13 +147,13 @@ const parent = createRouter({
   defaults: {
     accepts: {types: ['application/json']},
     timeout: {ms: 5000},
- },
+  },
 });
 
 const child = createRouter({
   defaults: {
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 
 child.get('/items', {execute: listItems});
@@ -179,7 +179,7 @@ const child = createRouter({
   defaults: {
     ...sharedDefaults,
     authorization: {strategies: [bearerStrategy]},
- },
+  },
 });
 ```
 
@@ -194,7 +194,7 @@ import createRouter from '@centralping/ergo-router';
 const publicRouter = createRouter({
   defaults: {
     rateLimit: {max: 100, windowMs: 60_000},
- },
+  },
 });
 publicRouter.get('/search', {execute: search});
 
@@ -202,14 +202,14 @@ const premiumRouter = createRouter({
   defaults: {
     authorization: {strategies: [apiKeyStrategy]},
     rateLimit: {max: 1000, windowMs: 60_000},
- },
+  },
 });
 premiumRouter.get('/search', {execute: search});
 
 const router = createRouter({
   transport: {
     rateLimit: {max: 10_000, windowMs: 60_000},
- },
+  },
 });
 router
   .mount('/v1', publicRouter)
@@ -248,7 +248,7 @@ const projectsRouter = createRouter({
   defaults: {
     authorization: {strategies: [bearerStrategy]},
     accepts: {types: ['application/json']},
- },
+  },
 });
 projectsRouter.get('/', {execute: listProjects});
 projectsRouter.post('/', {
@@ -261,9 +261,9 @@ const adminRouter = createRouter({
   defaults: {
     authorization: {
       strategies: [{type: 'Basic', authorizer: verifyAdmin}],
-   },
+    },
     accepts: {types: ['application/json']},
- },
+  },
 });
 adminRouter.get('/users', {execute: listAllUsers});
 adminRouter.delete('/users/:id', {execute: deleteUser});
@@ -273,7 +273,7 @@ healthRouter.get('/', {
   authorization: false,
   execute: (req, res, acc) => ({
     response: {body: {status: 'ok', ts: Date.now()}},
- }),
+  }),
 });
 
 // --- Parent router with transport ---
@@ -284,7 +284,7 @@ const router = createRouter({
     security: {hsts: {maxAge: 31_536_000}},
     cors: {origin: 'https://app.example.com'},
     rateLimit: {max: 10_000, windowMs: 60_000},
- },
+  },
   strictPatch: true,
   strictBody: true,
 });

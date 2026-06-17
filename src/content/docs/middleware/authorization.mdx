@@ -149,9 +149,9 @@ configured strategy:
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
-     }),
+          },
+        }],
+      }),
     );
     ```
   </TabItem>
@@ -166,13 +166,13 @@ configured strategy:
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
-     },
+          },
+        }],
+      },
       execute: (req, res, acc) => ({
         response: {body: {userId: acc.auth.user.id}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -194,9 +194,9 @@ configured strategy:
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
-     }),
+          },
+        }],
+      }),
     );
     ```
   </TabItem>
@@ -212,13 +212,13 @@ configured strategy:
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
-     },
+          },
+        }],
+      },
       execute: (req, res, acc) => ({
         response: {body: {admin: acc.auth.user.name}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

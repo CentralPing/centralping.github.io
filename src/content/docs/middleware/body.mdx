@@ -118,15 +118,15 @@ contexts.
           type: 'object',
           properties: {name: {type: 'string'}},
           required: ['name'],
-       },
-     },
+        },
+      },
       execute: (req, res, acc) => ({
         response: {
           statusCode: 201,
           body: {id: '1', name: acc.body.parsed.name},
-       },
-     }),
-   });
+        },
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

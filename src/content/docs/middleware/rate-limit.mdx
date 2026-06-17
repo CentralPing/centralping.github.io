@@ -42,7 +42,7 @@ import {rateLimit} from '@centralping/ergo';
       ['X-RateLimit-Remaining', '99'],
       ['X-RateLimit-Reset', '1717041600']
     ]
- }
+  }
 }
 ```
 
@@ -53,7 +53,7 @@ import {rateLimit} from '@centralping/ergo';
   response: {
     statusCode: 429,
     retryAfter: 30
- }
+  }
 }
 ```
 
@@ -77,7 +77,7 @@ import {rateLimit} from '@centralping/ergo';
       rateLimit({max: 100, windowMs: 60_000}),
       (req, res, acc) => ({
         response: {statusCode: 200, body: {ok: true}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -88,20 +88,20 @@ import {rateLimit} from '@centralping/ergo';
     const router = createRouter({
       defaults: {
         rateLimit: {max: 100, windowMs: 60_000},
-     },
-   });
+      },
+    });
 
     // Strict limit on login — 5 attempts per 15 minutes
     router.post('/login', {
       rateLimit: {max: 5, windowMs: 900_000},
       execute: handleLogin,
-   });
+    });
 
     // Relaxed limit on reads — 1000 per minute
     router.get('/items', {
       rateLimit: {max: 1000, windowMs: 60_000},
       execute: listItems,
-   });
+    });
 
     // Disabled for health checks — no rate limiting
     router.get('/health', {
@@ -109,8 +109,8 @@ import {rateLimit} from '@centralping/ergo';
       authorization: false,
       execute: (req, res, acc) => ({
         response: {body: {status: 'ok'}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -166,7 +166,7 @@ class RedisStore {
 
   constructor(redis) {
     this.redis = redis;
- }
+  }
 
   hit(key, windowMs) {
     const now = Date.now();
@@ -177,7 +177,7 @@ class RedisStore {
     if (!entries) {
       entries = [];
       this.#local.set(windowKey, entries);
-   }
+    }
 
     while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
     entries.push(now);
@@ -190,7 +190,7 @@ class RedisStore {
     this.#sync(windowKey, now, cutoff, windowMs);
 
     return {count, resetMs};
- }
+  }
 
   #sync(windowKey, now, cutoff, windowMs) {
     const pipeline = this.redis.pipeline();
@@ -198,7 +198,7 @@ class RedisStore {
     pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
     pipeline.pexpire(windowKey, windowMs);
     pipeline.exec().catch(() => {});
- }
+  }
 }
 ```
 
@@ -244,7 +244,7 @@ rateLimit({
     return forwarded
       ? forwarded.split(',')[0].trim()
       : req.socket.remoteAddress;
- },
+  },
 })
 ```
 
@@ -310,7 +310,7 @@ const router = createRouter({
   defaults: {
     ...presets.jsonApi.defaults,
     rateLimit: {max: 200, windowMs: 60_000},
- },
+  },
 });
 ```
 

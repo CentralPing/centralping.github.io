@@ -134,8 +134,8 @@ the [authorization](/middleware/authorization/) middleware guide.
       defaults: {
         cookie: true,
         csrf: {secret: process.env.CSRF_SECRET},
-     },
-   });
+      },
+    });
 
     // Browser route — inherits cookie + CSRF from defaults.
     // GET/HEAD/OPTIONS → issue (sets token cookies)
@@ -143,14 +143,14 @@ the [authorization](/middleware/authorization/) middleware guide.
     router.get('/account/settings', {
       execute: (req, res, acc) => ({
         response: {body: {settings: {theme: 'dark'}}},
-     }),
-   });
+      }),
+    });
 
     router.post('/account/settings', {
       execute: async (req, res, acc) => ({
         response: {body: {updated: true}},
-     }),
-   });
+      }),
+    });
 
     // Bearer-only route — disables CSRF (token clients are not
     // vulnerable). cookie: false is optional since cookie middleware
@@ -160,8 +160,8 @@ the [authorization](/middleware/authorization/) middleware guide.
       cookie: false,
       execute: async (req, res, acc) => ({
         response: {body: {received: true}},
-     }),
-   });
+      }),
+    });
     ```
 
     `cookie: true` is required alongside `csrf` — cookie middleware

@@ -59,8 +59,8 @@ stages:
     const router = createRouter({
       defaults: {
         accepts: {types: ['application/json']},
-     },
-   });
+      },
+    });
 
     router.get('/users/:id', {
       authorization: {
@@ -70,27 +70,27 @@ stages:
             authorizer: async (attributes, token) => {
               if (!token) return {authorized: false};
               return {authorized: true, info: {userId: token}};
-           },
-         },
+            },
+          },
         ],
-     },
+      },
       validate: {
         params: {
           type: 'object',
           properties: {id: {type: 'string', minLength: 1}},
           required: ['id'],
-       },
-     },
+        },
+      },
       execute: (req, res, acc) => ({
         response: {
           body: {
             id: acc.route.params.id,
             name: 'Jane Doe',
             requestedBy: acc.auth.userId,
-         },
-       },
-     }),
-   });
+          },
+        },
+      }),
+    });
 
     router.post('/users', {
       authorization: {
@@ -100,24 +100,24 @@ stages:
             authorizer: async (attributes, token) => {
               if (!token) return {authorized: false};
               return {authorized: true, info: {userId: token}};
-           },
-         },
+            },
+          },
         ],
-     },
+      },
       validate: {
         body: {
           type: 'object',
           properties: {name: {type: 'string', minLength: 1}},
           required: ['name'],
-       },
-     },
+        },
+      },
       execute: (req, res, acc) => ({
         response: {
           statusCode: 201,
           body: {name: acc.body.parsed.name, createdBy: acc.auth.userId},
-       },
-     }),
-   });
+        },
+      }),
+    });
 
     await graceful(router.handle(), {port: 3000});
     ```
@@ -135,14 +135,14 @@ stages:
       authorizer: async (_: Record<string, string>, token: string) => {
         if (!token) return {authorized: false};
         return {authorized: true, info: {userId: token}};
-     },
-   };
+      },
+    };
 
     const router = createRouter({
       defaults: {
         accepts: {types: ['application/json']},
-     },
-   });
+      },
+    });
 
     router.get(
       '/users/:id',
@@ -154,18 +154,18 @@ stages:
               type: 'object',
               properties: {id: {type: 'string', minLength: 1}},
               required: ['id'],
-           },
-         },
-       },
+            },
+          },
+        },
         (req, res, acc) => ({
           response: {
             body: {
               id: acc.route.params.id,
               name: 'Jane Doe',
               requestedBy: acc.auth.userId,
-           },
-         },
-       }),
+            },
+          },
+        }),
       ),
     );
 
@@ -179,15 +179,15 @@ stages:
               type: 'object',
               properties: {name: {type: 'string', minLength: 1}},
               required: ['name'],
-           },
-         },
-       },
+            },
+          },
+        },
         (req, res, acc) => ({
           response: {
             statusCode: 201,
             body: {name: acc.body.parsed.name, createdBy: acc.auth.userId},
-         },
-       }),
+          },
+        }),
       ),
     );
 
@@ -280,8 +280,8 @@ const pipeline = compose(
     response: {
       body: {path: acc.url.pathname, query: acc.url.query},
       statusCode: 200,
-   },
- }),
+    },
+  }),
 );
 
 const server = http.createServer(handler(pipeline));

@@ -33,19 +33,19 @@ Set router-level defaults and override per route. Setting
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false, info: {statusCode: 401}};
-         },
-       }],
-     }),
+          },
+        }],
+      }),
       (req, res, acc) => ({
         response: {body: {userId: acc.auth.user.id}},
-     }),
+      }),
     );
 
     // Public route — no auth middleware in the pipeline
     const publicPipeline = compose(
       (req, res, acc) => ({
         response: {body: {status: 'healthy'}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -63,26 +63,26 @@ Set router-level defaults and override per route. Setting
               return user
                 ? {authorized: true, info: {user}}
                 : {authorized: false, info: {statusCode: 401}};
-           },
-         }],
-       },
-     },
-   });
+            },
+          }],
+        },
+      },
+    });
 
     // Inherits Bearer auth from defaults
     router.get('/users/:id', {
       execute: (req, res, acc) => ({
         response: {body: {userId: acc.auth.user.id}},
-     }),
-   });
+      }),
+    });
 
     // Disables auth entirely
     router.get('/health', {
       authorization: false,
       execute: (req, res, acc) => ({
         response: {body: {status: 'healthy'}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -105,10 +105,10 @@ on failure), use a custom middleware wrapper:
         if (result?.response?.statusCode) {
           // Auth failed — clear the pipeline break and continue anonymous
           return {value: {user: undefined}};
-       }
+        }
         return result;
-     };
-   }
+      };
+    }
 
     const pipeline = compose(
       [optionalAuth({
@@ -119,8 +119,8 @@ on failure), use a custom middleware wrapper:
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
+          },
+        }],
      }), 'auth'],
       (req, res, acc) => ({
         response: {
@@ -128,9 +128,9 @@ on failure), use a custom middleware wrapper:
             greeting: acc.auth?.user
               ? `Hello, ${acc.auth.user.name}`
               : 'Hello, guest',
-         },
-       },
-     }),
+          },
+        },
+      }),
     );
     ```
   </TabItem>
@@ -145,10 +145,10 @@ on failure), use a custom middleware wrapper:
         const result = await authMiddleware(req, res, acc, responseAcc);
         if (result?.response?.statusCode) {
           return {value: {user: undefined}};
-       }
+        }
         return result;
-     };
-   }
+      };
+    }
 
     const router = createRouter();
 
@@ -162,8 +162,8 @@ on failure), use a custom middleware wrapper:
             return user
               ? {authorized: true, info: {user}}
               : {authorized: false};
-         },
-       }],
+          },
+        }],
      }), 'auth']],
       execute: (req, res, acc) => ({
         response: {
@@ -171,10 +171,10 @@ on failure), use a custom middleware wrapper:
             greeting: acc.auth?.user
               ? `Hello, ${acc.auth.user.name}`
               : 'Hello, guest',
-         },
-       },
-     }),
-   });
+          },
+        },
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -198,12 +198,12 @@ Use a custom scheme type to authenticate via a non-standard header
             return key
               ? {authorized: true, info: {client: key.clientId}}
               : {authorized: false, info: {statusCode: 401}};
-         },
-       }],
-     }),
+          },
+        }],
+      }),
       (req, res, acc) => ({
         response: {body: {clientId: acc.auth.client}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -218,13 +218,13 @@ Use a custom scheme type to authenticate via a non-standard header
             return key
               ? {authorized: true, info: {client: key.clientId}}
               : {authorized: false, info: {statusCode: 401}};
-         },
-       }],
-     },
+          },
+        }],
+      },
       execute: (req, res, acc) => ({
         response: {body: {clientId: acc.auth.client}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

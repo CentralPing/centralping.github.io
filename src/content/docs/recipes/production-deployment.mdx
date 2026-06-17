@@ -42,7 +42,7 @@ entry point:
       PORT = '3000',
       HOSTNAME = '0.0.0.0',
       REDIS_URL = 'redis://localhost:6379',
-      SHUTDOWN_TIMEOUT = '10_000',
+      SHUTDOWN_TIMEOUT = '10000',
    } = process.env;
 
     const log = pino({level: 'info'});
@@ -51,7 +51,7 @@ entry point:
     class RedisStore {
       constructor(client) {
         this.redis = client;
-     }
+      }
 
       async hit(key, windowMs) {
         const now = Date.now();
@@ -72,15 +72,15 @@ entry point:
         const resetMs = Math.max(0, oldestScore + windowMs - now);
 
         return {count, resetMs};
-     }
-   }
+      }
+    }
 
     const proxyKeyGenerator = (req) => {
       const forwarded = req.headers['x-forwarded-for'];
       return forwarded
         ? forwarded.split(',')[0].trim()
         : req.socket.remoteAddress;
-   };
+    };
 
     let isShuttingDown = false;
 
@@ -88,9 +88,9 @@ entry point:
       (req, res, acc) => {
         if (isShuttingDown) {
           return {response: {statusCode: 503, body: {status: 'draining'}}};
-       }
+        }
         return {response: {body: {status: 'healthy'}}};
-     },
+      },
     );
 
     const apiPipeline = handler(
@@ -103,17 +103,17 @@ entry point:
           windowMs: 60_000,
           store: new RedisStore(redis),
           keyGenerator: proxyKeyGenerator,
-       }),
+        }),
         (req, res, acc) => ({
           response: {body: {path: acc.url.pathname}},
-       }),
+        }),
       ),
     );
 
     const requestListener = (req, res) => {
       if (req.url === '/health') return healthPipeline(req, res);
       return apiPipeline(req, res);
-   };
+    };
 
     const {server, shutdown} = await graceful(requestListener, {
       port: Number(PORT),
@@ -123,13 +123,13 @@ entry point:
       onStartup: async ({log}) => {
         await redis.ping();
         log.info('Redis connected');
-     },
+      },
       onShutdown: async ({log}) => {
         isShuttingDown = true;
         await redis.quit();
         log.info('Redis disconnected');
-     },
-   });
+      },
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -142,7 +142,7 @@ entry point:
       PORT = '3000',
       HOSTNAME = '0.0.0.0',
       REDIS_URL = 'redis://localhost:6379',
-      SHUTDOWN_TIMEOUT = '10_000',
+      SHUTDOWN_TIMEOUT = '10000',
    } = process.env;
 
     const log = pino({level: 'info'});
@@ -151,7 +151,7 @@ entry point:
     class RedisStore {
       constructor(client) {
         this.redis = client;
-     }
+      }
 
       async hit(key, windowMs) {
         const now = Date.now();
@@ -172,36 +172,36 @@ entry point:
         const resetMs = Math.max(0, oldestScore + windowMs - now);
 
         return {count, resetMs};
-     }
-   }
+      }
+    }
 
     const proxyKeyGenerator = (req) => {
       const forwarded = req.headers['x-forwarded-for'];
       return forwarded
         ? forwarded.split(',')[0].trim()
         : req.socket.remoteAddress;
-   };
+    };
 
     let isShuttingDown = false;
 
     const router = createRouter({
       transport: {
         trustProxy: true,
-     },
+      },
       defaults: {
         accepts: {types: ['application/json']},
         logger: {
           log: (info) => log.info(info),
           error: (info) => log.error(info),
-       },
+        },
         rateLimit: {
           max: 100,
           windowMs: 60_000,
           store: new RedisStore(redis),
           keyGenerator: proxyKeyGenerator,
-       },
-     },
-   });
+        },
+      },
+    });
 
     router.get('/health', {
       authorization: false,
@@ -209,10 +209,10 @@ entry point:
       execute: () => {
         if (isShuttingDown) {
           return {response: {statusCode: 503, body: {status: 'draining'}}};
-       }
+        }
         return {response: {body: {status: 'healthy'}}};
-     },
-   });
+      },
+    });
 
     router.get('/users', {
       authorization: {
@@ -222,14 +222,14 @@ entry point:
             authorizer: async (attributes, token) => {
               if (!token) return {authorized: false};
               return {authorized: true, info: {userId: token}};
-           },
-         },
+            },
+          },
         ],
-     },
+      },
       execute: () => ({
         response: {body: [{id: '1', name: 'Jane'}]},
-     }),
-   });
+      }),
+    });
 
     await graceful(router.handle(), {
       port: Number(PORT),
@@ -239,13 +239,13 @@ entry point:
       onStartup: async ({log}) => {
         await redis.ping();
         log.info('Redis connected');
-     },
+      },
       onShutdown: async ({log}) => {
         isShuttingDown = true;
         await redis.quit();
         log.info('Redis disconnected');
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -424,7 +424,7 @@ variables with sensible defaults:
 | `PORT` | `3000` | HTTP listen port |
 | `HOSTNAME` | `0.0.0.0` | Bind address |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
-| `SHUTDOWN_TIMEOUT` | `10_000` | Graceful shutdown deadline (ms) |
+| `SHUTDOWN_TIMEOUT` | `10000` | Graceful shutdown deadline (ms) |
 
 This keeps the application image immutable — the same image runs in
 development, staging, and production with different environment values.
@@ -466,7 +466,7 @@ one of these approaches:
 
 | Approach | How | Trade-off |
 | -------- | --- | --------- |
-| `tini` (Dockerfile `ENTRYPOINT`) | `ENTRYPOINT ['tini', '--']` | Adds ~20KB to image; handles zombie reaping |
+| `tini` (Dockerfile `ENTRYPOINT`) | `ENTRYPOINT ["tini", "--"]` | Adds ~20KB to image; handles zombie reaping |
 | `init: true` (docker-compose) | `init: true` in service definition | No image change; Docker provides the init process |
 | `--init` (docker run) | `docker run --init ...` | Per-invocation flag |
 

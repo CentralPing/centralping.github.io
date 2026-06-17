@@ -67,7 +67,7 @@ None. This middleware always injects headers.
         private: true,
         maxAge: 0,
         mustRevalidate: true,
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -77,8 +77,8 @@ None. This middleware always injects headers.
       cacheControl: {public: true, maxAge: 86400, immutable: true},
       execute: (req, res, acc) => ({
         response: {body: staticContent},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

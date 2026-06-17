@@ -34,7 +34,7 @@ at `acc.url`:
   query: {
     page: '1',
     filter: ['a', 'b']
- }
+  }
 }
 ```
 
@@ -65,9 +65,9 @@ None.
           body: {
             path: acc.url.pathname,
             page: acc.url.query.page,
-         },
-       },
-     }),
+          },
+        },
+      }),
     );
     ```
   </TabItem>
@@ -82,10 +82,10 @@ None.
           body: queryArticles({
             page: acc.url.query.page,
             filter: acc.url.query.filter,
-         }),
-       },
-     }),
-   });
+          }),
+        },
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

@@ -44,17 +44,17 @@ Pluggable strategies support Bearer, Basic, and custom schemes.
               return user
                 ? {authorized: true, info: user}
                 : {authorized: false};
-           },
-         },
+            },
+          },
         ],
-     },
+      },
       execute: (req, res, acc) => {
         if (acc.auth.id !== acc.route.params.id) {
           return {response: {statusCode: 403, detail: 'Access denied'}};
-       }
+        }
         return {response: {body: getAccount(acc.route.params.id)}};
-     },
-   });
+      },
+    });
     ```
   </TabItem>
   <TabItem label="TypeScript">
@@ -77,17 +77,17 @@ Pluggable strategies support Bearer, Basic, and custom schemes.
                   return user
                     ? {authorized: true, info: user}
                     : {authorized: false};
-               },
-             },
+                },
+              },
             ],
-         },
-       },
+          },
+        },
         (req, res, acc) => {
           if (acc.auth.id !== acc.route.params.id) {
             return {response: {statusCode: 403, detail: 'Access denied'}};
-         }
+          }
           return {response: {body: getAccount(acc.route.params.id)}};
-       },
+        },
       ),
     );
     ```
@@ -148,13 +148,13 @@ execution.
           properties: {
             name: {type: 'string', maxLength: 100},
             email: {type: 'string', format: 'email'},
-         },
+          },
           required: ['name', 'email'],
           additionalProperties: false,
-       },
-     },
+        },
+      },
       execute: updateUser,
-   });
+    });
     ```
   </TabItem>
   <TabItem label="TypeScript">
@@ -171,15 +171,15 @@ execution.
               properties: {
                 name: {type: 'string', maxLength: 100},
                 email: {type: 'string', format: 'email'},
-             },
+              },
               required: ['name', 'email'],
               additionalProperties: false,
-           },
-         },
-       },
+            },
+          },
+        },
         (req, res, acc) => ({
           response: {body: updateUserById(acc.route.params.id, acc.body.parsed)},
-       }),
+        }),
       ),
     );
     ```
@@ -220,7 +220,7 @@ router.post('/upload', {
     limit: 5 * 1024 * 1024,
     decompressedLimit: 50 * 1024 * 1024,
     maxParts: 10,
- },
+  },
   execute: handleUpload,
 });
 ```
@@ -342,7 +342,7 @@ const router = createRouter({
     cors: {origin: 'https://myapp.com'},
     rateLimit: {max: 100, windowMs: 60_000},
     requestId: {},
- },
+  },
 });
 ```
 

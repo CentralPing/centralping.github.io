@@ -46,7 +46,7 @@ ergo-router declarative configs that use the `use` key.
       [url(), 'url'],
       (req, res, acc) => ({
         response: {body: {path: acc.url.pathname}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -58,8 +58,8 @@ ergo-router declarative configs that use the `use` key.
       ],
       execute: (req, res, acc) => ({
         response: {body: acc.audit},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -77,7 +77,7 @@ ergo-router declarative configs that use the `use` key.
       {fn: url(), setPath: 'url'},
       (req, res, acc) => ({
         response: {body: {path: acc.url.pathname}},
-     }),
+      }),
     );
     ```
   </TabItem>
@@ -89,8 +89,8 @@ ergo-router declarative configs that use the `use` key.
       ],
       execute: (req, res, acc) => ({
         response: {body: acc.audit},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

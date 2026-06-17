@@ -117,7 +117,7 @@ alter headers, status, or body.
     const pipeline = compose(
       (req, res, acc) => ({
         response: {statusCode: 200, body: {ok: true}},
-     }),
+      }),
     );
 
     const server = http.createServer(
@@ -129,9 +129,9 @@ alter headers, status, or body.
             status: responseInfo.statusCode,
             duration: responseInfo.duration,
             user: domainAcc.auth?.identity,
-         }));
-       },
-     }),
+          }));
+        },
+      }),
     );
     ```
   </TabItem>
@@ -145,9 +145,9 @@ alter headers, status, or body.
           status: responseInfo.statusCode,
           duration: responseInfo.duration,
           user: domainAcc.auth?.identity,
-       }));
-     },
-   });
+        }));
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -170,8 +170,8 @@ alter headers, status, or body.
         response: {
           body: processRequest(acc),
           statusCode: 200,
-       },
-     }),
+        },
+      }),
     );
 
     const server = http.createServer(
@@ -191,7 +191,7 @@ alter headers, status, or body.
     const router = createRouter();
     router.get('/health', {
       execute: () => ({response: {body: {ok: true}}}),
-   });
+    });
 
     await graceful(router.handle(), {port: 3000});
     ```

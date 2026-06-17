@@ -37,7 +37,7 @@ output with OpenTelemetry trace context.
       logger({
         log: (info) => log.info(info),
         error: (info) => log.error(info),
-     }),
+      }),
       // ... remaining middleware
     );
 
@@ -57,13 +57,13 @@ output with OpenTelemetry trace context.
         logger: {
           log: (info) => log.info(info),
           error: (info) => log.error(info),
-       },
-     },
-   });
+        },
+      },
+    });
 
     router.get('/users', {
       execute: () => ({response: {body: []}}),
-   });
+    });
 
     await graceful(router.handle(), {port: 3000, log});
     ```
@@ -87,13 +87,13 @@ output with OpenTelemetry trace context.
       level: 'info',
       format: winston.format.json(),
       transports: [new winston.transports.Console()],
-   });
+    });
 
     const pipeline = compose(
       logger({
         log: (info) => log.info({message: 'request completed', ...info}),
         error: (info) => log.error({message: 'request error', ...info}),
-     }),
+      }),
       // ... remaining middleware
     );
 
@@ -110,20 +110,20 @@ output with OpenTelemetry trace context.
       level: 'info',
       format: winston.format.json(),
       transports: [new winston.transports.Console()],
-   });
+    });
 
     const router = createRouter({
       defaults: {
         logger: {
           log: (info) => log.info({message: 'request completed', ...info}),
           error: (info) => log.error({message: 'request error', ...info}),
-       },
-     },
-   });
+        },
+      },
+    });
 
     router.get('/users', {
       execute: () => ({response: {body: []}}),
-   });
+    });
 
     await graceful(router.handle(), {port: 3000, log});
     ```
@@ -148,7 +148,7 @@ router.get('/users', {
     log.info({requestId, msg: 'query complete', count: users.length});
 
     return {response: {body: users}};
- },
+  },
 });
 ```
 
@@ -164,7 +164,7 @@ router.get('/users', {
     reqLog.info({msg: 'query complete', count: users.length});
 
     return {response: {body: users}};
- },
+  },
 });
 ```
 
@@ -191,7 +191,7 @@ available for log enrichment:
       tracing(),
       logger({
         log: (info) => log.info(info),
-     }),
+      }),
       // ... remaining middleware
     );
     ```
@@ -209,9 +209,9 @@ available for log enrichment:
         tracing: {perStage: true},
         logger: {
           log: (info) => log.info(info),
-       },
-     },
-   });
+        },
+      },
+    });
 
     await graceful(router.handle(), {port: 3000, log});
     ```

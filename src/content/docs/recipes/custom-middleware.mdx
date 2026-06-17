@@ -31,8 +31,8 @@ Every middleware function receives four arguments and returns
       return (req, res, domainAcc, responseAcc) => {
         // Return {value?, response?} or undefined
         return {value: {/* domain data */}};
-     };
-   }
+      };
+    }
     ```
   </TabItem>
   <TabItem label="TypeScript">
@@ -45,8 +45,8 @@ Every middleware function receives four arguments and returns
         statusCode?: number;
         headers?: [string, string | undefined][];
         body?: unknown;
-     };
-   }
+      };
+    }
 
     function myMiddleware(options: MyOptions) {
       const precomputed = buildConfig(options);
@@ -58,8 +58,8 @@ Every middleware function receives four arguments and returns
         responseAcc: Record<string, unknown>,
       ): MiddlewareResult => {
         return {value: {/* domain data */}};
-     };
-   }
+      };
+    }
     ```
   </TabItem>
 </Tabs>
@@ -94,8 +94,8 @@ on the domain accumulator:
       return async (req, res, acc) => {
         const flags = await flagService.evaluate(acc.auth?.sub);
         return {value: flags};
-     };
-   }
+      };
+    }
 
     const pipeline = compose(
       {fn: featureFlags({endpoint: 'https://flags.internal'}), setPath: 'flags'},
@@ -103,8 +103,8 @@ on the domain accumulator:
       (req, res, acc) => ({
         response: {
           body: {features: acc.flags, user: acc.auth?.sub},
-       },
-     }),
+        },
+      }),
     );
 
     export default handler(pipeline);
@@ -126,16 +126,16 @@ on the domain accumulator:
       ): Promise<{value: Flags}> => {
         const flags = await flagService.evaluate(acc.auth?.sub);
         return {value: flags};
-     };
-   }
+      };
+    }
 
     const pipeline = compose(
       {fn: featureFlags({endpoint: 'https://flags.internal'}), setPath: 'flags'},
       (req: IncomingMessage, res: ServerResponse, acc: {flags: Flags; auth?: {sub?: string}}) => ({
         response: {
           body: {features: acc.flags, user: acc.auth?.sub},
-       },
-     }),
+        },
+      }),
     );
 
     export default handler(pipeline);
@@ -148,17 +148,17 @@ on the domain accumulator:
       return async (req, res, acc) => {
         const flags = await flagService.evaluate(acc.auth?.sub);
         return {value: flags};
-     };
-   }
+      };
+    }
 
     router.get('/dashboard', {
       use: [{fn: featureFlags({endpoint: 'https://flags.internal'}), setPath: 'flags'}],
       execute: (req, res, acc) => ({
         response: {
           body: {features: acc.flags, user: acc.auth?.sub},
-       },
-     }),
-   });
+        },
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -173,8 +173,8 @@ function requestMetadata() {
     value: {
       receivedAt: Date.now(),
       correlationId: req.headers['x-correlation-id'] ?? crypto.randomUUID(),
-   },
- });
+    },
+  });
 }
 ```
 
@@ -188,7 +188,7 @@ function apiVersion(version) {
   const header = ['X-API-Version', version];
   return () => ({
     response: {headers: [header]},
- });
+  });
 }
 ```
 
@@ -209,7 +209,7 @@ middleware reads `acc.timing.startedAt`:
 function responseTimer() {
   return (req, res, acc) => {
     return {value: {startedAt: performance.now()}};
- };
+  };
 }
 
 const pipeline = compose(
@@ -221,9 +221,9 @@ const pipeline = compose(
       response: {
         headers: [['X-Response-Time', `${elapsed}ms`]],
         body: {result: 'ok'},
-     },
-   };
- },
+      },
+    };
+  },
 );
 ```
 
@@ -259,12 +259,12 @@ only for the current request:
           if (!resolved) {
             result = await db.tenants.findById(acc.auth?.tenantId);
             resolved = true;
-         }
+          }
           return result;
-       };
+        };
         return {value: {resolve}};
-     };
-   }
+      };
+    }
 
     const pipeline = compose(
       // ... auth middleware populates acc.auth ...
@@ -275,8 +275,8 @@ only for the current request:
         const tenant = await acc.tenant.resolve();
         return {
           response: {body: {name: tenant.name, plan: tenant.plan}},
-       };
-     },
+        };
+      },
     );
 
     export default handler(pipeline);
@@ -293,12 +293,12 @@ only for the current request:
           if (!resolved) {
             result = await db.tenants.findById(acc.auth?.tenantId);
             resolved = true;
-         }
+          }
           return result;
-       };
+        };
         return {value: {resolve}};
-     };
-   }
+      };
+    }
 
     router.get('/tenant/profile', {
       use: [{fn: tenantResolver({connectionString: DB_URL}), setPath: 'tenant'}],
@@ -306,9 +306,9 @@ only for the current request:
         const tenant = await acc.tenant.resolve();
         return {
           response: {body: {name: tenant.name, plan: tenant.plan}},
-       };
-     },
-   });
+        };
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -338,11 +338,11 @@ accumulator; the execute handler (or a downstream logger) flushes them:
           action: `${req.method} ${acc.url?.pathname}`,
           timestamp: Date.now(),
           ip: req.socket.remoteAddress,
-       };
+        };
         sink.record(entry);
         return {value: entry};
-     };
-   }
+      };
+    }
 
     const pipeline = compose(
       // ... auth + url middleware ...
@@ -350,8 +350,8 @@ accumulator; the execute handler (or a downstream logger) flushes them:
       (req, res, acc) => ({
         response: {
           body: {result: 'ok', auditId: acc.audit.timestamp},
-       },
-     }),
+        },
+      }),
     );
 
     export default handler(pipeline);
@@ -367,26 +367,26 @@ accumulator; the execute handler (or a downstream logger) flushes them:
           action: `${req.method} ${acc.url?.pathname}`,
           timestamp: Date.now(),
           ip: req.socket.remoteAddress,
-       };
+        };
         sink.record(entry);
         return {value: entry};
-     };
-   }
+      };
+    }
 
     const router = createRouter({
       defaults: {
         use: [{fn: auditLog({stream: 'api-audit'}), setPath: 'audit'}],
-     },
-   });
+      },
+    });
 
     router.post('/accounts', {
       execute: (req, res, acc) => ({
         response: {
           statusCode: 201,
           body: {created: true, auditId: acc.audit.timestamp},
-       },
-     }),
-   });
+        },
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -419,13 +419,13 @@ handler:
                 type: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401',
                 title: 'Unauthorized',
                 detail: 'Audit context requires authenticated identity.',
-             },
-           },
-         };
-       }
+              },
+            },
+          };
+        }
         return {value: {auditActor: acc.auth.sub}};
-     };
-   }
+      };
+    }
 
     const pipeline = compose(
       // ... auth middleware ...
@@ -433,7 +433,7 @@ handler:
       // Only reached if auth context exists
       (req, res, acc) => ({
         response: {body: {actor: acc.audit.auditActor}},
-     }),
+      }),
     );
 
     export default handler(pipeline);
@@ -451,20 +451,20 @@ handler:
                 type: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401',
                 title: 'Unauthorized',
                 detail: 'Audit context requires authenticated identity.',
-             },
-           },
-         };
-       }
+              },
+            },
+          };
+        }
         return {value: {auditActor: acc.auth.sub}};
-     };
-   }
+      };
+    }
 
     router.get('/admin/audit-log', {
       use: [{fn: requireAuditContext(), setPath: 'audit'}],
       execute: (req, res, acc) => ({
         response: {body: {actor: acc.audit.auditActor}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>
@@ -537,7 +537,7 @@ concatenated — defaults run first, then route-specific middleware:
 const router = createRouter({
   defaults: {
     use: [{fn: globalMiddleware(), setPath: 'global'}],
- },
+  },
 });
 
 router.get('/endpoint', {
@@ -610,7 +610,7 @@ function good(req, res, acc) {
   return {
     value: {user: acc.auth?.sub},
     response: {headers: [['X-Custom', 'value']]},
- };
+  };
 }
 ```
 
@@ -646,7 +646,7 @@ function bad() {
     doSetup();
     // If earlier middleware set statusCode, this never executes
     return {value: {ready: true}};
- };
+  };
 }
 
 // ✅ If cleanup is needed, attach to res events at request time
@@ -654,7 +654,7 @@ function good() {
   return (req, res) => {
     res.on('close', () => releaseResources());
     return undefined;
- };
+  };
 }
 ```
 
@@ -674,7 +674,7 @@ function rateLimitByUser() {
     const key = acc.auth?.sub ?? req.socket.remoteAddress;
     // ... rate limit logic using the accumulator ...
     return undefined;
- };
+  };
 }
 ```
 
@@ -690,7 +690,7 @@ function bad() {
   return (req, res, acc) => {
     requestCache.set(req, {/* data */});
     // Who deletes this entry? When?
- };
+  };
 }
 
 // ✅ Closure-scoped per invocation — no shared state
@@ -703,10 +703,10 @@ function good(options) {
       if (!resolved) {
         result = await db.find(acc.auth?.tenantId);
         resolved = true;
-     }
+      }
       return result;
-   };
+    };
     return {value: {resolve}};
- };
+  };
 }
 ```

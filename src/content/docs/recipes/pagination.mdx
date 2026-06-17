@@ -37,8 +37,8 @@ Link headers and `X-Total-Count`.
         const total = await db.count();
         return {
           response: {body: items, paginate: {total}},
-       };
-     },
+        };
+      },
     );
 
     const server = http.createServer(
@@ -59,9 +59,9 @@ Link headers and `X-Total-Count`.
         const total = await db.count();
         return {
           response: {body: items, paginate: {total}},
-       };
-     },
-   });
+        };
+      },
+    });
     // GET /articles?page=2&per_page=10
     // → Link: </articles?page=1&per_page=10>; rel="first", ...
     // → X-Total-Count: 42
@@ -87,9 +87,9 @@ Link headers and `X-Total-Count`.
           response: {
             body: items,
             paginate: {nextCursor},
-         },
-       };
-     },
+          },
+        };
+      },
     );
 
     const server = http.createServer(
@@ -110,10 +110,10 @@ Link headers and `X-Total-Count`.
           response: {
             body: items,
             paginate: {nextCursor},
-         },
-       };
-     },
-   });
+          },
+        };
+      },
+    });
     // GET /events?cursor=abc123&limit=10
     // → Link: </events>; rel="first", </events?cursor=def456&limit=10>; rel="next"
     ```
@@ -296,7 +296,7 @@ router.get('/articles', {
     // url() and send({ paginate: true }) are auto-configured
     const {offset, limit} = acc.paginate;
     // ...
- },
+  },
 });
 ```
 

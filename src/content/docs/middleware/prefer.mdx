@@ -54,7 +54,7 @@ None.
       prefer(),
       (req, res, acc) => ({
         response: {body: {id: 1, name: 'item'}},
-     }),
+      }),
     );
 
     // With send's prefer option enabled
@@ -70,14 +70,14 @@ None.
     const router = createRouter({
       defaults: {
         send: {prefer: true},
-     },
-   });
+      },
+    });
 
     router.get('/items/:id', {
       execute: (req, res, acc) => ({
         response: {body: {id: 1, name: 'item'}},
-     }),
-   });
+      }),
+    });
     ```
   </TabItem>
 </Tabs>

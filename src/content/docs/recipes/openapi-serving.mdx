@@ -34,9 +34,9 @@ Both routes should be publicly accessible without authentication.
       paths: {
         '/health': {
           get: {responses: {200: {description: 'OK'}}},
-       },
-     },
-   };
+        },
+      },
+    };
 
     const pipeline = compose(
       (req, res) => ({response: {body: spec}}),
@@ -56,8 +56,8 @@ Both routes should be publicly accessible without authentication.
       defaults: {
         accepts: {types: ['application/json']},
         authorization: {strategies: [bearerStrategy]},
-     },
-   });
+      },
+    });
 
     // Register all application routes first
     router.get('/users/:id', {
@@ -65,23 +65,23 @@ Both routes should be publicly accessible without authentication.
         params: {
           type: 'object',
           properties: {id: {type: 'string'}},
-       },
-     },
+        },
+      },
       openapi: {summary: 'Get user by ID', tags: ['Users']},
       execute: getUser,
-   });
+    });
 
     // Generate spec after all routes are registered
     const spec = generateOpenAPI(router, {
       title: 'My API',
       version: '1.0.0',
-   });
+    });
 
     // Serve the spec without auth
     router.get('/openapi.json', {
       authorization: false,
       execute: () => ({response: {body: spec}}),
-   });
+    });
     ```
   </TabItem>
 </Tabs>
@@ -97,7 +97,7 @@ Both routes should be publicly accessible without authentication.
       openapi: '3.1.0',
       info: {title: 'My API', version: '1.0.0'},
       paths: {},
-   };
+    };
 
     const html = `<!doctype html>
     <html>
@@ -124,8 +124,8 @@ Both routes should be publicly accessible without authentication.
      } else {
         res.writeHead(404);
         res.end();
-     }
-   });
+      }
+    });
 
     server.listen(3000);
     ```
@@ -139,20 +139,20 @@ Both routes should be publicly accessible without authentication.
       defaults: {
         accepts: {types: ['application/json']},
         authorization: {strategies: [bearerStrategy]},
-     },
-   });
+      },
+    });
 
     // ... register application routes ...
 
     const spec = generateOpenAPI(router, {
       title: 'My API',
       version: '1.0.0',
-   });
+    });
 
     router.get('/openapi.json', {
       authorization: false,
       execute: () => ({response: {body: spec}}),
-   });
+    });
 
     const docsHtml = `<!doctype html>
     <html>
@@ -175,8 +175,8 @@ Both routes should be publicly accessible without authentication.
       execute: (req, res) => {
         res.writeHead(200, {'Content-Type': 'text/html'});
         res.end(docsHtml);
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -242,8 +242,8 @@ router.post('/users', {
     responses: {
       201: {description: 'User created'},
       409: {description: 'Email already exists'},
-   },
- },
+    },
+  },
   execute: createUser,
 });
 ```

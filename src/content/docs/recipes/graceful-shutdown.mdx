@@ -33,12 +33,12 @@ and orderly shutdown.
       onStartup: async ({log}) => {
         await db.connect();
         log.info('Database connected');
-     },
+      },
       onShutdown: async ({log, signal}) => {
         await db.disconnect();
         log.info(`Database disconnected (${signal})`);
-     },
-   });
+      },
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -53,12 +53,12 @@ and orderly shutdown.
       onStartup: async ({log}) => {
         await db.connect();
         log.info('Database connected');
-     },
+      },
       onShutdown: async ({log, signal}) => {
         await db.disconnect();
         log.info(`Database disconnected (${signal})`);
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -78,12 +78,12 @@ and orderly shutdown.
       onStartup: async ({log}) => {
         sdk.start();
         log.info('OpenTelemetry SDK started');
-     },
+      },
       onShutdown: async ({log}) => {
         await sdk.shutdown();
         log.info('OpenTelemetry SDK flushed and shut down');
-     },
-   });
+      },
+    });
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -99,12 +99,12 @@ and orderly shutdown.
       onStartup: async ({log}) => {
         sdk.start();
         log.info('OpenTelemetry SDK started');
-     },
+      },
       onShutdown: async ({log}) => {
         await sdk.shutdown();
         log.info('OpenTelemetry SDK flushed and shut down');
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>
@@ -123,17 +123,17 @@ and orderly shutdown.
       onShutdown: async ({log}) => {
         isShuttingDown = true;
         await db.disconnect();
-     },
-   });
+      },
+    });
 
     // Expose shutdown state in your health check route
     // check the closure variable `isShuttingDown` in your handler
     function healthCheck() {
       if (isShuttingDown) {
         return {response: {statusCode: 503, body: {status: 'draining'}}};
-     }
+      }
       return {response: {body: {status: 'healthy'}}};
-   }
+    }
     ```
   </TabItem>
   <TabItem label="ergo-router">
@@ -149,18 +149,18 @@ and orderly shutdown.
       execute: (req, res, acc) => {
         if (isShuttingDown) {
           return {response: {statusCode: 503, body: {status: 'draining'}}};
-       }
+        }
         return {response: {body: {status: 'healthy'}}};
-     },
-   });
+      },
+    });
 
     const {server, shutdown} = await graceful(router.handle(), {
       port: 3000,
       onShutdown: async ({log}) => {
         isShuttingDown = true;
         await db.disconnect();
-     },
-   });
+      },
+    });
     ```
   </TabItem>
 </Tabs>

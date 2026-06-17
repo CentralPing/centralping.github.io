@@ -30,7 +30,7 @@ pipeline break.
       body(),
       (req, res, acc) => ({
         response: {body: acc.body.parsed, statusCode: 200},
-     }),
+      }),
     );
 
     const server = http.createServer(
@@ -50,8 +50,8 @@ pipeline break.
       execute: async (req, res, acc) => {
         const item = await db.create(acc.body.parsed);
         return {response: {statusCode: 201, body: item}};
-     },
-   });
+      },
+    });
 
     await graceful(router.handle(), {port: 3000});
     ```
