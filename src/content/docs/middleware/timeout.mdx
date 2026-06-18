@@ -3,7 +3,7 @@ title: timeout
 description: Request timeout middleware — races the pipeline against a deadline and destroys the request on expiry.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Races the pipeline against a configurable deadline. On timeout, sets the
 response status and detail via closure, then destroys the request stream.
@@ -66,6 +66,51 @@ The error `detail` is: `Request timed out after ${ms}ms`.
     ```
   </TabItem>
 </Tabs>
+
+### Global Default with Per-Route Overrides
+
+In ergo-router, `timeout` participates in
+[Config Resolution](/packages/ergo-router/#config-resolution) — set a
+global default in `defaults` and override or disable it per route:
+
+```js
+import createRouter from '@centralping/ergo-router';
+
+const router = createRouter({
+  defaults: {
+    timeout: {ms: 5_000},
+  },
+});
+
+// Inherits the 5s default
+router.get('/users', {
+  execute: async (req, res, acc) => ({
+    response: {body: await listUsers()},
+  }),
+});
+
+// Override: 30s for a slow report
+router.get('/reports/quarterly', {
+  timeout: {ms: 30_000},
+  execute: async (req, res, acc) => ({
+    response: {body: await generateQuarterlyReport()},
+  }),
+});
+
+// Disable: SSE connections are long-lived
+router.get('/events', {
+  timeout: false,
+  noSend: true,
+  execute: sseHandler,
+});
+```
+
+<Aside type="tip" title="Config Resolution rules">
+  `undefined` (omitted) inherits the default, `false` disables the
+  middleware entirely, `true` enables with empty options, and an object
+  replaces the default. Route values are shallow-replaced, not merged.
+  See [Config Resolution](/packages/ergo-router/#config-resolution).
+</Aside>
 
 ## RFC References
 

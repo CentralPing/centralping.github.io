@@ -81,6 +81,13 @@ store the response for future replays, or `discard()` to remove the key.
       },
     });
     ```
+
+    ergo-router automatically includes body parsing for POST, PUT, and
+    PATCH routes and places `idempotency` after it in the pipeline
+    (Stage 3: body → idempotency → validate). No manual ordering is
+    needed — the pipeline builder handles placement. See
+    [Config Resolution](/packages/ergo-router/#config-resolution) for
+    how `defaults`, per-route overrides, and `false` (disable) interact.
   </TabItem>
 </Tabs>
 
