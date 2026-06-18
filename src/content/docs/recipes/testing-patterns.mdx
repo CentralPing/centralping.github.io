@@ -753,9 +753,24 @@ ergo middleware.
 
 ### Rate-Limit Isolation
 
-Each `createRouter()` creates a fresh transport stack with its own
-`MemoryStore` for rate limiting. No explicit store reset is needed
-between test suites — just create a new router per suite.
+Two approaches for preventing rate-limit counter accumulation across tests:
+
+**Option A: Shared store with `reset()`** — inject a `MemoryStore` and
+call `reset()` between tests. Avoids the overhead of creating a new
+router for every test suite:
+
+```js
+import {MemoryStore} from '@centralping/ergo/lib/rate-limit';
+
+const store = new MemoryStore();
+const router = createRouter({defaults: {rateLimit: {store}}});
+
+beforeEach(() => store.reset());
+```
+
+**Option B: Fresh router per suite** — each `createRouter()` creates a
+fresh transport stack with its own `MemoryStore`. Simple but heavier
+when many suites share the same route configuration.
 
 ### Conditional Request Round-Trip
 

@@ -147,6 +147,30 @@ import {MemoryStore} from '@centralping/ergo/lib/rate-limit';
 const store = new MemoryStore({maxKeys: 50_000});
 ```
 
+#### MemoryStore Methods
+
+| Method | Returns | Description |
+| ------ | ------- | ----------- |
+| `hit(key, windowMs)` | `{count, resetMs}` | Record a hit and return current window state |
+| `reset()` | `void` | Clear all tracked keys, restoring the store to its initial state |
+
+`reset()` is useful for integration tests that share a single store
+instance across multiple test cases. Call it between tests to prevent
+rate-limit counter accumulation:
+
+```js
+import {describe, beforeEach} from 'node:test';
+import {MemoryStore} from '@centralping/ergo/lib/rate-limit';
+
+const store = new MemoryStore();
+
+describe('my API', () => {
+  beforeEach(() => store.reset());
+
+  // tests can now hit the rate-limited endpoint without budget exhaustion
+});
+```
+
 #### Redis Store Example
 
 For multi-instance deployments, implement the `hit()` contract with a
