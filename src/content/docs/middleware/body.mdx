@@ -3,7 +3,7 @@ title: body
 description: Request body parsing middleware — JSON, form-urlencoded, and multipart with size limits and decompression protection.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Reads and parses the request body based on `Content-Type`. Supports JSON
 variants (including [RFC 7386](https://www.rfc-editor.org/rfc/rfc7386) merge-patch and [RFC 6902](https://www.rfc-editor.org/rfc/rfc6902) json-patch),
@@ -53,6 +53,28 @@ On success, the middleware returns a body descriptor stored on the
   parsed: {name: 'Jane'}
 }
 ```
+
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| `type` | `string` | Content-Type MIME type (e.g. `'application/json'`, `'application/merge-patch+json'`) |
+| `charset` | `string` | Character encoding (e.g. `'utf-8'`) |
+| `encoding` | `string` | Content-Encoding (e.g. `'identity'`, `'gzip'`) |
+| `length` | `number \| undefined` | Content-Length header value; `undefined` for chunked transfers |
+| `received` | `number` | Actual bytes received |
+| `boundary` | `string \| undefined` | Multipart boundary; `undefined` for non-multipart types |
+| `raw` | `string` | Raw body string before parsing |
+| `parsed` | `unknown` | Parsed body (JSON object, URLSearchParams entries, or multipart parts array) |
+
+<Aside type="tip" title="Content-type dispatch">
+  The `type` field reflects the parsed MIME type from the request's
+  `Content-Type` header. For JSON variants (`application/json`,
+  `application/merge-patch+json`, `application/json-patch+json`), the
+  body is always parsed with `JSON.parse` — the `type` value carries
+  the semantic distinction. Use `acc.body.type` in your execute handler
+  to dispatch logic based on the content type the client sent. See the
+  [PATCH Semantics recipe](/recipes/patch-semantics/) for a complete
+  dispatch pattern.
+</Aside>
 
 ### Multipart Parsed Shape
 
