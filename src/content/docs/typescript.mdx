@@ -83,7 +83,8 @@ Without `'types': ['node']`, TypeScript produces TS2591 errors like
 
 `@centralping/ergo` exports consumer-facing type interfaces from a `./types`
 subpath. `@centralping/ergo-router` exports typed route helpers (`defineGet`,
-`definePost`, `defineRoute`) and utility types from its main entry point.
+`definePost`, `defineRoute`, `definePut`, `definePatch`, `defineDelete`) and
+utility types from its main entry point.
 
 ### ergo type interfaces
 
@@ -106,14 +107,27 @@ import type {
 These interfaces describe the middleware result shapes stored on the domain
 accumulator (e.g., `acc.url` is `UrlResult`, `acc.body` is `BodyResult`).
 
-## Typed Routes with defineGet / definePost
+## Typed Routes with Route Helpers
 
-ergo-router's `defineGet` and `definePost` helpers infer the domain accumulator
+ergo-router provides six typed route helpers that infer the domain accumulator
 type from enabled middleware config keys — providing fully typed `acc` in
 execute callbacks without manual annotation:
 
+| Helper | Auto-includes | Use for |
+| --- | --- | --- |
+| `defineGet` | `{url: UrlResult}` | GET routes |
+| `defineDelete` | `{url: UrlResult}` | DELETE routes |
+| `definePost` | `{body: BodyResult}` | POST routes |
+| `definePut` | `{body: BodyResult}` | PUT routes |
+| `definePatch` | `{body: BodyResult}` | PATCH routes |
+| `defineRoute` | — | Method-agnostic |
+
+`definePut` and `definePatch` are type-identical to `definePost`; `defineDelete`
+is type-identical to `defineGet`. The aliases exist for IDE discoverability — use
+whichever matches your HTTP method.
+
 ```ts
-import createRouter, {defineGet, definePost} from '@centralping/ergo-router';
+import createRouter, {defineGet, definePost, definePut, definePatch, defineDelete} from '@centralping/ergo-router';
 
 const router = createRouter({
   defaults: {
@@ -142,6 +156,42 @@ router.post(
       acc.auth;        // AuthorizationResult — typed
       acc.body.parsed; // unknown — typed
       return {response: {statusCode: 201, body: acc.body.parsed}};
+    },
+  ),
+);
+
+router.put(
+  '/users/:id',
+  definePut(
+    {authorization: true, body: {limit: 2048}},
+    (req, res, acc) => {
+      acc.auth;        // AuthorizationResult — typed
+      acc.body.parsed; // unknown — typed
+      return {response: {body: acc.body.parsed}};
+    },
+  ),
+);
+
+router.patch(
+  '/users/:id',
+  definePatch(
+    {authorization: true, body: true},
+    (req, res, acc) => {
+      acc.auth;        // AuthorizationResult — typed
+      acc.body.parsed; // unknown — typed
+      return {response: {body: acc.body.parsed}};
+    },
+  ),
+);
+
+router.delete(
+  '/users/:id',
+  defineDelete(
+    {authorization: true, url: true},
+    (req, res, acc) => {
+      acc.auth;      // AuthorizationResult — typed
+      acc.url.query; // Record<string, string | string[]> — typed
+      return {response: {statusCode: 204}};
     },
   ),
 );
