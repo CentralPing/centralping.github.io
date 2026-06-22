@@ -1,6 +1,6 @@
 ---
 title: precondition
-description: Precondition Required middleware — enforces If-Match or If-Unmodified-Since on unsafe requests (RFC 6585 §3).
+description: Conditional request enforcement middleware — requires If-Match or If-Unmodified-Since on unsafe requests for ETag-based optimistic concurrency (RFC 6585 §3).
 ---
 
 import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
@@ -127,6 +127,10 @@ headers but are not required to:
 ## RFC References
 
 - [RFC 6585 §3 — 428 Precondition Required](https://www.rfc-editor.org/rfc/rfc6585#section-3)
+
+## Related Recipes
+
+- [Testing Patterns](/recipes/testing-patterns/) — ETag round-trip and 304 conditional request testing patterns
 
 ## API Reference
 
