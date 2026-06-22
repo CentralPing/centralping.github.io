@@ -3,13 +3,21 @@ title: accepts
 description: Content negotiation middleware — validates Accept, Accept-Language, Accept-Charset, and Accept-Encoding headers.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 Validates the client's `Accept`, `Accept-Language`, `Accept-Charset`, and
 `Accept-Encoding` request headers against the server's supported values.
 Returns `406 Not Acceptable` when any negotiation fails (configurable).
 
 **Pipeline stage:** Negotiation
+
+<Aside type="tip" title="Why 'accepts'?">
+  The name maps directly to the HTTP `Accept` header family per
+  [RFC 9110 §12.5](https://www.rfc-editor.org/rfc/rfc9110#section-12.5) —
+  it is a verb form of the protocol concept, not a generic "does this accept
+  X?" helper.
+  [Full naming rationale →](/why-ergo/#api-naming)
+</Aside>
 
 ## Import
 

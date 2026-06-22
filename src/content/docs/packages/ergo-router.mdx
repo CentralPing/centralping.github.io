@@ -740,6 +740,68 @@ router.get('/health', {
 For standalone (non-router) usage of the `timing` option, see the
 [handler middleware guide](/middleware/handler/).
 
+### Conditional Requests
+
+ergo-router composes three independent behaviors into a full conditional
+request pattern — ETag generation, conditional header evaluation, and
+header-presence enforcement. All three are enabled via declarative config
+keys with sensible defaults:
+
+| Config | Default | Behavior | Status Codes |
+| ------ | ------- | -------- | ------------ |
+| `send` options `etag: true` | **on** (send default) | Generates a strong ETag from the response body | — |
+| `send` options `etag: true` | **on** (send default) | Evaluates conditional headers when present | 304, 412 |
+| `preconditionRequired: true` | **off** | Enforces that clients **must send** `If-Match` or `If-Unmodified-Since` | 428 |
+
+These three compose the full optimistic concurrency lifecycle:
+
+1. **GET** → response includes `ETag` header (automatic via `send()`)
+2. **PUT/PATCH with valid `If-Match`** → update succeeds (200)
+3. **PUT/PATCH with stale `If-Match`** → `412 Precondition Failed` (evaluated by `send()`)
+4. **PUT/PATCH without `If-Match`** → `428 Precondition Required` (enforced by `preconditionRequired`)
+
+#### Declarative Example
+
+```js
+import createRouter from '@centralping/ergo-router';
+
+const router = createRouter({
+  defaults: {
+    accepts: {types: ['application/json']},
+  },
+});
+
+router.get('/articles/:id', {
+  execute: async (req, res, acc) => {
+    const article = await db.findById(acc.route.params.id);
+    return {response: {body: article}};
+  },
+});
+// GET /articles/42 → 200 + ETag: "abc123"
+
+router.put('/articles/:id', {
+  preconditionRequired: true,
+  // etag: true is the send() default — no explicit config needed
+  execute: async (req, res, acc) => {
+    const article = await db.update(acc.route.params.id, acc.body.parsed);
+    return {response: {body: article}};
+  },
+});
+// PUT without If-Match       → 428 Precondition Required
+// PUT with stale If-Match    → 412 Precondition Failed
+// PUT with current If-Match  → 200 OK + new ETag
+```
+
+<Aside type="note" title="Independent concerns">
+  `etag: true` and `preconditionRequired: true` are **independent** —
+  neither enables the other. ETags are generated and conditional headers
+  are evaluated by default on all routes (via `send()`).
+  `preconditionRequired` adds the enforcement gate. See the
+  [precondition middleware guide](/middleware/precondition/) for options
+  and the [send middleware guide](/middleware/send/#conditional-requests)
+  for evaluation details.
+</Aside>
+
 ### Pagination
 
 The `paginate` config key wires a two-sided contract: **request parsing**
