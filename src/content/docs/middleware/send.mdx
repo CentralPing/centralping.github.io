@@ -16,6 +16,13 @@ via `handler()`.
 
 **Pipeline stage:** Post-pipeline (called by `handler`)
 
+<Aside type="tip" title="Why 'send'?">
+  ergo's `send` is a factory wired by the framework — not an imperative
+  `res.send()` call inside a handler. The name describes the same concept
+  (sending a response) at a different architectural level.
+  [Full naming rationale →](/why-ergo/#api-naming)
+</Aside>
+
 ## Import
 
 ```js
