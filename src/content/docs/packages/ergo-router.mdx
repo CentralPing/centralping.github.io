@@ -150,6 +150,115 @@ router.get('/admin', {
   URL parsing.
 </Aside>
 
+### Config Validation
+
+ergo-router validates every config object at registration time — before
+any requests arrive. Three layers of validation catch errors early:
+unknown key detection with typo suggestions, value type enforcement,
+and semantic cross-key consistency checking.
+
+<Aside type="tip" title="Errors surface before your first request">
+  Registration-time validation means config errors appear in your
+  terminal during startup, not as 500 errors on the first request.
+  Every error message includes the HTTP method, route path, and — for
+  typos — a "did you mean?" suggestion.
+</Aside>
+
+#### Unknown Key Detection
+
+Unrecognized config keys are detected using Levenshtein distance
+matching (threshold: 3 edits). When a close match exists, the error
+message includes a suggestion:
+
+```text
+Error: Unknown config key "authorisation" in route config for POST /users (did you mean "authorization"?)
+```
+
+In **strict mode** (the default), unknown keys throw an `Error` that
+prevents server startup. In **lenient mode**, unknown keys log a
+`console.warn` prefixed with `[ergo-router]`:
+
+```text
+[ergo-router] Unknown config key "authorisation" in route config for POST /users (did you mean "authorization"?)
+```
+
+To enable lenient mode:
+
+```js
+const router = createRouter({strict: false});
+```
+
+Unknown key detection also validates router defaults and router
+options — not just route configs. A typo in `defaults` is caught at
+`createRouter()` time:
+
+```text
+Error: Unknown config key "authoriation" in router defaults (did you mean "authorization"?)
+```
+
+For the complete list of valid keys by category, see the
+[Route Config Key Reference](#route-config-key-reference).
+
+#### Value Type Enforcement
+
+Every config key has an expected type. Incorrect types are rejected
+at registration time with a descriptive error.
+
+| Key Category | Expected Type | Notes |
+| --- | --- | --- |
+| Pipeline keys (e.g. `authorization`, `body`, `compress`) | `boolean \| object` | `true` enables with defaults, `false` disables, object passes options |
+| `execute` | `function` | Required on every route config |
+| `use` | `array \| false` | Custom middleware array; `false` disables all |
+| `openapi` | plain `object` | Annotation key — pass-through to metadata |
+| `send` | `object` | Per-route send options |
+| `noSend` | `boolean` | Skip automatic `send()` |
+| `catchHandler` | `function` | Per-route error handler |
+| `onResponse` | `function` | Post-send observation hook |
+
+```text
+Error: Invalid "authorization" in route config for POST /users: expected object or boolean, got string.
+```
+
+```text
+Error: Invalid "use" in route config for POST /users: expected an array or false, got string.
+```
+
+Type enforcement **always throws** regardless of the `strict`
+setting — an incorrect type will always cause a runtime failure.
+
+#### Semantic Cross-Key Validation
+
+After keys and types are validated, ergo-router checks for cross-key
+contradictions using resolved values (route config merged with
+defaults per [Config Resolution](#config-resolution) rules). Currently
+one semantic rule is enforced:
+
+**`body: false` + `validate.body`** — disabling body parsing while
+configuring body validation is guaranteed to produce a runtime error
+because `acc.body` is never populated:
+
+```text
+Error: Route config for POST /users has body: false but validate.body is configured. Body parsing must be enabled for body validation to work.
+```
+
+Semantic validation uses **resolved** config values — if `body: false`
+comes from defaults and `validate.body` comes from the route (or vice
+versa), the contradiction is still detected. This check **always
+throws** regardless of the `strict` setting.
+
+#### Validation Scope
+
+| Scope | What Is Validated | When It Runs | Strict Mode Applies? |
+| --- | --- | --- | --- |
+| Route config | Keys, value types, `execute` presence | `router.get()`, `router.post()`, etc. | Yes — unknown keys only |
+| Router defaults | Keys (pipeline keys, excluding `execute`), value types | `createRouter()` | Yes — unknown keys only |
+| Router options | Top-level keys (`transport`, `strict`, `timing`, etc.), value types | `createRouter()` | Yes — unknown keys only |
+| Semantic consistency | Cross-key contradictions on resolved config | Route registration | No — always throws |
+
+For error message formats, troubleshooting steps, and the warning
+code reference, see
+[Debugging & Diagnostics](/concepts/debugging/).
+
 ### Presets
 
 ergo-router ships named presets — pre-built `{transport, defaults}`
