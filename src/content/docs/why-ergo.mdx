@@ -10,6 +10,55 @@ request with a proper error or passes it forward. There is no ambiguity, no
 silent swallowing, no deferred validation. The name also carries its Latin
 meaning: _therefore_ — as in, "the request is valid; _therefore_, proceed."
 
+## API Naming
+
+ergo's public API names are deliberate architectural choices, not arbitrary
+labels. Each was evaluated against ecosystem alternatives and retained for
+accuracy. The full audit is documented in ergo's internal decision record
+([#139](https://github.com/CentralPing/ergo/issues/139)).
+
+### `send`
+
+A factory that returns the post-pipeline response writer — called once by
+`handler()` after the pipeline completes. It serializes the accumulated
+response (JSON, ETags, conditionals, [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) errors, pagination).
+
+Unlike Express's `res.send()` or Fastify's `reply.send()`, ergo's `send` is
+not a method called inside a route handler. It operates at a different
+architectural level — a factory wired by the framework, not an imperative call
+in user code.
+
+**Rejected:** `respond` (semantically vague), `reply` (Fastify's term with
+different invocation semantics), `complete` (too generic).
+
+### `accepts`
+
+A pipeline middleware for content negotiation — validates the client's `Accept`,
+`Accept-Language`, `Accept-Charset`, and `Accept-Encoding` headers per
+[RFC 9110 §12.5](https://www.rfc-editor.org/rfc/rfc9110#section-12.5).
+
+The name is a verb form of the HTTP header name. It maps directly to the
+protocol concept rather than inventing a framework-specific abstraction.
+
+**Rejected:** `negotiate` (overloaded — could mean auth or protocol
+negotiation), `contentType` (covers only one of the four Accept headers).
+
+### `compose`
+
+Left-to-right two-accumulator pipeline composition. `compose` is the standard
+term for combining functions into a pipeline. ergo's left-to-right direction
+matches Node.js `stream.pipeline()`, RxJS `pipe()`, and lodash `_.flow()` —
+all established left-to-right composition patterns.
+
+The FP convention where `compose` means right-to-left (Ramda, Redux) is one
+convention, not the only one. ergo's pipeline model — data flows through
+ordered stages — is inherently left-to-right.
+
+**Rejected:** `pipeline` (ambiguous with the architectural concept — ~300
+occurrences as a concept word), `chain` (name collision with internal
+utilities), `flow` (lodash-specific semantics without the two-accumulator
+model).
+
 ## The Problem
 
 Most Node.js frameworks treat middleware as a flat chain where anything can
