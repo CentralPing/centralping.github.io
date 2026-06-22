@@ -224,7 +224,7 @@ Error: Invalid "use" in route config for POST /users: expected an array or false
 ```
 
 Type enforcement **always throws** regardless of the `strict`
-setting — an incorrect type will always cause a runtime failure.
+setting — an incorrect type will always block startup at registration time.
 
 #### Semantic Cross-Key Validation
 
