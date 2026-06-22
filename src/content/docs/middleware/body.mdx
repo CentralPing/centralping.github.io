@@ -63,13 +63,14 @@ On success, the middleware returns a body descriptor stored on the
 | `received` | `number` | Actual bytes received |
 | `boundary` | `string \| undefined` | Multipart boundary; `undefined` for non-multipart types |
 | `raw` | `string` | Raw body string before parsing |
-| `parsed` | `unknown` | Parsed body (JSON object, URLSearchParams entries, or multipart parts array) |
+| `parsed` | `unknown \| undefined` | Parsed body (JSON object, URLSearchParams entries, or multipart parts array) |
 
 <Aside type="tip" title="Content-type dispatch">
   The `type` field reflects the parsed MIME type from the request's
-  `Content-Type` header. For JSON variants (`application/json`,
-  `application/merge-patch+json`, `application/json-patch+json`), the
-  body is always parsed with `JSON.parse` — the `type` value carries
+  `Content-Type` header. For JSON variants (`application/vnd.api+json`,
+  `application/json`, `application/merge-patch+json`,
+  `application/json-patch+json`), the body is always parsed with
+  `JSON.parse` — the `type` value carries
   the semantic distinction. Use `acc.body.type` in your execute handler
   to dispatch logic based on the content type the client sent. See the
   [PATCH Semantics recipe](/recipes/patch-semantics/) for a complete
