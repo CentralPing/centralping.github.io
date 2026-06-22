@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Resolve source refs
         id: source_refs
@@ -62,14 +62,14 @@ jobs:
           echo "router=$router_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout ergo source
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: CentralPing/ergo
           path: .ergo-source
           ref: ${{ steps.source_refs.outputs.ergo }}
 
       - name: Checkout ergo-router source
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: CentralPing/ergo-router
           path: .ergo-router-source

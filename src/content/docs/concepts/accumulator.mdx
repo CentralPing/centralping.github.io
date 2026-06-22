@@ -145,7 +145,7 @@ interface BodyResult {
 | `received` | `number` | Actual bytes received |
 | `boundary` | `string \| undefined` | Multipart boundary; `undefined` for non-multipart |
 | `raw` | `string` | Raw body string before parsing |
-| `parsed` | `unknown` | Parsed body (JSON object, form data, etc.) |
+| `parsed` | `unknown \| undefined` | Parsed body (JSON object, form data, etc.) |
 
 [Full documentation →](/middleware/body/)
 
