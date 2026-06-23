@@ -150,6 +150,115 @@ router.get('/admin', {
   URL parsing.
 </Aside>
 
+### Config Validation
+
+ergo-router validates every config object at registration time — before
+any requests arrive. Three layers of validation catch errors early:
+unknown key detection with typo suggestions, value type enforcement,
+and semantic cross-key consistency checking.
+
+<Aside type="tip" title="Errors surface before your first request">
+  Registration-time validation means config errors appear in your
+  terminal during startup, not as 500 errors on the first request.
+  Route-config errors include the HTTP method and route path; typos
+  also include a "did you mean?" suggestion.
+</Aside>
+
+#### Unknown Key Detection
+
+Unrecognized config keys are detected using Levenshtein distance
+matching (threshold: 3 edits). When a close match exists, the error
+message includes a suggestion:
+
+```text
+Error: Unknown config key "authorisation" in route config for POST /users (did you mean "authorization"?)
+```
+
+In **strict mode** (the default), unknown keys throw an `Error` that
+prevents server startup. In **lenient mode**, unknown keys log a
+`console.warn` prefixed with `[ergo-router]`:
+
+```text
+[ergo-router] Unknown config key "authorisation" in route config for POST /users (did you mean "authorization"?)
+```
+
+To enable lenient mode:
+
+```js
+const router = createRouter({strict: false});
+```
+
+Unknown key detection also validates router defaults and router
+options — not just route configs. A typo in `defaults` is caught at
+`createRouter()` time:
+
+```text
+Error: Unknown config key "authoriation" in router defaults (did you mean "authorization"?)
+```
+
+For the complete list of valid keys by category, see the
+[Route Config Key Reference](#route-config-key-reference).
+
+#### Value Type Enforcement
+
+Every config key has an expected type. Incorrect types are rejected
+at registration time with a descriptive error.
+
+| Key Category | Expected Type | Notes |
+| --- | --- | --- |
+| Pipeline keys (e.g. `authorization`, `body`, `compress`) | `boolean \| object` | `true` enables with defaults, `false` disables, object passes options |
+| `execute` | `function` | Required on every route config |
+| `use` | `array \| false` | Custom middleware array; `false` disables all |
+| `openapi` | plain `object` | Annotation key — pass-through to metadata |
+| `send` | `object` | Per-route send options |
+| `noSend` | `boolean` | Skip automatic `send()` |
+| `catchHandler` | `function` | Per-route error handler |
+| `onResponse` | `function` | Post-send observation hook |
+
+```text
+Error: Invalid "authorization" in route config for POST /users: expected object or boolean, got string.
+```
+
+```text
+Error: Invalid "use" in route config for POST /users: expected an array or false, got string.
+```
+
+Type enforcement **always throws** regardless of the `strict`
+setting — an incorrect type will always block startup at registration time.
+
+#### Semantic Cross-Key Validation
+
+After keys and types are validated, ergo-router checks for cross-key
+contradictions using resolved values (route config merged with
+defaults per [Config Resolution](#config-resolution) rules). Currently
+one semantic rule is enforced:
+
+**`body: false` + `validate.body`** — disabling body parsing while
+configuring body validation is guaranteed to produce a runtime error
+because `acc.body` is never populated:
+
+```text
+Error: Route config for POST /users has body: false but validate.body is configured. Body parsing must be enabled for body validation to work.
+```
+
+Semantic validation uses **resolved** config values — if `body: false`
+comes from defaults and `validate.body` comes from the route (or vice
+versa), the contradiction is still detected. This check **always
+throws** regardless of the `strict` setting.
+
+#### Validation Scope
+
+| Scope | What Is Validated | When It Runs | Strict Mode Applies? |
+| --- | --- | --- | --- |
+| Route config | Keys, value types, `execute` presence | `router.get()`, `router.post()`, etc. | Yes — unknown keys only |
+| Router defaults | Keys (pipeline keys, excluding `execute`), value types | `createRouter()` | Yes — unknown keys only |
+| Router options | Top-level keys (`transport`, `strict`, `timing`, etc.), value types | `createRouter()` | Yes — unknown keys only |
+| Semantic consistency | Cross-key contradictions on resolved config | Route registration | No — always throws |
+
+For error message formats, troubleshooting steps, and the warning
+code reference, see
+[Debugging & Diagnostics](/concepts/debugging/).
+
 ### Presets
 
 ergo-router ships named presets — pre-built `{transport, defaults}`
@@ -370,6 +479,14 @@ by the pipeline builder.
 | `openapi` | OpenAPI operation object merged onto auto-derived spec output. Not valid in `defaults`. |
 
 See [OpenAPI Generation](#openapi-generation) for usage.
+
+<Aside type="tip" title="Config validation error messages">
+  ergo-router validates all config keys at registration time and produces
+  helpful error messages for typos, wrong types, missing `execute`, and
+  semantic contradictions. See
+  [Debugging & Diagnostics — Registration-Time Validation](/concepts/debugging/#registration-time-validation-ergo-router)
+  for error message examples with the code mistakes that trigger them.
+</Aside>
 
 ### Application Middleware
 
@@ -630,6 +747,68 @@ router.get('/health', {
 
 For standalone (non-router) usage of the `timing` option, see the
 [handler middleware guide](/middleware/handler/).
+
+### Conditional Requests
+
+ergo-router composes three independent behaviors into a full conditional
+request pattern — ETag generation, conditional header evaluation, and
+header-presence enforcement. All three are enabled via declarative config
+keys with sensible defaults:
+
+| Config | Default | Behavior | Status Codes |
+| ------ | ------- | -------- | ------------ |
+| `send` options `etag: true` | **on** (send default) | Generates a strong ETag from the response body | — |
+| `send` options `etag: true` | **on** (send default) | Evaluates conditional headers when present | 304, 412 |
+| `preconditionRequired: true` | **off** | Enforces that clients **must send** `If-Match` or `If-Unmodified-Since` | 428 |
+
+These three compose the full optimistic concurrency lifecycle:
+
+1. **GET** → response includes `ETag` header (automatic via `send()`)
+2. **PUT/PATCH with valid `If-Match`** → update succeeds (200)
+3. **PUT/PATCH with stale `If-Match`** → `412 Precondition Failed` (evaluated by `send()`)
+4. **PUT/PATCH without `If-Match`** → `428 Precondition Required` (enforced by `preconditionRequired`)
+
+#### Declarative Example
+
+```js
+import createRouter from '@centralping/ergo-router';
+
+const router = createRouter({
+  defaults: {
+    accepts: {types: ['application/json']},
+  },
+});
+
+router.get('/articles/:id', {
+  execute: async (req, res, acc) => {
+    const article = await db.findById(acc.route.params.id);
+    return {response: {body: article}};
+  },
+});
+// GET /articles/42 → 200 + ETag: "abc123"
+
+router.put('/articles/:id', {
+  preconditionRequired: true,
+  // etag: true is the send() default — no explicit config needed
+  execute: async (req, res, acc) => {
+    const article = await db.update(acc.route.params.id, acc.body.parsed);
+    return {response: {body: article}};
+  },
+});
+// PUT without If-Match       → 428 Precondition Required
+// PUT with stale If-Match    → 412 Precondition Failed
+// PUT with current If-Match  → 200 OK + new ETag
+```
+
+<Aside type="note" title="Independent concerns">
+  `etag: true` and `preconditionRequired: true` are **independent** —
+  neither enables the other. ETags are generated and conditional headers
+  are evaluated by default on all routes (via `send()`).
+  `preconditionRequired` adds the enforcement gate. See the
+  [precondition middleware guide](/middleware/precondition/) for options
+  and the [send middleware guide](/middleware/send/#conditional-requests)
+  for evaluation details.
+</Aside>
 
 ### Pagination
 
