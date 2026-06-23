@@ -21,8 +21,15 @@ requests arrive.
 
 **Unknown config keys** are caught with Levenshtein-distance suggestions:
 
+```js
+router.post('/users', {
+  authorisation: {strategies: [bearerStrategy]},
+  execute: createUser,
+});
+```
+
 ```text
-Error: Unknown config key "authorisation" in POST /users (did you mean "authorization"?)
+Error: Unknown config key "authorisation" in route config for POST /users (did you mean "authorization"?)
 ```
 
 ergo-router validates in **strict mode** by default — unknown keys throw
@@ -32,20 +39,42 @@ single request is processed.
 **Type validation** ensures every config key has the correct value type
 (`object`, `boolean`, `function`, or `Array` depending on the key):
 
+```js
+router.post('/users', {
+  authorization: 'admin',
+  execute: createUser,
+});
+```
+
 ```text
-Error: Invalid "authorization" in POST /users: expected object or boolean, got string.
+Error: Invalid "authorization" in route config for POST /users: expected object or boolean, got string.
 ```
 
 **Missing `execute` function** — every declarative route config must
 include an `execute` function:
 
+```js
+router.post('/users', {
+  authorization: {strategies: [bearerStrategy]},
+  validate: {body: userSchema},
+});
+```
+
 ```text
-Error: Route config for POST /users is missing the required "execute" function.
+Error: Missing "execute" function in route config for POST /users. Declarative route configs must include an execute function.
 ```
 
 **Semantic contradictions** are detected across resolved config. For
 example, `body: false` combined with `validate.body` is caught at
 registration time:
+
+```js
+router.post('/users', {
+  body: false,
+  validate: {body: userSchema},
+  execute: createUser,
+});
+```
 
 ```text
 Error: Route config for POST /users has body: false but validate.body is configured.
@@ -165,6 +194,25 @@ validation uses:
 - **Lenient mode** (`strict: false`): `console.warn()` for unknown
   config keys — prefixed with `[ergo-router]`
 
+In lenient mode, unknown keys produce a warning instead of throwing:
+
+```js
+const router = createRouter({strict: false});
+
+router.get('/users', {
+  rateLimmit: {max: 100},
+  execute: listUsers,
+});
+```
+
+```text
+[ergo-router] Unknown config key "rateLimmit" in route config for GET /users (did you mean "rateLimit"?)
+```
+
+The server starts normally and the unrecognized key is ignored. All
+other validations (type checks, missing `execute`, semantic
+contradictions) still throw regardless of the `strict` setting.
+
 ## Pipeline Debug Mode
 
 For request-level debugging (identifying which middleware rejected a
@@ -191,6 +239,53 @@ See [Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for
 the execution model and
 [handler `onResponse`](/middleware/handler/#onresponse-hook) for the
 standalone equivalent.
+
+## Runtime Error Responses
+
+Unlike registration-time errors (which prevent startup), runtime errors
+are returned as HTTP responses using
+[RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) format
+(`Content-Type: application/problem+json`). Every error response includes
+`type`, `title`, `status`, and `detail`.
+
+**401 Unauthorized** — missing or invalid Bearer token:
+
+```json
+{
+  "type": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Unauthorized"
+}
+```
+
+**422 Unprocessable Entity** — JSON Schema validation failure with
+per-field `details`:
+
+```json
+{
+  "details": [
+    {
+      "path": "/name",
+      "message": "must NOT have fewer than 1 characters",
+      "params": {"limit": 1}
+    }
+  ],
+  "type": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "Validation failed"
+}
+```
+
+The `details` extension member is an array of per-field errors produced
+by the [validate middleware](/middleware/validate/#validation-error-response).
+Each entry includes the JSON Pointer `path`, the AJV error `message`,
+and keyword-specific `params`.
+
+For the complete catalog of every error status code, condition, and
+producing middleware, see the
+[Error Response Reference](/concepts/error-responses/).
 
 ## Troubleshooting FAQ
 

@@ -480,6 +480,14 @@ by the pipeline builder.
 
 See [OpenAPI Generation](#openapi-generation) for usage.
 
+<Aside type="tip" title="Config validation error messages">
+  ergo-router validates all config keys at registration time and produces
+  helpful error messages for typos, wrong types, missing `execute`, and
+  semantic contradictions. See
+  [Debugging & Diagnostics — Registration-Time Validation](/concepts/debugging/#registration-time-validation-ergo-router)
+  for error message examples with the code mistakes that trigger them.
+</Aside>
+
 ### Application Middleware
 
 `router.use(...fns)` registers middleware that runs before every route
