@@ -254,7 +254,7 @@ are returned as HTTP responses using
 }
 ```
 
-**422 Unprocessable Content** — JSON Schema validation failure with
+**422 Unprocessable Entity** — JSON Schema validation failure with
 per-field `details`:
 
 ```json
@@ -267,9 +267,9 @@ per-field `details`:
     }
   ],
   "type": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422",
-  "title": "Unprocessable Content",
+  "title": "Unprocessable Entity",
   "status": 422,
-  "detail": "body validation failed"
+  "detail": "Validation failed"
 }
 ```
 
