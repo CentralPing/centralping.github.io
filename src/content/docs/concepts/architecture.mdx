@@ -3,6 +3,8 @@ title: Architecture
 description: How ergo's middleware toolkit is structured — the two-accumulator pipeline model, shared primitives, and package composition.
 ---
 
+import { Aside } from "@astrojs/starlight/components";
+
 ## Overview
 
 ergo is composed of two packages that work together to provide a complete
@@ -90,6 +92,13 @@ const pipeline = compose(
   (req, res, acc) => ({response: {body: acc.custom}})
 );
 ```
+
+<Aside type="tip" title="Why 'compose'?">
+  `compose` is the standard term for function composition. ergo's left-to-right
+  direction matches `stream.pipeline()` (Node.js) and `pipe()` (RxJS) — data
+  flows through ordered stages, not right-to-left.
+  [Full naming rationale →](/why-ergo/#api-naming)
+</Aside>
 
 ## Four-Stage Fast Fail Ordering
 
