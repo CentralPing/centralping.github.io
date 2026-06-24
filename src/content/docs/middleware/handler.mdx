@@ -31,6 +31,7 @@ import {handler} from '@centralping/ergo';
 | `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) extension member. |
 | `onResponse` | `function` | — | Post-send lifecycle observation hook. Called after `send()` completes with `(req, res, responseInfo, domainAcc)`. Errors thrown by the hook are swallowed — the hook cannot affect the response. Async hooks are awaited. |
 | `redactErrors` | `boolean` | `true` | Control whether caught 5xx exception messages appear in the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) response `detail` field. When `true`, `detail` is set to generic status text. When `false`, `err.message` is passed through for 5xx only — 4xx always uses generic text. Stack traces are never exposed. Only set to `false` in development. |
+| `redactHeaders` | `Set<string>` | `DEFAULT_REDACTED_HEADERS` | Header names to redact in the `onResponse` hook's `responseInfo.headers` snapshot (default: `authorization`, `proxy-authorization`, `cookie`, `set-cookie`). Pass an empty `Set` to disable redaction. Shares the same default set as [logger](/middleware/logger/). |
 | `timing` | `boolean \| object` | `false` | Inject an `X-Response-Time` header measuring the full request lifecycle (pipeline + error handling + send). Pass `true` for defaults (`x-response-time` header, 3 decimal places), or `{header?: string, precision?: number}` for custom configuration. Zero overhead when disabled. For router-level timing, see [Response Timing](/packages/ergo-router/#response-timing). |
 | `prettify` | `boolean` | `false` | Pretty-print JSON output (forwarded to [send](/middleware/send/)) |
 | `vary` | `string[]` | `['Accept']` | Vary header values to append (forwarded to [send](/middleware/send/)) |
@@ -88,7 +89,7 @@ alter headers, status, or body.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `statusCode` | `number` | Final HTTP status code |
-| `headers` | `object` | Response headers snapshot (from `res.getHeaders()`) |
+| `headers` | `object` | Response headers snapshot (from `res.getHeaders()`), with sensitive headers redacted per the `redactHeaders` option |
 | `method` | `string` | Request HTTP method |
 | `url` | `string` | Request URL |
 | `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
