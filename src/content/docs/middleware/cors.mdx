@@ -72,6 +72,27 @@ The middleware returns one of three results:
   </TabItem>
 </Tabs>
 
+## Security Notes
+
+:::caution[Wildcard + Credentials]
+Configuring `origins: '*'` with `allowCredentials: true` allows **any site** to make
+credentialed cross-origin requests (cookies, Authorization headers). This is an
+[OWASP-documented misconfiguration](https://owasp.org/www-project-web-security-testing-guide/)
+that can enable data exfiltration.
+
+ergo emits a one-time `process.emitWarning` with code `ERGO_CORS_WILDCARD_CREDENTIALS`
+when this combination is detected at factory time.
+
+**Recommended fix:** replace the wildcard with an explicit origin allowlist:
+
+```js
+cors({
+  origins: ['https://app.example.com', 'https://admin.example.com'],
+  allowCredentials: true,
+})
+```
+:::
+
 ## RFC References
 
 - [Fetch Standard — CORS Protocol](https://fetch.spec.whatwg.org/#http-cors-protocol)
