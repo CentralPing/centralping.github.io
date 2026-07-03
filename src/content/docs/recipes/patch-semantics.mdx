@@ -188,9 +188,10 @@ inspect `acc.body.type` to determine which format was sent:
 
 ### `strictPatch` Enforcement
 
-ergo-router enforces valid PATCH content types at the transport level
-**before** the request reaches your route pipeline. This is enabled by
-default and configured at router creation time (not per-route):
+ergo-router enforces valid PATCH content types **after** route matching
+(unknown paths return 404, method mismatches return 405) but **before**
+the request reaches your route pipeline. This is enabled by default and
+configured at router creation time (not per-route):
 
 ```js
 import createRouter from '@centralping/ergo-router';
