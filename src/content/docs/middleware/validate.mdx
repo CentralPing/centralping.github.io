@@ -85,8 +85,8 @@ are present) and produces no validators — validation is effectively skipped.
 
 <Aside type="tip" title="ReDoS mitigation">
   The default fast mode uses simplified regexes for 8 format validators
-  (`date`, `time`, `date-time`, `duration`, `uri`, `uri-reference`,
-  `email`, `idn-email`). Fast-mode `date` validates structure only —
+  (`date`, `time`, `date-time`, `iso-time`, `iso-date-time`, `uri`,
+  `uri-reference`, `email`). Fast-mode `date` validates structure only —
   `2026-02-31` passes. Use `{mode: 'full'}` when strict semantic
   validation is required and input sources are trusted.
 </Aside>
