@@ -27,7 +27,7 @@ import {logger} from '@centralping/ergo';
 | `uuid` | `function` | `crypto.randomUUID` | Fallback UUID generator |
 | `headerRequestIdName` | `string` | `'x-request-id'` | Request ID header name |
 | `headerRequestIpName` | `string` | `'x-real-ip'` | Client IP header name |
-| `redactErrors` | `boolean` | `true` | When true, error log entries use generic HTTP status text instead of `err.message`, and suppress `stack` and `originalError`. Set to `false` in development for full error details. |
+| `redactErrors` | `boolean` | `true` | When true, error log entries use generic HTTP status text instead of `err.message`, and suppress `stack` and `originalError`. Set to `false` in development for full error details. Independent of [`handler()`](/middleware/handler/)'s `redactErrors` option (which controls HTTP response bodies). |
 | `redactHeaders` | `Set<string>` | See below | Headers replaced with `'[REDACTED]'` |
 
 ### Default Redacted Headers
