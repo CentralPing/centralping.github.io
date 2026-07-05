@@ -236,8 +236,8 @@ non-standard semantics, disable enforcement at router creation:
 const router = createRouter({strictPatch: false});
 ```
 
-This removes the transport-level content-type check. Your route pipeline
-is then responsible for validating the incoming content type.
+This disables the content-type check that runs after route matching. Your
+route pipeline is then responsible for validating the incoming content type.
 
 ### Related Documentation
 
