@@ -149,7 +149,9 @@ run `verify`.
 ### Idempotent Mutation
 
 The `complete()`/`discard()` lifecycle stores successful responses for
-replay and cleans up on failure.
+replay and cleans up on failure. `complete()` returns `true` on success,
+or `false` if the entry was evicted before completion (the response is
+not stored). `discard()` always returns `void`.
 
 <Tabs>
   <TabItem label="Standalone">
@@ -176,7 +178,10 @@ replay and cleans up on failure.
           const result = await processTransfer(acc.body.parsed);
           const response = {statusCode: 201, body: result};
 
-          acc.idempotency.complete(response);
+          const stored = acc.idempotency.complete(response);
+          if (!stored) {
+            console.warn('Idempotency entry evicted before completion');
+          }
 
           return {response};
        } catch (err) {
@@ -197,7 +202,10 @@ replay and cleans up on failure.
           const result = await processTransfer(acc.body.parsed);
           const response = {statusCode: 201, body: result};
 
-          acc.idempotency.complete(response);
+          const stored = acc.idempotency.complete(response);
+          if (!stored) {
+            console.warn('Idempotency entry evicted before completion');
+          }
 
           return {response};
        } catch (err) {
@@ -497,6 +505,8 @@ your execute handler after the operation succeeds. This design allows
 the handler to decide whether a result should be stored:
 
 - **Success** → `complete(response)` stores the response for replay
+  and returns `true` (or `false` if the entry was evicted — the
+  response is not stored)
 - **Failure** → `discard()` removes the key, allowing a retry with the
   same idempotency key
 - **Neither called** → entry stays in `processing` state (concurrent
