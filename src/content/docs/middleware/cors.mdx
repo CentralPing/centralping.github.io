@@ -77,7 +77,7 @@ The middleware returns one of three results:
 <Aside type="caution" title="Wildcard + Credentials">
 Configuring `origins: '*'` with `allowCredentials: true` allows **any site** to make
 credentialed cross-origin requests (cookies, Authorization headers). This is an
-[OWASP-documented misconfiguration](https://owasp.org/www-project-web-security-testing-guide/)
+[OWASP-documented misconfiguration](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing)
 that can enable data exfiltration.
 
 ergo emits a one-time `process.emitWarning` with code `ERGO_CORS_WILDCARD_CREDENTIALS`
@@ -88,7 +88,7 @@ when this combination is detected at factory time.
 ```js
 cors({
   origins: ['https://app.example.com', 'https://admin.example.com'],
-  allowCredentials: true,
+  allowCredentials: true
 })
 ```
 </Aside>
