@@ -7,6 +7,5 @@ dist
 src/content/docs/api/
 
 # Agent/editor local files
-DECISIONS.md
 .cursor/
 .vscode/
