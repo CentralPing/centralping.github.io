@@ -152,6 +152,7 @@ middleware factory or pipeline step.
 | --- | --- | --- | --- |
 | `ERGO_VALIDATE_NO_BODY` | `validate()` | `validate.body` schema is configured but `acc.body` is missing — `body()` middleware did not run before `validate()` | Ensure `body` is in the pipeline before `validate`, or let ergo-router auto-include it |
 | `ERGO_VALIDATE_UNKNOWN_KEY` | `validate()` | Schema object contains keys other than `body`, `query`, `params` | Check for typos; valid keys are `body`, `query`, `params` |
+| `ERGO_IDEMPOTENCY_PROCESSING_EVICTED` | `idempotency()` store | All entries are `processing` and a new entry must be stored — oldest `processing` entry was evicted | Increase `maxKeys` to match peak concurrent request volume, or use a store with LRU eviction that protects `processing` entries |
 
 ### Dynamic Codes (ergo middleware factories)
 
