@@ -609,6 +609,7 @@ failure does not prevent the router-level hook from firing.
 | `url` | `string` | Request URL |
 | `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
 | `duration` | `number` | Pipeline execution time in milliseconds |
+| `source` | `'pipeline' \| 'transport'` | Response origin — `'pipeline'` for routed requests, `'transport'` for short-circuit responses (404, 405, 415, 429, OPTIONS, CORS preflight) |
 
 <Aside type="caution" title="Does not fire with catchHandler">
   When a `catchHandler` is defined and the pipeline throws, the
@@ -623,6 +624,40 @@ failure does not prevent the router-level hook from firing.
   already been sent.
 </Aside>
 
+#### Transport-Level Hooks
+
+The **router-level** `onResponse` hook also fires for transport-level
+responses — requests that are short-circuited before any route pipeline
+runs. These include:
+
+- **404** — unknown path (no matching route)
+- **405** — wrong HTTP method for a known path
+- **415** — unsupported Content-Type
+- **429** — rate limited (transport-level rate limiter)
+- **204 OPTIONS** — automatic OPTIONS response
+- **204 CORS preflight** — preflight request handled by CORS transport
+
+For transport-level responses, `responseInfo.source` is `'transport'`
+and `domainAcc` is `undefined` (no pipeline ran, so no domain
+accumulator was created). **Per-route** `onResponse` hooks do **not**
+fire for transport responses — only the router-level hook fires.
+
+<Aside type="tip" title="Distinguishing pipeline vs transport responses">
+  Use `responseInfo.source` to branch logic in a shared router-level
+  hook, and use optional chaining on `domainAcc` to safely access
+  pipeline-only data:
+
+  ```js
+  onResponse: (req, res, responseInfo, domainAcc) => {
+    if (responseInfo.source === 'transport') {
+      log.info({type: 'transport', status: responseInfo.statusCode});
+      return;
+    }
+    log.info({type: 'pipeline', user: domainAcc?.auth?.identity});
+  }
+  ```
+</Aside>
+
 #### Usage — Audit Logging + Per-Route Metrics
 
 ```js
@@ -635,7 +670,7 @@ const router = createRouter({
       url: responseInfo.url,
       status: responseInfo.statusCode,
       duration: responseInfo.duration,
-      user: domainAcc.auth?.identity,
+      user: domainAcc?.auth?.identity,
     });
   },
 });
