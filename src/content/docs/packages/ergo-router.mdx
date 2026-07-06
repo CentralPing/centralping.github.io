@@ -214,6 +214,7 @@ at registration time with a descriptive error.
 | `noSend` | `boolean` | Skip automatic `send()` |
 | `catchHandler` | `function` | Per-route error handler |
 | `onResponse` | `function` | Post-send observation hook |
+| `redactHeaders` | `Set` | Header names to redact in `onResponse` snapshots |
 
 ```text
 Error: Invalid "authorization" in route config for POST /users: expected object or boolean, got string.
@@ -465,6 +466,7 @@ auto-wrap layer. They do not correspond to pipeline middleware.
 | `noSend` | `boolean` | Skip automatic `send()` — handler writes the full response |
 | `catchHandler` | `function` | Per-route error handler: `(req, res, err, domainAcc)` |
 | `onResponse` | `function` | Post-send observation hook: `(req, res, responseInfo, domainAcc)` |
+| `redactHeaders` | `Set<string>` | Per-route header redaction override for `onResponse` hook `responseInfo.headers` |
 
 See [Route Options](#route-options) below for full documentation and
 examples.
@@ -540,6 +542,7 @@ to the auto-wrap layer — they do not correspond to pipeline middleware.
 | `send` | `object` | — | Per-route options passed to `send()`. Overrides router-level `send` defaults. |
 | `catchHandler` | `function` | — | Per-route error handler. Receives `(req, res, err, domainAcc)` when the pipeline throws. Overrides router-level `catchHandler`. The fourth argument provides the domain accumulator state at the time of the error. |
 | `onResponse` | `function` | — | Per-route post-send observation hook. Receives `(req, res, responseInfo, domainAcc)` after `send()` completes. Fires before the router-level hook. |
+| `redactHeaders` | `Set<string>` | — | Per-route override for header redaction in `onResponse` hook snapshots. Overrides the router-level `redactHeaders` set. See [Lifecycle Hooks](#lifecycle-hooks). |
 
 #### `noSend` — Manual Response Control
 
@@ -584,8 +587,9 @@ router.get('/events', {
 ### Lifecycle Hooks
 
 ergo-router supports `onResponse` observation hooks at two levels:
-**router-level** (via `createRouter({onResponse})`) and **per-route**
-(via the `onResponse` route option). Both receive the same signature:
+**router-level** (via `createRouter({onResponse, redactHeaders})`) and
+**per-route** (via the `onResponse` and `redactHeaders` route options).
+Both hooks receive the same signature:
 
 ```js
 (req, res, responseInfo, domainAcc) => void | Promise
@@ -604,7 +608,7 @@ failure does not prevent the router-level hook from firing.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `statusCode` | `number` | Final HTTP status code |
-| `headers` | `object` | Response headers snapshot |
+| `headers` | `object` | Response headers snapshot — sensitive headers redacted per `redactHeaders` option |
 | `method` | `string` | Request HTTP method |
 | `url` | `string` | Request URL |
 | `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
@@ -622,6 +626,42 @@ failure does not prevent the router-level hook from firing.
   hooks are awaited. The hooks cannot alter the response — it has
   already been sent.
 </Aside>
+
+#### Header Redaction
+
+The `redactHeaders` option controls which response headers are replaced
+with `'[REDACTED]'` in the `responseInfo.headers` snapshot passed to
+`onResponse` hooks. Set it at the router level via
+`createRouter({redactHeaders})` or override per-route via the
+`redactHeaders` route option.
+
+##### Default Redacted Headers
+
+`authorization`, `proxy-authorization`, `cookie`, `set-cookie`
+
+Pass an empty Set to disable redaction entirely:
+
+```js
+const router = createRouter({
+  redactHeaders: new Set(),
+  onResponse: (req, res, responseInfo) => {
+    // responseInfo.headers contains all header values unredacted
+  },
+});
+```
+
+Per-route overrides replace the router-level set for that route:
+
+```js
+router.post('/payments', {
+  redactHeaders: new Set(['authorization', 'proxy-authorization']),
+  onResponse: (req, res, responseInfo) => {
+    // Only authorization and proxy-authorization are redacted;
+    // cookie and set-cookie are visible for this route
+  },
+  execute: processPayment,
+});
+```
 
 #### Usage — Audit Logging + Per-Route Metrics
 
