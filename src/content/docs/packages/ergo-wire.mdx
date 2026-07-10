@@ -1,0 +1,57 @@
+---
+title: ergo-wire
+description: Symmetric HTTP wire-format primitives for the Ergo stack — shared parse/format helpers so server and client stay aligned.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+<Badge text="Node.js ≥ 22" variant="tip" />
+<Badge text="Pure ESM" variant="caution" />
+<Badge text="Zero Dependencies" variant="note" />
+
+## Installation
+
+```bash
+npm install @centralping/ergo-wire
+```
+
+## Overview
+
+`@centralping/ergo-wire` is the canonical HTTP wire contract for the Ergo stack.
+It provides shared parse/format primitives so the server (`@centralping/ergo`) and
+client (`@centralping/ergo-fetch`) stay aligned without duplicating RFC grammars.
+
+Every parse function has a matching format/serialize helper (symmetric primitives).
+Returned wire objects use `Object.create(null)` + `Object.freeze()`.
+
+## Wire Profile v1
+
+| Concern | Wire format | Key exports |
+| ------- | ----------- | ----------- |
+| Idempotency-Key | RFC 8941 quoted sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
+| Link | RFC 8288 | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
+| Offset pagination | `page`, `per_page` query keys | `serializeOffsetParams`, `parseOffsetParams` |
+| Cursor pagination | `cursor`, `limit` query keys | `serializeCursorParams`, `parseCursorParams` |
+| Retry-After | seconds or IMF-fixdate | `parseRetryAfter`, `formatRetryAfter` |
+| Body fingerprint | SHA-256 hex (Web Crypto) | `fingerprint` |
+
+## Design Principles
+
+- **Zero runtime dependencies** — Web Platform APIs only (`crypto.subtle`)
+- **Symmetric primitives** — every parse has a matching format/serialize
+- **Graceful parse degradation** — malformed wire input returns `undefined`; format throws `TypeError`
+- **Character-by-character parsing** for RFC grammars (no regex for Link parsing)
+- **Null-prototype policy** — returned objects use `Object.create(null)` + `Object.freeze()`
+
+## Subpath Exports
+
+Individual modules are available via subpath imports (no `.js` suffix needed):
+
+```js
+import { sanitizeQuotedString } from '@centralping/ergo-wire/lib/quoted-string';
+```
+
+## Links
+
+- [GitHub](https://github.com/CentralPing/ergo-wire)
+- [Changelog](https://github.com/CentralPing/ergo-wire/blob/main/CHANGELOG.md)
