@@ -47,10 +47,10 @@ acc.cookies.toHeader() // ["session=abc123; HttpOnly; Secure", ...]
 ### Security
 
 - Cookie values are validated against [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265) `cookie-octet` grammar
-- Cookie names must be valid HTTP tokens ([RFC 7230](https://www.rfc-editor.org/rfc/rfc7230))
+- Cookie names must be valid HTTP tokens ([RFC 9110 §5.6.2](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.2))
 - Domain values are validated against the subdomain grammar ([RFC 1034](https://www.rfc-editor.org/rfc/rfc1034)/[RFC 1123](https://www.rfc-editor.org/rfc/rfc1123))
 - Path values are validated against the `path-value` production (any character except CTLs or semicolons)
-- SameSite values must be `Strict`, `Lax`, or `None` (case-insensitive, per [RFC 6265bis](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html))
+- SameSite values must be `Strict`, `Lax`, or `None` (case-insensitive, per the [RFC 6265bis](https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html) Internet-Draft)
 - Names that collide with jar methods are silently dropped
 - Null-prototype parsing prevents prototype pollution
 
