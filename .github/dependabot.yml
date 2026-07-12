@@ -21,7 +21,7 @@ updates:
     reviewers: ["JasonCust"]
     ignore:
       - dependency-name: "astro"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
