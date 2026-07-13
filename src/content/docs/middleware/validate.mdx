@@ -85,14 +85,14 @@ are present) and produces no validators — validation is effectively skipped.
 | `{mode: 'fast'}` | Equivalent to the default — all standard formats in fast mode |
 
 <Aside type="caution" title="ReDoS mitigation">
-  Eight format validators use complex regex patterns in full mode that are
-  vulnerable to ReDoS with crafted input: `date`, `time`, `date-time`,
-  `duration`, `uri`, `uri-reference`, `email`, and `idn-email`. Fast mode
-  (the default) uses simplified regexes that validate structure without
-  exhaustive semantic checks — for example, fast-mode `date` accepts
-  `2026-02-31` because it validates the digit pattern without calendar
-  logic. Use `{mode: 'full'}` only when strict RFC compliance is required
-  and input sources are trusted.
+  Fast mode (the default) uses simplified regexes for 8 format validators
+  (`date`, `time`, `date-time`, `iso-time`, `iso-date-time`, `uri`,
+  `uri-reference`, and `email`). Full-mode patterns for these formats are
+  vulnerable to ReDoS with crafted input. Fast mode validates structure
+  without exhaustive semantic checks — for example, fast-mode `date`
+  accepts `2026-02-31` because it validates the digit pattern without
+  calendar logic. Use `{mode: 'full'}` only when strict RFC compliance is
+  required and input sources are trusted.
 </Aside>
 
 ### Route Parameter Resolution
