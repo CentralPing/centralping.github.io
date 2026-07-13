@@ -30,8 +30,8 @@ import {handler} from '@centralping/ergo';
 | ------ | ---- | ------- | ----------- |
 | `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) extension member. |
 | `onResponse` | `function` | — | Post-send lifecycle observation hook. Called after `send()` completes with `(req, res, responseInfo, domainAcc)`. Errors thrown by the hook are swallowed — the hook cannot affect the response. Async hooks are awaited. |
+| `redactHeaders` | `Set<string>` | See below | Header names to redact in the `onResponse` hook's `responseInfo.headers` snapshot. Matching headers are replaced with `'[REDACTED]'`. Pass an empty Set to disable redaction. Shares the same default set as [logger](/middleware/logger/). |
 | `redactErrors` | `boolean` | `true` | Control whether caught 5xx exception messages appear in the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) response `detail` field. When `true`, `detail` is set to generic status text. When `false`, `err.message` is passed through for 5xx only — 4xx always uses generic text. Stack traces are never exposed. Only set to `false` in development. |
-| `redactHeaders` | `Set<string>` | See description | Header names to redact in the `onResponse` hook's `responseInfo.headers` snapshot (default: `authorization`, `proxy-authorization`, `cookie`, `set-cookie`). Pass an empty `Set` to disable redaction. Shares the same default set as [logger](/middleware/logger/). |
 | `timing` | `boolean \| object` | `false` | Inject an `X-Response-Time` header measuring the full request lifecycle (pipeline + error handling + send). Pass `true` for defaults (`x-response-time` header, 3 decimal places), or `{header?: string, precision?: number}` for custom configuration. Zero overhead when disabled. For router-level timing, see [Response Timing](/packages/ergo-router/#response-timing). |
 | `prettify` | `boolean` | `false` | Pretty-print JSON output (forwarded to [send](/middleware/send/)) |
 | `vary` | `string[]` | `['Accept']` | Vary header values to append (forwarded to [send](/middleware/send/)) |
@@ -52,6 +52,10 @@ import {handler} from '@centralping/ergo';
   your middleware, or configure a different header name via
   `timing: {header: 'x-custom-timing'}`.
 </Aside>
+
+### Default Redacted Headers
+
+`authorization`, `proxy-authorization`, `cookie`, `set-cookie`
 
 ## Return Value
 
@@ -149,7 +153,7 @@ alter headers, status, or body.
           url: responseInfo.url,
           status: responseInfo.statusCode,
           duration: responseInfo.duration,
-          user: domainAcc.auth?.identity,
+          user: domainAcc?.auth?.identity,
         }));
       },
     });
