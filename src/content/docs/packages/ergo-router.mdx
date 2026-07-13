@@ -1011,7 +1011,7 @@ router.mount('/users', usersRouter);
 | Defaults isolation | Child defaults stay with the child | Parent defaults do not merge into child routes; child routes use the defaults they were registered with |
 | Transport | Parent-governed | Transport middleware (CORS, rate limiting, security headers, request ID) runs at the parent dispatch level only; child `transport` config is not used |
 | `router.use()` | Per-router scoping | Parent `router.use()` does not apply to mounted routes; child `router.use()` is baked into child pipelines at registration time |
-| `strictPatch` / `strictBody` | Parent-governed | Content-Type enforcement is applied at parent dispatch, before route matching |
+| `strictPatch` / `strictBody` | Parent-governed | Content-Type enforcement is applied at parent dispatch, after route matching (unknown paths→404, wrong methods→405) but before pipeline execution |
 | Ordering | Register routes before mounting | Routes must be added to the child router before calling `parent.mount()` |
 | Chainable | `mount()` returns the parent | Allows `router.mount('/a', a).mount('/b', b)` |
 
