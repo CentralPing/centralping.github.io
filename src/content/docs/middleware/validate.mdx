@@ -71,16 +71,25 @@ are present) and produces no validators — validation is effectively skipped.
 
 | Property | Type | Default | Description |
 | -------- | ---- | ------- | ----------- |
-| `formats` | `boolean \| string[] \| object` | all standard | `ajv-formats` configuration |
+| `formats` | `boolean \| string[] \| object` | all standard (fast mode) | `ajv-formats` configuration |
 
 #### `formats` Values
 
 | Value | Behavior |
 | ----- | -------- |
-| `undefined` or `true` | All standard formats enabled |
+| `undefined` or `true` | All standard formats enabled in **fast mode** (simplified regexes, safe for untrusted input) |
 | `false` | Formats disabled |
-| `['email', 'uri']` | Only listed formats enabled |
-| `{mode: 'fast'}` | Full `ajv-formats` plugin config |
+| `['email', 'uri']` | Only listed formats enabled (uses full-mode regexes) |
+| `{mode: 'full'}` | Full-mode regexes for strict RFC compliance (ReDoS risk with untrusted input) |
+| `{mode: 'fast'}` | Equivalent to default — explicit fast mode |
+
+<Aside type="tip" title="ReDoS mitigation">
+  The default fast mode uses simplified regexes for 8 format validators
+  (`date`, `time`, `date-time`, `iso-time`, `iso-date-time`, `uri`,
+  `uri-reference`, `email`). Fast-mode `date` validates structure only —
+  `2026-02-31` passes. Use `{mode: 'full'}` when strict semantic
+  validation is required and input sources are trusted.
+</Aside>
 
 ### Route Parameter Resolution
 
