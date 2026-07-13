@@ -148,11 +148,12 @@ middleware factory or pipeline step.
 
 ### Fixed Codes (ergo)
 
-| Code | Source | Condition | Action |
-| --- | --- | --- | --- |
-| `ERGO_VALIDATE_NO_BODY` | `validate()` | `validate.body` schema is configured but `acc.body` is missing — `body()` middleware did not run before `validate()` | Ensure `body` is in the pipeline before `validate`, or let ergo-router auto-include it |
-| `ERGO_VALIDATE_UNKNOWN_KEY` | `validate()` | Schema object contains keys other than `body`, `query`, `params` | Check for typos; valid keys are `body`, `query`, `params` |
-| `ERGO_IDEMPOTENCY_PROCESSING_EVICTED` | `idempotency()` store | All entries are `processing` and a new entry must be stored — oldest `processing` entry was evicted | Increase `maxKeys` to match peak concurrent request volume, or use a store with LRU eviction that protects `processing` entries |
+| Code | Source | Timing | Condition | Action |
+| --- | --- | --- | --- | --- |
+| `ERGO_CORS_WILDCARD_CREDENTIALS` | `cors()` | factory | `origins: '*'` with `allowCredentials: true` — OWASP-documented misconfiguration allowing any site to make credentialed requests | Replace the wildcard with an explicit origin allowlist; see the [cors middleware guide](/middleware/cors/) |
+| `ERGO_IDEMPOTENCY_PROCESSING_EVICTED` | `IdempotencyStore` | runtime | All entries are `processing` (no completed entries to evict) and a new entry must be stored — oldest processing entry is evicted | Increase `maxKeys` to match expected concurrent request volume, or investigate why requests are not calling `complete()` |
+| `ERGO_VALIDATE_NO_BODY` | `validate()` | runtime | `validate.body` schema is configured but `acc.body` is missing — `body()` middleware did not run before `validate()` | Ensure `body` is in the pipeline before `validate`, or let ergo-router auto-include it |
+| `ERGO_VALIDATE_UNKNOWN_KEY` | `validate()` | factory | Schema object contains keys other than `body`, `query`, `params` | Check for typos; valid keys are `body`, `query`, `params` |
 
 ### Dynamic Codes (ergo middleware factories)
 
@@ -180,6 +181,7 @@ name with camelCase boundaries expanded:
 | `ERGO_SEND_UNKNOWN_OPTION` | `send()` |
 | `ERGO_TIMEOUT_UNKNOWN_OPTION` | `timeout()` |
 | `ERGO_TRACING_UNKNOWN_OPTION` | `tracing()` |
+| `ERGO_VALIDATE_UNKNOWN_OPTION` | `validate()` |
 
 All dynamic codes include the unrecognized option name(s) and a "did
 you mean?" suggestion when a valid option is within Levenshtein
