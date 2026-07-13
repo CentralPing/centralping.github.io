@@ -153,7 +153,7 @@ alter headers, status, or body.
           url: responseInfo.url,
           status: responseInfo.statusCode,
           duration: responseInfo.duration,
-          user: domainAcc.auth?.identity,
+          user: domainAcc?.auth?.identity,
         }));
       },
     });
