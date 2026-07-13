@@ -595,13 +595,23 @@ Both hooks receive the same signature:
 (req, res, responseInfo, domainAcc) => void | Promise
 ```
 
+The **router-level** hook fires on every response — both pipeline-routed
+responses (after `send()`) and transport-level short-circuits (404, 405,
+415, 429, OPTIONS 204, CORS preflight 204). The **per-route** hook fires
+only for pipeline-routed responses on that route.
+
 #### Execution Order
+
+For pipeline-routed responses:
 
 1. **Route-level** hook fires first (if defined)
 2. **Router-level** hook fires second (if defined)
 
 Each hook is wrapped in its own `try/catch` — a route-level hook
 failure does not prevent the router-level hook from firing.
+
+For transport-level short-circuits, only the router-level hook fires
+(no route matched, so no route-level hook exists).
 
 #### responseInfo Snapshot
 
@@ -612,7 +622,15 @@ failure does not prevent the router-level hook from firing.
 | `method` | `string` | Request HTTP method |
 | `url` | `string` | Request URL |
 | `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
-| `duration` | `number` | Pipeline execution time in milliseconds |
+| `duration` | `number` | Elapsed time in milliseconds from dispatch entry (pipeline) or transport short-circuit |
+| `source` | `'pipeline' \| 'transport'` | `'pipeline'` when the response passed through a route pipeline; `'transport'` for transport-level short-circuits |
+
+<Aside type="note" title="Transport-level domainAcc">
+  For transport-level responses (`responseInfo.source === 'transport'`),
+  `domainAcc` is `undefined` — no pipeline ran, so no domain accumulator
+  exists. Guard with `domainAcc?.auth` (or equivalent) when reading
+  accumulator state in a router-level hook.
+</Aside>
 
 <Aside type="caution" title="Does not fire with catchHandler">
   When a `catchHandler` is defined and the pipeline throws, the
@@ -675,7 +693,8 @@ const router = createRouter({
       url: responseInfo.url,
       status: responseInfo.statusCode,
       duration: responseInfo.duration,
-      user: domainAcc.auth?.identity,
+      source: responseInfo.source,
+      user: domainAcc?.auth?.identity,
     });
   },
 });
