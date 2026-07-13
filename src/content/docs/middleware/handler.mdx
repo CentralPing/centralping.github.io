@@ -72,6 +72,7 @@ Returns an async handler `(req, res) => void` suitable for
   (unless a timeout or earlier pipeline break already set the status)
 - Attaches `instance` from the `X-Request-Id` response header
 - Emits error on `res` if error listeners are present
+- Records the exception on the OTEL span (if tracing is configured)
 - If `send()` itself throws: emits the error on `res` (if listeners are present),
   records the exception on the OTEL span, and — if the response has not already
   been committed — sets `responseAcc.statusCode = 500` and ends the response
