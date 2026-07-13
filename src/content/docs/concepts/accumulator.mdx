@@ -314,7 +314,7 @@ result — a discriminated union with three variants.
 ```ts
 type IdempotencyResult =
   | Record<string, never>
-  | {key: string; fingerprint: string; complete: (response: unknown) => void; discard: () => void}
+  | {key: string; fingerprint: string; complete: (response: unknown) => boolean; discard: () => void}
   | {replayed: true};
 ```
 

@@ -30,7 +30,7 @@ import {handler} from '@centralping/ergo';
 | ------ | ---- | ------- | ----------- |
 | `debug` | `boolean` | `false` | Enable pipeline debug tracing. When true, `responseAcc._trace` is initialized with `{steps, breakAt}` before the pipeline runs. On error responses (≥ 400), `_trace` appears as an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) extension member. |
 | `onResponse` | `function` | — | Post-send lifecycle observation hook. Called after `send()` completes with `(req, res, responseInfo, domainAcc)`. Errors thrown by the hook are swallowed — the hook cannot affect the response. Async hooks are awaited. |
-| `redactHeaders` | `Set<string>` | See below | Header names to redact in the `onResponse` hook's `responseInfo.headers` snapshot. Matching headers are replaced with `'[REDACTED]'`. Pass an empty Set to disable redaction. |
+| `redactHeaders` | `Set<string>` | See below | Header names to redact in the `onResponse` hook's `responseInfo.headers` snapshot. Matching headers are replaced with `'[REDACTED]'`. Pass an empty Set to disable redaction. Shares the same default set as [logger](/middleware/logger/). |
 | `redactErrors` | `boolean` | `true` | Control whether caught 5xx exception messages appear in the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) response `detail` field. When `true`, `detail` is set to generic status text. When `false`, `err.message` is passed through for 5xx only — 4xx always uses generic text. Stack traces are never exposed. Only set to `false` in development. |
 | `timing` | `boolean \| object` | `false` | Inject an `X-Response-Time` header measuring the full request lifecycle (pipeline + error handling + send). Pass `true` for defaults (`x-response-time` header, 3 decimal places), or `{header?: string, precision?: number}` for custom configuration. Zero overhead when disabled. For router-level timing, see [Response Timing](/packages/ergo-router/#response-timing). |
 | `prettify` | `boolean` | `false` | Pretty-print JSON output (forwarded to [send](/middleware/send/)) |
@@ -76,7 +76,11 @@ Returns an async handler `(req, res) => void` suitable for
   (unless a timeout or earlier pipeline break already set the status)
 - Attaches `instance` from the `X-Request-Id` response header
 - Emits error on `res` if error listeners are present
-- If `send()` itself throws: `res.statusCode = 500; res.end()`
+- Records the exception on the OTEL span (if tracing is configured)
+- If `send()` itself throws: emits the error on `res` (if listeners are present),
+  records the exception on the OTEL span, and — if the response has not already
+  been committed — sets `responseAcc.statusCode = 500` and ends the response
+  with `res.statusCode = 500; res.end()`
 
 <Aside type="tip">
 For startup errors, runtime warnings, and troubleshooting, see [Debugging & Diagnostics](/concepts/debugging/).
@@ -93,7 +97,7 @@ alter headers, status, or body.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `statusCode` | `number` | Final HTTP status code |
-| `headers` | `object` | Response headers snapshot — sensitive headers are replaced with `'[REDACTED]'` per the `redactHeaders` option |
+| `headers` | `object` | Response headers snapshot (from `res.getHeaders()`), with sensitive headers redacted per the `redactHeaders` option |
 | `method` | `string` | Request HTTP method |
 | `url` | `string` | Request URL |
 | `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
