@@ -104,8 +104,8 @@ const pipeline = compose(
 
 `compose()` runs middleware **sequentially** with a sync fast-path — when a
 middleware returns a non-Promise value, the next middleware executes
-immediately with no microtask overhead. Of ergo's 18 built-in middleware,
-16 are synchronous header checks or response decorators. Sequential
+immediately with no microtask overhead. Of ergo's 20 built-in middleware,
+18 are synchronous header checks or response decorators. Sequential
 composition eliminates unnecessary `Promise.all` microtask hops and
 accumulator copies for these synchronous functions.
 
