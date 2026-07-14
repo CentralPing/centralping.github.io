@@ -25,7 +25,7 @@ import {idempotency} from '@centralping/ergo';
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `store` | `object` | In-memory store | Pluggable store with `get`/`set`/`complete`/`delete` |
+| `store` | `object` | In-memory store | Pluggable store — `get(key) → object\|undefined`, `set(key, fingerprint) → string`, `complete(key, response, generation) → boolean`, `delete(key) → void` |
 | `ttlMs` | `number` | `86400000` (24h) | TTL for default in-memory store |
 | `required` | `boolean` | `false` | Return `400` if header is missing on applicable methods |
 | `methods` | `Set<string> \| string[]` | `POST`, `PATCH` | HTTP methods to enforce |
@@ -37,11 +37,13 @@ Depends on the request state:
 | State | Return |
 | ----- | ------ |
 | Method not applicable or key absent (not required) | `{}` |
-| New request | `{value: {key, fingerprint, complete(response), discard()}}` |
+| New request | `{value: {key, fingerprint, complete(response) → boolean, discard()}}` |
 | Replay (stored response exists) | `{value: {replayed: true}, response: storedResponse}` |
 
 For new requests, call `complete(response)` after your execute stage to
 store the response for future replays, or `discard()` to remove the key.
+`complete()` returns `true` on success, or `false` if the entry was
+evicted before completion (the response is not stored).
 
 ## Error Responses
 
@@ -168,9 +170,10 @@ idempotency entry (e.g. on failure).
 1. **New request** — the middleware returns `{ key, fingerprint,
    complete, discard }` on the [domain accumulator](/concepts/accumulator/)
    at `acc.idempotency`. The execute handler runs normally.
-2. **`complete(response)`** — stores the response for this key. The
-   argument should be a response accumulator shape (e.g.
-   `{statusCode, body}`).
+2. **`complete(response)`** — stores the response for this key and
+   returns `true`. Returns `false` if the entry was evicted before
+   completion (the response is not stored). The argument should be a
+   response accumulator shape (e.g. `{statusCode, body}`).
 3. **Replay** — a subsequent request with the same key and fingerprint
    returns the stored response immediately. The execute handler does
    not run — the middleware handles replay automatically.
@@ -181,7 +184,9 @@ idempotency entry (e.g. on failure).
   If neither `complete()` nor `discard()` is called for a new key, the
   store entry remains in a `processing` state. Concurrent requests with
   the same key will receive a `409 Conflict` response until the entry
-  expires or is cleaned up.
+  expires or is cleaned up. If `complete()` returns `false`, the entry
+  was evicted — the response will not be replayed on subsequent requests
+  with the same key.
 </Aside>
 
 ## RFC References

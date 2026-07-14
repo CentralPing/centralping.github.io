@@ -149,7 +149,9 @@ run `verify`.
 ### Idempotent Mutation
 
 The `complete()`/`discard()` lifecycle stores successful responses for
-replay and cleans up on failure.
+replay and cleans up on failure. `complete()` returns `true` when the
+response is stored, or `false` if the entry was evicted before
+completion (the response is not stored and will not be replayed).
 
 <Tabs>
   <TabItem label="Standalone">
@@ -161,7 +163,7 @@ replay and cleans up on failure.
       authorization,
       body,
       idempotency,
-   } from '@centralping/ergo';
+    } from '@centralping/ergo';
 
     const csrfMiddleware = csrf({secret: process.env.CSRF_SECRET});
 
@@ -176,10 +178,12 @@ replay and cleans up on failure.
           const result = await processTransfer(acc.body.parsed);
           const response = {statusCode: 201, body: result};
 
-          acc.idempotency.complete(response);
+          if (!acc.idempotency.complete(response)) {
+            // Evicted — response will not be replayed on subsequent requests
+          }
 
           return {response};
-       } catch (err) {
+        } catch (err) {
           acc.idempotency.discard();
           throw err;
         }
@@ -197,10 +201,12 @@ replay and cleans up on failure.
           const result = await processTransfer(acc.body.parsed);
           const response = {statusCode: 201, body: result};
 
-          acc.idempotency.complete(response);
+          if (!acc.idempotency.complete(response)) {
+            // Evicted — response will not be replayed on subsequent requests
+          }
 
           return {response};
-       } catch (err) {
+        } catch (err) {
           acc.idempotency.discard();
           throw err;
         }
@@ -213,9 +219,11 @@ replay and cleans up on failure.
 <Aside type="caution" title="Always call complete() or discard()">
   If neither `complete()` nor `discard()` is called, the store entry
   remains in a `processing` state. Concurrent requests with the same key
-  will receive a `409 Conflict` response until the entry expires. See
-  the [idempotency guide](/middleware/idempotency/#lifecycle) for the
-  full lifecycle.
+  will receive a `409 Conflict` response until the entry expires. If
+  `complete()` returns `false`, the entry was evicted — the response will
+  not be replayed on subsequent requests with the same key. See the
+  [idempotency guide](/middleware/idempotency/#lifecycle) for the full
+  lifecycle.
 </Aside>
 
 ### Client-Side Fetch Helper
@@ -496,7 +504,8 @@ The `complete(response)` call is not automatic — you must call it in
 your execute handler after the operation succeeds. This design allows
 the handler to decide whether a result should be stored:
 
-- **Success** → `complete(response)` stores the response for replay
+- **Success** → `complete(response)` stores the response and returns
+  `true`, or returns `false` if the entry was evicted before completion
 - **Failure** → `discard()` removes the key, allowing a retry with the
   same idempotency key
 - **Neither called** → entry stays in `processing` state (concurrent

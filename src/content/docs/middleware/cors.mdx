@@ -3,7 +3,7 @@ title: cors
 description: Cross-Origin Resource Sharing middleware — validates origins, methods, and headers per the Fetch Standard.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
 Validates CORS requests against allowed origins, methods, and headers.
 No-op when the `Origin` header is absent (same-origin requests). Preflight
@@ -71,6 +71,27 @@ The middleware returns one of three results:
     ```
   </TabItem>
 </Tabs>
+
+### Security Notes
+
+<Aside type="caution" title="Wildcard + Credentials">
+Configuring `origins: '*'` with `allowCredentials: true` allows **any site** to make
+credentialed cross-origin requests (cookies, Authorization headers). This is an
+[OWASP-documented misconfiguration](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing)
+that can enable data exfiltration.
+
+ergo emits a one-time `process.emitWarning` with code `ERGO_CORS_WILDCARD_CREDENTIALS`
+when this combination is detected at factory time.
+
+**Recommended fix:** replace the wildcard with an explicit origin allowlist:
+
+```js
+cors({
+  origins: ['https://app.example.com', 'https://admin.example.com'],
+  allowCredentials: true
+})
+```
+</Aside>
 
 ## RFC References
 

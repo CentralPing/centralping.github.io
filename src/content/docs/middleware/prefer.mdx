@@ -9,6 +9,12 @@ Parses the `Prefer` request header per [RFC 7240](https://www.rfc-editor.org/rfc
 `send()`'s `prefer: true` option to automatically handle
 `return=minimal` (200 → 204) and `return=representation` behaviors.
 
+The parser enforces the [RFC 9110 §5.6.2 `token`](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.2)
+and [§5.6.4 `quoted-string`](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.4)
+grammars. Malformed preferences (invalid characters, unterminated quotes, bare
+control characters) are silently skipped — valid preferences in the same header
+are still parsed.
+
 **Pipeline stage:** Negotiation
 
 ## Import

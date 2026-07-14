@@ -130,7 +130,14 @@ application/json
 application/javascript
 application/xml
 application/x-www-form-urlencoded
+application/*+json (e.g., application/problem+json, application/vnd.api+json)
+application/*+xml (e.g., application/hal+xml, application/atom+xml)
 ```
+
+The `+json` and `+xml` patterns recognize
+[RFC 6838 structured syntax suffixes](https://www.rfc-editor.org/rfc/rfc6838#section-4.2.8),
+ensuring types like `application/problem+json` (ergo's error format) and
+`application/vnd.api+json` (JSON:API) are correctly compressed.
 
 Binary formats (images, audio, video, `application/octet-stream`) are
 not compressible and are always skipped.
@@ -196,6 +203,7 @@ curl -v http://localhost:3000/api/data
 
 - [RFC 9110 §12.5.3 — Accept-Encoding](https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3)
 - [RFC 9110 §8.8.1 — Content-Encoding](https://www.rfc-editor.org/rfc/rfc9110#section-8.8.1)
+- [RFC 6838 §4.2.8 — Structured Syntax Suffixes](https://www.rfc-editor.org/rfc/rfc6838#section-4.2.8)
 
 ## API Reference
 
