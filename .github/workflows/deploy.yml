@@ -24,6 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # Docs-update dispatch contract (repository_dispatch event-type: docs-update):
+      # - Payload: {package, version}. package may be scoped (@centralping/…) or short.
+      # - Supported packages: ergo, ergo-router, ergo-fetch, ergo-wire.
+      # - version "dev" → main; otherwise main or vX.Y.Z (+optional pre-release/build).
+      # - ergo / empty package: pin .ergo-source to version; ergo-router → main.
+      # - ergo-router: pin .ergo-router-source to version; ergo → main.
+      # - ergo-fetch / ergo-wire: rebuild site with ergo+router both at main.
+      #   Payload version is validated for contract uniformity but does not yet pin a
+      #   package-source checkout — add .ergo-fetch-source / .ergo-wire-source only when
+      #   astro.config.mjs / content.config.ts consume them (#229).
+      # - Auth: org secret WEBSITE_DISPATCH_TOKEN (selected repos: ergo, ergo-router,
+      #   ergo-fetch, ergo-wire, json-api-query).
       - name: Resolve source refs
         id: source_refs
         shell: bash
@@ -50,6 +62,10 @@ jobs:
           elif [[ "$pkg" == "ergo-router" ]]; then
             ergo_ref="main"
             router_ref="$ver"
+          elif [[ "$pkg" == "ergo-fetch" || "$pkg" == "ergo-wire" ]]; then
+            validate_ref "$ver" "package version"
+            ergo_ref="main"
+            router_ref="main"
           else
             echo "::error::Unsupported package: $pkg"
             exit 1
