@@ -33,10 +33,11 @@ reviews:
   path_instructions:
     - path: "src/content/**"
       instructions: >
-        Documentation content (MDX). Verify technical accuracy of ergo/ergo-router
-        API descriptions, correct RFC references, and consistent terminology with
-        the library READMEs and JSDoc. Code examples must match current API
-        signatures. Dual JS/TS examples use Starlight Tabs/TabItem components.
+        Documentation content (MDX). Verify technical accuracy of ergo,
+        ergo-router, ergo-wire, and ergo-fetch API descriptions against the
+        relevant library source/JSDoc, correct RFC references, and consistent
+        terminology with the library READMEs. Code examples must match current
+        API signatures. Dual JS/TS examples use Starlight Tabs/TabItem components.
 
     - path: "src/components/**"
       instructions: >
