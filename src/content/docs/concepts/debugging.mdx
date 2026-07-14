@@ -148,10 +148,12 @@ middleware factory or pipeline step.
 
 ### Fixed Codes (ergo)
 
-| Code | Source | Condition | Action |
-| --- | --- | --- | --- |
-| `ERGO_VALIDATE_NO_BODY` | `validate()` | `validate.body` schema is configured but `acc.body` is missing — `body()` middleware did not run before `validate()` | Ensure `body` is in the pipeline before `validate`, or let ergo-router auto-include it |
-| `ERGO_VALIDATE_UNKNOWN_KEY` | `validate()` | Schema object contains keys other than `body`, `query`, `params` | Check for typos; valid keys are `body`, `query`, `params` |
+| Code | Source | Timing | Condition | Action |
+| --- | --- | --- | --- | --- |
+| `ERGO_CORS_WILDCARD_CREDENTIALS` | `cors()` | factory | `origins: '*'` with `allowCredentials: true` — OWASP-documented misconfiguration allowing any site to make credentialed requests | Replace the wildcard with an explicit origin allowlist; see the [cors middleware guide](/middleware/cors/) |
+| `ERGO_IDEMPOTENCY_PROCESSING_EVICTED` | `IdempotencyStore` | runtime | All entries are `processing` (no completed entries to evict) and a new entry must be stored — oldest processing entry is evicted | Increase `maxKeys` to match expected concurrent request volume, or investigate why requests are not calling `complete()` |
+| `ERGO_VALIDATE_NO_BODY` | `validate()` | runtime | `validate.body` schema is configured but `acc.body` is missing — `body()` middleware did not run before `validate()` | Ensure `body` is in the pipeline before `validate`, or let ergo-router auto-include it |
+| `ERGO_VALIDATE_UNKNOWN_KEY` | `validate()` | factory | Schema object contains keys other than `body`, `query`, `params` | Check for typos; valid keys are `body`, `query`, `params` |
 
 ### Dynamic Codes (ergo middleware factories)
 
@@ -179,6 +181,7 @@ name with camelCase boundaries expanded:
 | `ERGO_SEND_UNKNOWN_OPTION` | `send()` |
 | `ERGO_TIMEOUT_UNKNOWN_OPTION` | `timeout()` |
 | `ERGO_TRACING_UNKNOWN_OPTION` | `tracing()` |
+| `ERGO_VALIDATE_UNKNOWN_OPTION` | `validate()` |
 
 All dynamic codes include the unrecognized option name(s) and a "did
 you mean?" suggestion when a valid option is within Levenshtein
@@ -234,6 +237,12 @@ appear in the HTTP response or cause unhandled rejections. If your
 2. Verify that no `catchHandler` is configured on the route —
    `onResponse` does **not** fire when a `catchHandler` handles the
    error via early return
+3. For router-level hooks, check whether the response is
+   transport-level (404, 405, 415, 429, OPTIONS, CORS preflight) —
+   `domainAcc` is `undefined` for these responses. Use
+   `responseInfo.source` to distinguish pipeline vs transport
+   responses and optional chaining (`domainAcc?.auth?.identity`) to
+   safely access pipeline-only data
 
 See [Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for
 the execution model and
@@ -356,10 +365,17 @@ compressed.
 
 **Cause:** A `catchHandler` is configured on the route or router.
 When the pipeline throws, the `catchHandler` takes control via early
-return — `onResponse` hooks do not fire in this path.
+return — `onResponse` hooks do not fire in this path. Additionally,
+**per-route** `onResponse` hooks only fire for pipeline responses —
+they do not fire for transport-level short-circuits (404, 405, 415,
+429, OPTIONS, CORS preflight). Only the **router-level** `onResponse`
+hook fires for transport responses.
 
 **Fix:** If you need post-response observation alongside error
-handling, add logging inside the `catchHandler` itself. See
+handling, add logging inside the `catchHandler` itself. If you need
+to observe transport-level responses, use a router-level `onResponse`
+hook and check `responseInfo.source` to distinguish pipeline vs
+transport responses. See
 [Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for the
 execution model.
 

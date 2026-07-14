@@ -385,7 +385,7 @@ security concerns:
 
 | Protection | Description |
 | ---------- | ----------- |
-| `sanitizeQuotedString` | Escapes backslashes, double-quotes, and strips all CTL characters (except HTAB) per [RFC 7230 §3.2.6](https://www.rfc-editor.org/rfc/rfc7230#section-3.2.6). Used in `WWW-Authenticate`, `Link`, and `Set-Cookie` headers. |
+| `sanitizeQuotedString` | Escapes backslashes, double-quotes, and strips all CTL characters (except HTAB) per [RFC 9110 §5.6.4](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.4). Used in `WWW-Authenticate`, `Link`, and `Set-Cookie` headers. |
 | Prefer header ReDoS mitigation | The `lib/prefer.js` parser uses a two-alternative regex pattern that avoids catastrophic backtracking on adversarial input. |
 | Sensitive header redaction | The structured logger redacts `authorization`, `cookie`, `proxy-authorization`, and `set-cookie` header values from log output. |
 | Safe URI decoding | `lib/query.js` wraps `decodeURIComponent` in a `safeDecode()` helper that catches `URIError` on malformed percent-encoded sequences, preventing 500 crashes. |
