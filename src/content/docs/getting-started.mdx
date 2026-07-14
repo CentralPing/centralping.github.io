@@ -37,13 +37,15 @@ import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 | --- | --- | --- |
 | **Full REST API** with routing, transport security, and declarative pipeline assembly | `@centralping/ergo` + `@centralping/ergo-router` | ergo-router provides `createRouter()`, automatic `handler()`/`send()` wrapping, and transport-level concerns (request IDs, CORS, rate limiting, security headers) |
 | **Custom routing** or framework integration — you bring your own router (Express, Fastify, Koa, etc.) | `@centralping/ergo` only | Use `compose()` and `handler()` directly to build pipelines without ergo-router's opinions |
+| **HTTP client** for consuming ergo-router APIs (conditional requests, retry, CSRF, pagination) | `@centralping/ergo-fetch` (+ `@centralping/ergo-wire`) | Client encodes RFC-correct behaviors; wire primitives keep client and server aligned |
 
 <Aside type="tip">
-  Most projects should start with **both packages**. Choose ergo-only when you
-  need to integrate ergo middleware into an existing framework or want full
-  control over routing and server lifecycle. See
-  [Architecture](/concepts/architecture/) for a deeper look at how the two
-  packages relate.
+  Most **server** projects should start with **ergo + ergo-router**. Choose
+  ergo-only when you need to integrate ergo middleware into an existing
+  framework or want full control over routing and server lifecycle. Add
+  [ergo-fetch](/packages/ergo-fetch/) when you need a matching HTTP client.
+  See [Architecture](/concepts/architecture/) for how the stack packages
+  relate.
 </Aside>
 
 ## Quick Start
@@ -322,6 +324,8 @@ exactly once to serialize the HTTP response. See the
   Top 10
 - [ergo API](/packages/ergo/) — middleware overview and package reference
 - [ergo-router API](/packages/ergo-router/) — router and pipeline builder
+- [ergo-wire](/packages/ergo-wire/) — shared HTTP wire-format primitives
+- [ergo-fetch](/packages/ergo-fetch/) — RFC-compliant HTTP client for ergo APIs
 - [Changelog](/changelog/ergo/) — release history and breaking change notices
 - [Migration Guides](/migration/0.4-to-0.5/) — step-by-step upgrade
   instructions with before/after examples

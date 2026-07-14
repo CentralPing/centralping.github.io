@@ -237,3 +237,11 @@ knowledge_base:
         (parse/serialize helpers, Link header, Idempotency-Key, Retry-After,
         fingerprint). Do not confuse with ergo lib/paginate.js response builders
         (offsetResponse, cursorResponse), which are higher-level ergo utilities.
+    - repository: "CentralPing/ergo-fetch"
+      instructions: >
+        RFC-compliant HTTP client for ergo-router APIs. Package pages and
+        cross-references must match exports from index.js and lib/*.js JSDoc
+        (createClient, interceptors, problem-details helpers, stores, pagination,
+        query builder). Runtime dependency on @centralping/ergo-wire —
+        do not claim zero runtime dependencies. Homepage is
+        https://centralping.github.io/packages/ergo-fetch/.

@@ -1,0 +1,182 @@
+---
+title: ergo-fetch
+description: RFC-compliant HTTP client for ergo-router APIs — conditional requests, rate limiting, retry, pagination, and more.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+[![npm version](https://img.shields.io/npm/v/@centralping/ergo-fetch)](https://www.npmjs.com/package/@centralping/ergo-fetch)
+<Badge text="Node.js ≥ 22" variant="tip" />
+<Badge text="Pure ESM" variant="caution" />
+
+## Installation
+
+```bash
+npm install @centralping/ergo-fetch
+```
+
+## Overview
+
+`@centralping/ergo-fetch` is the client-side counterpart to
+[`@centralping/ergo-router`](/packages/ergo-router/). It encodes RFC-correct
+client behaviors so application code expresses intent — not HTTP mechanics.
+
+HTTP transport uses Web Platform APIs (`fetch`, `Headers`, `AbortSignal`,
+`URL`). Wire-format parse and format helpers come from the
+[`@centralping/ergo-wire`](/packages/ergo-wire/) runtime dependency so the
+client stays aligned with the Ergo Stack Wire Profile.
+
+## Features
+
+| Feature | Description |
+| ------- | ----------- |
+| [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details | Structured errors with classification (`isRetryable`, `isValidation`, `isAuth`) |
+| Conditional requests ([RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)) | Automatic ETag / Last-Modified caching with transparent 304 handling |
+| Rate limit awareness | Tracks `X-RateLimit-*` headers; retries on 429 with Retry-After |
+| Exponential backoff | Retries transient failures (503, 429) and network errors; retries 500/502/504 for idempotent methods |
+| CSRF lifecycle | Extracts tokens from safe responses; injects on unsafe same-origin requests |
+| Prefer header ([RFC 7240](https://www.rfc-editor.org/rfc/rfc7240)) | Declarative `return=minimal` / `return=representation` negotiation |
+| Request-ID correlation | Captures `X-Request-Id` from responses; optionally generates for requests |
+| Pagination ([RFC 8288](https://www.rfc-editor.org/rfc/rfc8288)) | Async iterator over paginated responses via Link headers |
+| JSON:API query builder | Immutable builder with structural validation and bracket-notation serialization |
+| Idempotency-Key management | Auto-generates keys for safe mutation retry; body fingerprinting detects reuse errors |
+| Web Storage caching | `localStorage` / `sessionStorage` adapter for durable conditional request caching |
+| Fail-fast validation | Invalid inputs throw synchronously before any network call |
+
+## Quick Start
+
+```js
+import {createClient} from '@centralping/ergo-fetch';
+
+const api = createClient({
+  baseUrl: 'https://api.example.com'
+});
+
+const user = await api.get('/users/:id', {
+  params: {id: '123'}
+});
+
+console.log(user.status); // 200
+console.log(user.body); // parsed JSON body
+```
+
+## Configuration
+
+```js
+import {createClient} from '@centralping/ergo-fetch';
+
+const api = createClient({
+  baseUrl: 'https://api.example.com',
+  timeout: 30_000,
+  headers: {Accept: 'application/json'},
+  requestId: {generate: true},
+  prefer: 'return=representation',
+  csrf: true,
+  conditional: true,
+  rateLimit: {proactive: true, threshold: 10},
+  retry: {maxAttempts: 3, backoff: 'exponential', jitter: 'full'},
+  idempotency: true
+});
+```
+
+`requestId`, `csrf`, `conditional`, `rateLimit`, and `retry` are enabled by
+default (pass `false` to disable). `prefer` and `idempotency` are **opt-in** —
+set `true` for defaults or pass an options object.
+
+### Interceptor Options
+
+#### `requestId`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `headerName` | `string` | `'x-request-id'` | Header name for request ID |
+| `generate` | `boolean` | `false` | Generate UUID for outgoing requests |
+
+#### `csrf`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `cookieName` | `string` | `'__csrf'` | Cookie containing CSRF token |
+| `headerName` | `string` | `'x-csrf-token'` | Header for CSRF token injection |
+| `safeMethods` | `string[]` | `['GET', 'HEAD', 'OPTIONS']` | Methods that extract (not inject) tokens |
+
+#### `conditional`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `store` | `CacheStore` | in-memory (1024 entries) | Cache store for validators and bodies |
+| `methods.read` | `string[]` | `['GET', 'HEAD']` | Methods receiving `If-None-Match` / `If-Modified-Since` |
+| `methods.write` | `string[]` | `['PUT', 'PATCH', 'DELETE']` | Methods receiving `If-Match` |
+
+#### `rateLimit`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `proactive` | `boolean` | `false` | Throttle when remaining &lt; threshold |
+| `threshold` | `number` | `5` | Remaining count triggering proactive throttle |
+| `headerPrefix` | `string` | `'x-ratelimit'` | Header prefix for rate limit headers |
+
+#### `retry`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `maxAttempts` | `number` | `3` | Max attempts including initial request |
+| `maxDelay` | `number` | `60_000` | Backoff cap in milliseconds |
+| `baseDelay` | `number` | `1000` | Base delay for backoff computation |
+| `backoff` | `'exponential' \| 'linear'` | `'exponential'` | Backoff strategy |
+| `jitter` | `'full' \| 'none'` | `'full'` | AWS-style full jitter or deterministic |
+
+#### `idempotency`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `headerName` | `string` | `'idempotency-key'` | Header name for the idempotency key |
+| `methods` | `string[]` | `['POST']` | Methods that receive auto-generated keys |
+| `generator` | `() => string` | `crypto.randomUUID` | Custom key generator |
+| `ttl` | `number` | `300_000` | Key registry TTL in milliseconds (5 minutes) |
+
+## Public Exports
+
+| Export | Description |
+| ------ | ----------- |
+| `createClient` | Configured HTTP client factory |
+| `ProblemDetailsError` | Error class for [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem responses |
+| `isProblemResponse` | Detect problem-details response bodies |
+| `parseProblemDetails` | Parse problem-details payload |
+| `isRetryable` / `isValidation` / `isAuth` | Problem classification helpers |
+| `createMemoryStore` | In-memory conditional-request cache store |
+| `createWebStorageStore` | `localStorage` / `sessionStorage` cache store |
+| `createRequestIdInterceptor` | Request-ID interceptor factory |
+| `createPreferInterceptor` | Prefer interceptor factory |
+| `createCsrfInterceptor` | CSRF interceptor factory |
+| `createConditionalInterceptor` | Conditional-request interceptor factory |
+| `createRateLimitInterceptor` | Rate-limit interceptor factory |
+| `parseRetryAfter` | Parse Retry-After header values |
+| `createRetryInterceptor` | Retry interceptor factory |
+| `parseMediaType` / `isJsonMediaType` | Media-type helpers |
+| `createIdempotencyInterceptor` | Idempotency-Key interceptor factory |
+| `parseLinkHeader` | Parse [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Link headers |
+| `createPaginator` | Standalone paginator (also via `api.paginate`) |
+| `createQueryBuilder` / `isQueryBuilder` | JSON:API query builder |
+
+TypeScript declarations ship with the package. Import types from subpaths such as
+`@centralping/ergo-fetch/lib/client` when you need `Client`, `ClientConfig`, or
+`ClientResponse`.
+
+## Related
+
+- [ergo-wire](/packages/ergo-wire/) — shared wire-format primitives
+- [ergo](/packages/ergo/) — server middleware toolkit
+- [ergo-router](/packages/ergo-router/) — REST router
+- [Pagination middleware](/middleware/paginate/) — offset and cursor parsing on the server
+- [Idempotency middleware](/middleware/idempotency/) — server-side key lifecycle
+- [CSRF middleware](/middleware/csrf/) — token issue and verify
+- [Precondition middleware](/middleware/precondition/) — conditional header enforcement
+- [Rate limit middleware](/middleware/rate-limit/) — server-side rate limiting
+- [Prefer middleware](/middleware/prefer/) — Prefer header parsing
+
+## Links
+
+- [GitHub](https://github.com/CentralPing/ergo-fetch)
+- [npm](https://www.npmjs.com/package/@centralping/ergo-fetch)
+- [Changelog](https://github.com/CentralPing/ergo-fetch/blob/main/CHANGELOG.md)
