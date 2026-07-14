@@ -44,8 +44,11 @@ at `acc.url`:
 | `search` | `string \| undefined` | Raw query string including leading `?`; `undefined` when absent |
 | `query` | `Record<string, string \| string[]>` | Parsed query parameters; multi-value keys become arrays |
 
-- `query` uses a null-prototype object to prevent prototype pollution
+- `query` uses a null-prototype object to prevent prototype pollution (including nested
+  bracket objects created during parse)
 - Bounded by `maxPairs: 256` and `maxQueryLength: 8192` defaults
+- Conflicting scalar and nested keys for the same name (e.g. `a=42&a[b]=99`) keep the
+  earlier value; the conflicting nested assignment is skipped
 
 ## Error Responses
 
