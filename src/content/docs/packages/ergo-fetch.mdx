@@ -136,6 +136,7 @@ Enable `idempotency` with `true` for defaults or pass an options object.
 | `methods` | `string[]` | `['POST']` | Methods that receive auto-generated keys |
 | `generator` | `() => string` | `crypto.randomUUID` | Custom key generator |
 | `ttl` | `number` | `300_000` | Key registry TTL in milliseconds (5 minutes) |
+| `maxEntries` | `number` | `1024` | Max fingerprint-registry entries before FIFO eviction; under load, still-valid fingerprints can expire early and miss mismatch detection |
 
 ## Public Exports
 
