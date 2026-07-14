@@ -107,6 +107,7 @@ export default defineConfig({
           items: [
             { label: "ergo", slug: "packages/ergo" },
             { label: "ergo-router", slug: "packages/ergo-router" },
+            { label: "ergo-wire", slug: "packages/ergo-wire" },
           ],
         },
         {

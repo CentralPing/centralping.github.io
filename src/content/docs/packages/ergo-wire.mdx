@@ -29,8 +29,8 @@ Returned wire objects use `Object.create(null)` + `Object.freeze()`.
 
 | Concern | Wire format | Key exports |
 | ------- | ----------- | ----------- |
-| Idempotency-Key | RFC 8941 quoted sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
-| Link | RFC 8288 | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
+| Idempotency-Key | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) quoted sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
+| Link | [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
 | Offset pagination | `page`, `per_page` query keys | `serializeOffsetParams`, `parseOffsetParams` |
 | Cursor pagination | `cursor`, `limit` query keys | `serializeCursorParams`, `parseCursorParams` |
 | Retry-After | seconds or IMF-fixdate | `parseRetryAfter`, `formatRetryAfter` |
@@ -40,16 +40,32 @@ Returned wire objects use `Object.create(null)` + `Object.freeze()`.
 
 - **Zero runtime dependencies** — Web Platform APIs only (`crypto.subtle`)
 - **Symmetric primitives** — every parse has a matching format/serialize
-- **Graceful parse degradation** — malformed wire input returns `undefined`; format throws `TypeError`
+- **Graceful parse degradation** — malformed input does not throw: header parsers such as `parseIdempotencyKey` / `parseRetryAfter` return `undefined`, `parseLinkHeader` returns an empty `Map`, and pagination parsers fall back to defaults; format/serialize helpers throw `TypeError` on invalid values
 - **Character-by-character parsing** for RFC grammars (no regex for Link parsing)
 - **Null-prototype policy** — returned objects use `Object.create(null)` + `Object.freeze()`
 
-## Subpath Exports
-
-Individual modules are available via subpath imports (no `.js` suffix needed):
+## Usage
 
 ```js
-import { sanitizeQuotedString } from '@centralping/ergo-wire/lib/quoted-string';
+import {
+  formatIdempotencyKey,
+  parseIdempotencyKey,
+  serializeOffsetParams,
+  serializeCursorParams,
+  parseLinkHeader,
+  formatLinkHeader,
+  parseRetryAfter
+} from '@centralping/ergo-wire';
+
+formatIdempotencyKey('my-key'); // '"my-key"'
+serializeOffsetParams({page: 2, perPage: 25}); // {page:2, per_page:25}
+serializeCursorParams({limit: 10, cursor: 'tok'}); // {limit:10, cursor:'tok'}
+```
+
+Individual modules are also available via subpath imports (no `.js` suffix needed):
+
+```js
+import {sanitizeQuotedString} from '@centralping/ergo-wire/lib/quoted-string';
 ```
 
 ## Links
