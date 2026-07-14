@@ -597,7 +597,7 @@ Both hooks receive the same signature:
 
 The **router-level** hook fires on every response — both pipeline-routed
 responses (after `send()`) and transport-level short-circuits (404, 405,
-415, 429, OPTIONS 204, CORS preflight 204). The **per-route** hook fires
+415, 429, OPTIONS 204, CORS preflight). The **per-route** hook fires
 only for pipeline-routed responses on that route.
 
 #### Execution Order
@@ -656,7 +656,8 @@ runs. These include:
 - **415** — unsupported Content-Type
 - **429** — rate limited (transport-level rate limiter)
 - **204 OPTIONS** — automatic OPTIONS response
-- **204 CORS preflight** — preflight request handled by CORS transport
+- **CORS preflight** — preflight handled by CORS transport (204 on
+  success, 403 when the origin is disallowed)
 
 For transport-level responses, `responseInfo.source` is `'transport'`
 and `domainAcc` is `undefined` (no pipeline ran, so no domain
