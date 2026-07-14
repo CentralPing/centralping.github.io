@@ -22,8 +22,12 @@ npm install @centralping/ergo-wire
 It provides shared parse/format primitives so the server (`@centralping/ergo`) and
 client (`@centralping/ergo-fetch`) stay aligned without duplicating RFC grammars.
 
-Every parse function has a matching format/serialize helper (symmetric primitives).
-Returned wire objects use `Object.create(null)` + `Object.freeze()`.
+Wire Profile concerns (idempotency, Link, pagination, Retry-After) expose matching
+parse and format/serialize helpers. Shared scanners such as `parseQuotedString` are
+primitives without a dedicated format pair (`sanitizeQuotedString` is the related
+sanitize helper). `serializeOffsetParams` / `serializeCursorParams` and Link entries
+from `parseLinkHeader` use `Object.create(null)` + `Object.freeze()`; pagination
+parsers return plain mutable objects, and `parseLinkHeader` returns a mutable `Map`.
 
 ## Wire Profile v1
 
@@ -39,10 +43,10 @@ Returned wire objects use `Object.create(null)` + `Object.freeze()`.
 ## Design Principles
 
 - **Zero runtime dependencies** — Web Platform APIs only (`crypto.subtle`)
-- **Symmetric primitives** — every parse has a matching format/serialize
-- **Graceful parse degradation** — malformed input does not throw: header parsers such as `parseIdempotencyKey` / `parseRetryAfter` return `undefined`, `parseLinkHeader` returns an empty `Map`, and pagination parsers fall back to defaults; format/serialize helpers throw `TypeError` on invalid values
+- **Symmetric primitives** — Wire Profile concerns pair parse with format/serialize; shared scanners like `parseQuotedString` are primitives without a dedicated format helper
+- **Graceful parse degradation** — malformed *wire* input does not throw: header parsers such as `parseIdempotencyKey` / `parseRetryAfter` return `undefined`, `parseLinkHeader` returns an empty `Map` for malformed Link values (it still throws `TypeError` when an optional `requestUrl` is provided and invalid), and pagination parsers fall back to defaults; format/serialize helpers throw `TypeError` on invalid values
 - **Character-by-character parsing** for RFC grammars (no regex for Link parsing)
-- **Null-prototype policy** — returned objects use `Object.create(null)` + `Object.freeze()`
+- **Null-prototype policy** — `serializeOffsetParams` / `serializeCursorParams` and frozen Link entries from `parseLinkHeader` use `Object.create(null)` + `Object.freeze()`
 
 ## Usage
 
