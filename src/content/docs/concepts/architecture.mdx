@@ -100,6 +100,54 @@ const pipeline = compose(
   [Full naming rationale →](/why-ergo/#api-naming)
 </Aside>
 
+### Sequential vs. Parallel Composition
+
+`compose()` runs middleware **sequentially** with a sync fast-path — when a
+middleware returns a non-Promise value, the next middleware executes
+immediately with no microtask overhead. Of ergo's 20 built-in middleware,
+18 are synchronous header checks or response decorators. Sequential
+composition eliminates unnecessary `Promise.all` microtask hops and
+accumulator copies for these synchronous functions.
+
+`compose.all()` runs middleware in **parallel** via `Promise.all`. Each
+branch receives an isolated domain-accumulator copy, and **all branches
+always run to completion** — there is no mid-flight pipeline break when one
+sets `statusCode`. Use it only for independent async I/O with **no** live
+domain-accumulator dependencies between branches.
+
+ergo-router's four pipeline stages remain sequential
+(`compose()` / `compose-with`). `compose.all()` is a low-level primitive for
+custom standalone composition — not a drop-in replacement for stage ordering.
+
+| Composer | Execution | When to use |
+| --- | --- | --- |
+| `compose()` | Sequential, sync fast-path | Default — most pipelines; required when middleware can short-circuit or depend on prior `acc` values |
+| `compose.all()` | Parallel via `Promise.all` | 2+ independent async I/O calls with no cross-branch `acc` dependencies |
+
+```js
+import {compose} from '@centralping/ergo';
+
+const sequential = compose(
+  logger(),
+  cors(),
+  accepts({types: ['application/json']}),
+  url()
+);
+
+// Two independent network round-trips. Both always run — a rate-limit
+// rejection does not cancel the IdP call.
+const parallel = compose.all(
+  rateLimit({max: 100, windowMs: 60_000, store: redisStore}),
+  authorization({strategies: [externalIdpStrategy]})
+);
+```
+
+Profiling under 50 concurrent virtual users showed `compose.all()` is
+2× slower than sequential for synchronous middleware due to `Promise.all`
+microtask overhead. The sync fast-path in `compose()` is the reason
+sequential is the default — it matches the performance characteristics
+of the middleware inventory.
+
 ## Four-Stage Fast Fail Ordering
 
 The [Fast Fail Pipeline](/concepts/fast-fail/) arranges middleware into four
