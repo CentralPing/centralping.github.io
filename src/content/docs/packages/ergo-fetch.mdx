@@ -80,8 +80,10 @@ const api = createClient({
 ```
 
 `requestId`, `csrf`, `conditional`, `rateLimit`, and `retry` are enabled by
-default (pass `false` to disable). `prefer` and `idempotency` are **opt-in** —
-set `true` for defaults or pass an options object.
+default (pass `false` to disable). `prefer` and `idempotency` are **opt-in**.
+Enable `prefer` with a string or preferences object (e.g.
+`'return=representation'`) — boolean `true` is rejected.
+Enable `idempotency` with `true` for defaults or pass an options object.
 
 ### Interceptor Options
 
