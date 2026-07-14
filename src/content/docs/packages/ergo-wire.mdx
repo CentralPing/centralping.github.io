@@ -74,6 +74,22 @@ Individual modules are also available via subpath imports (no `.js` suffix neede
 import {sanitizeQuotedString} from '@centralping/ergo-wire/lib/quoted-string';
 ```
 
+## Exports
+
+Every root export from `@centralping/ergo-wire`:
+
+| Module | Exports |
+| ------ | ------- |
+| Idempotency | `assertSfStringInner`, `formatIdempotencyKey`, `parseIdempotencyKey` |
+| Fingerprint | `fingerprint` |
+| Link | `formatLinkHeader`, `paginationLinks`, `cursorPaginationLinks`, `parseLinkHeader` |
+| Pagination | `DEFAULT_PAGE`, `DEFAULT_PER_PAGE`, `MAX_PER_PAGE`, `DEFAULT_CURSOR_LIMIT`, `MAX_CURSOR_LIMIT`, `OFFSET_PAGINATION_KEYS`, `CURSOR_PAGINATION_KEYS`, `JSON_API_PAGE_STRATEGY_GROUPS`, `parseOffsetParams`, `serializeOffsetParams`, `parseCursorParams`, `serializeCursorParams` |
+| Retry-After | `parseRetryAfter`, `formatRetryAfter` |
+| Quoted-string | `TOKEN_CHARS`, `skipOWS`, `scanToken`, `sanitizeQuotedString`, `parseQuotedString` |
+
+Subpath imports under `@centralping/ergo-wire/lib/*` expose the same modules
+individually (for example `@centralping/ergo-wire/lib/quoted-string`).
+
 ## Consumers
 
 | Package | Relationship |
@@ -86,7 +102,7 @@ import {sanitizeQuotedString} from '@centralping/ergo-wire/lib/quoted-string';
 
 - [ergo](/packages/ergo/) — server middleware toolkit
 - [ergo-router](/packages/ergo-router/) — REST router
-- [ergo-fetch](https://github.com/CentralPing/ergo-fetch) — HTTP client consuming the wire contract
+- [ergo-fetch](/packages/ergo-fetch/) — HTTP client consuming the wire contract
 - [Pagination middleware](/middleware/paginate/) — offset and cursor parsing in the pipeline
 - [Idempotency middleware](/middleware/idempotency/) — server-side key lifecycle
 
