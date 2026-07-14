@@ -1,0 +1,57 @@
+---
+title: ergo-wire
+description: Shared HTTP wire-format primitives for the Ergo stack.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+[![npm version](https://img.shields.io/npm/v/@centralping/ergo-wire)](https://www.npmjs.com/package/@centralping/ergo-wire)
+<Badge text="Node.js ≥ 22" variant="tip" />
+<Badge text="Zero runtime deps" variant="caution" />
+<Badge text="Pure ESM" variant="caution" />
+
+## Installation
+
+```bash
+npm install @centralping/ergo-wire
+```
+
+## Purpose
+
+`@centralping/ergo-wire` is the canonical wire contract between Ergo server packages and
+`@centralping/ergo-fetch`. It provides symmetric parse/format helpers for headers and query
+keys so clients and servers stay aligned without duplicating RFC grammars.
+
+## Ergo Stack Wire Profile v1
+
+| Concern | Wire format | Key exports |
+| ------- | ----------- | ----------- |
+| Idempotency-Key | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
+| Link | [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
+| Offset pagination | `page`, `per_page` query keys | `serializeOffsetParams`, `parseOffsetParams` |
+| Cursor pagination | `cursor`, `limit` query keys | `serializeCursorParams`, `parseCursorParams` |
+| Retry-After | seconds or [IMF-fixdate](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.7) | `parseRetryAfter`, `formatRetryAfter` |
+| Body fingerprint | SHA-256 hex (Web Crypto) | `fingerprint` |
+
+Ergonomic client options may use `perPage`; serialization always emits `per_page` on the wire.
+
+## Consumers
+
+| Package | Relationship |
+| ------- | ------------ |
+| `@centralping/ergo` | Re-exports wire primitives from `lib/` (non-breaking shims) |
+| `@centralping/ergo-router` | Inherits wire behavior through ergo middleware |
+| `@centralping/ergo-fetch` | Runtime dependency for client-side parse/format (including `JSON_API_PAGE_STRATEGY_GROUPS`) |
+
+## Related
+
+- [ergo](/packages/ergo/) — server middleware toolkit
+- [ergo-router](/packages/ergo-router/) — REST router
+- [ergo-fetch](https://github.com/CentralPing/ergo-fetch) — HTTP client consuming the wire contract
+- [Pagination middleware](/middleware/paginate/) — offset and cursor parsing in the pipeline
+- [Idempotency middleware](/middleware/idempotency/) — server-side key lifecycle
+
+## Links
+
+- [GitHub](https://github.com/CentralPing/ergo-wire)
+- [npm](https://www.npmjs.com/package/@centralping/ergo-wire)
