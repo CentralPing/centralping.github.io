@@ -26,11 +26,11 @@ keys so clients and servers stay aligned without duplicating RFC grammars.
 
 | Concern | Wire format | Key exports |
 | ------- | ----------- | ----------- |
-| Idempotency-Key | RFC 8941 sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
-| Link | RFC 8288 | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
+| Idempotency-Key | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
+| Link | [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
 | Offset pagination | `page`, `per_page` query keys | `serializeOffsetParams`, `parseOffsetParams` |
-| Cursor pagination | `cursor`, `limit` query keys | `parseCursorParams` |
-| Retry-After | seconds or IMF-fixdate | `parseRetryAfter`, `formatRetryAfter` |
+| Cursor pagination | `cursor`, `limit` query keys | `serializeCursorParams`, `parseCursorParams` |
+| Retry-After | seconds or [IMF-fixdate](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.7) | `parseRetryAfter`, `formatRetryAfter` |
 | Body fingerprint | SHA-256 hex (Web Crypto) | `fingerprint` |
 
 Ergonomic client options may use `perPage`; serialization always emits `per_page` on the wire.
@@ -41,8 +41,7 @@ Ergonomic client options may use `perPage`; serialization always emits `per_page
 | ------- | ------------ |
 | `@centralping/ergo` | Re-exports wire primitives from `lib/` (non-breaking shims) |
 | `@centralping/ergo-router` | Inherits wire behavior through ergo middleware |
-| `@centralping/ergo-fetch` | Runtime dependency for client-side parse/format |
-| `@centralping/json-api-query` | Imports `JSON_API_PAGE_STRATEGY_GROUPS` for schema alignment |
+| `@centralping/ergo-fetch` | Runtime dependency for client-side parse/format (including `JSON_API_PAGE_STRATEGY_GROUPS`) |
 
 ## Related
 
