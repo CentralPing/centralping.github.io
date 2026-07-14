@@ -33,10 +33,11 @@ reviews:
   path_instructions:
     - path: "src/content/**"
       instructions: >
-        Documentation content (MDX). Verify technical accuracy of ergo/ergo-router
-        API descriptions, correct RFC references, and consistent terminology with
-        the library READMEs and JSDoc. Code examples must match current API
-        signatures. Dual JS/TS examples use Starlight Tabs/TabItem components.
+        Documentation content (MDX). Verify technical accuracy of ergo,
+        ergo-router, ergo-wire, and ergo-fetch API descriptions against the
+        relevant library source/JSDoc, correct RFC references, and consistent
+        terminology with the library READMEs. Code examples must match current
+        API signatures. Dual JS/TS examples use Starlight Tabs/TabItem components.
 
     - path: "src/components/**"
       instructions: >
@@ -86,7 +87,12 @@ reviews:
         instructions: |
           Pass/fail criteria for changed files in src/content/:
           - FAIL if API descriptions, function signatures, or option defaults do not
-            match the current state of ergo or ergo-router source code and JSDoc.
+            match the current state of the relevant library source and JSDoc
+            (CentralPing/ergo, CentralPing/ergo-router, CentralPing/ergo-wire,
+            CentralPing/ergo-fetch, or CentralPing/json-api-query as applicable).
+            For `@centralping/ergo-wire` pages, verify exports against ergo-wire
+            `index.js` / README — do not substitute ergo `lib/paginate.js` helpers
+            (`offsetResponse`, `cursorResponse`) for wire package exports.
           - FAIL if RFC citations reference incorrect section numbers or outdated
             RFC versions (e.g., citing RFC 7231 when RFC 9110 supersedes it).
           - FAIL if code examples use deprecated API patterns or incorrect import paths.
@@ -224,3 +230,10 @@ knowledge_base:
         JSDoc via starlight-typedoc. Content pages reference routing, transport
         concerns, declarative config, and pipeline builder. Route config documentation
         must match the current pipeline-builder.js config keys.
+    - repository: "CentralPing/ergo-wire"
+      instructions: >
+        Shared HTTP wire-format primitives (Ergo Stack Wire Profile). Package pages
+        and cross-references must match exports from index.js and lib/*.js JSDoc
+        (parse/serialize helpers, Link header, Idempotency-Key, Retry-After,
+        fingerprint). Do not confuse with ergo lib/paginate.js response builders
+        (offsetResponse, cursorResponse), which are higher-level ergo utilities.
