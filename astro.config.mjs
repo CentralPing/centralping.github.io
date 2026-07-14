@@ -28,7 +28,6 @@ export default defineConfig({
             ".ergo-source/lib/json-api-query/index.js",
             ".ergo-source/utils/buffers/index.js",
             ".ergo-source/utils/iterables/index.js",
-            ".ergo-source/utils/observables/index.js",
             ".ergo-source/utils/streams/index.js",
           ],
           tsconfig: "./tsconfig.typedoc.json",
