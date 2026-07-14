@@ -597,7 +597,7 @@ Both hooks receive the same signature:
 
 The **router-level** hook fires on every response — both pipeline-routed
 responses (after `send()`) and transport-level short-circuits (404, 405,
-415, 429, OPTIONS 204, CORS preflight 204). The **per-route** hook fires
+415, 429, OPTIONS 204, CORS preflight). The **per-route** hook fires
 only for pipeline-routed responses on that route.
 
 #### Execution Order
@@ -623,7 +623,7 @@ For transport-level short-circuits, only the router-level hook fires
 | `url` | `string` | Request URL |
 | `bodySize` | `number \| undefined` | `Content-Length` value; `undefined` for stream bodies |
 | `duration` | `number` | Elapsed time in milliseconds from dispatch entry (pipeline) or transport short-circuit |
-| `source` | `'pipeline' \| 'transport'` | `'pipeline'` when the response passed through a route pipeline; `'transport'` for transport-level short-circuits |
+| `source` | `'pipeline' \| 'transport'` | Response origin — `'pipeline'` for routed requests, `'transport'` for short-circuit responses (404, 405, 415, 429, OPTIONS, CORS preflight) |
 
 <Aside type="note" title="Transport-level domainAcc">
   For transport-level responses (`responseInfo.source === 'transport'`),
@@ -643,6 +643,41 @@ For transport-level short-circuits, only the router-level hook fires
   Errors thrown by `onResponse` hooks are silently swallowed. Async
   hooks are awaited. The hooks cannot alter the response — it has
   already been sent.
+</Aside>
+
+#### Transport-Level Hooks
+
+The **router-level** `onResponse` hook also fires for transport-level
+responses — requests that are short-circuited before any route pipeline
+runs. These include:
+
+- **404** — unknown path (no matching route)
+- **405** — wrong HTTP method for a known path
+- **415** — unsupported Content-Type
+- **429** — rate limited (transport-level rate limiter)
+- **204 OPTIONS** — automatic OPTIONS response
+- **CORS preflight** — preflight handled by CORS transport (204 on
+  success, 403 when the origin is disallowed)
+
+For transport-level responses, `responseInfo.source` is `'transport'`
+and `domainAcc` is `undefined` (no pipeline ran, so no domain
+accumulator was created). **Per-route** `onResponse` hooks do **not**
+fire for transport responses — only the router-level hook fires.
+
+<Aside type="tip" title="Distinguishing pipeline vs transport responses">
+  Use `responseInfo.source` to branch logic in a shared router-level
+  hook, and use optional chaining on `domainAcc` to safely access
+  pipeline-only data:
+
+  ```js
+  onResponse: (req, res, responseInfo, domainAcc) => {
+    if (responseInfo.source === 'transport') {
+      log.info({type: 'transport', status: responseInfo.statusCode});
+      return;
+    }
+    log.info({type: 'pipeline', user: domainAcc?.auth?.identity});
+  }
+  ```
 </Aside>
 
 #### Header Redaction

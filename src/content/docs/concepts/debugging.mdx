@@ -237,6 +237,12 @@ appear in the HTTP response or cause unhandled rejections. If your
 2. Verify that no `catchHandler` is configured on the route —
    `onResponse` does **not** fire when a `catchHandler` handles the
    error via early return
+3. For router-level hooks, check whether the response is
+   transport-level (404, 405, 415, 429, OPTIONS, CORS preflight) —
+   `domainAcc` is `undefined` for these responses. Use
+   `responseInfo.source` to distinguish pipeline vs transport
+   responses and optional chaining (`domainAcc?.auth?.identity`) to
+   safely access pipeline-only data
 
 See [Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for
 the execution model and
@@ -359,10 +365,17 @@ compressed.
 
 **Cause:** A `catchHandler` is configured on the route or router.
 When the pipeline throws, the `catchHandler` takes control via early
-return — `onResponse` hooks do not fire in this path.
+return — `onResponse` hooks do not fire in this path. Additionally,
+**per-route** `onResponse` hooks only fire for pipeline responses —
+they do not fire for transport-level short-circuits (404, 405, 415,
+429, OPTIONS, CORS preflight). Only the **router-level** `onResponse`
+hook fires for transport responses.
 
 **Fix:** If you need post-response observation alongside error
-handling, add logging inside the `catchHandler` itself. See
+handling, add logging inside the `catchHandler` itself. If you need
+to observe transport-level responses, use a router-level `onResponse`
+hook and check `responseInfo.source` to distinguish pipeline vs
+transport responses. See
 [Lifecycle Hooks](/packages/ergo-router/#lifecycle-hooks) for the
 execution model.
 
