@@ -1,14 +1,14 @@
 ---
 title: ergo-wire
-description: Shared HTTP wire-format primitives for the Ergo stack.
+description: Symmetric HTTP wire-format primitives for the Ergo stack — shared parse/format helpers so server and client stay aligned.
 ---
 
 import { Badge } from "@astrojs/starlight/components";
 
 [![npm version](https://img.shields.io/npm/v/@centralping/ergo-wire)](https://www.npmjs.com/package/@centralping/ergo-wire)
 <Badge text="Node.js ≥ 22" variant="tip" />
-<Badge text="Zero runtime deps" variant="caution" />
 <Badge text="Pure ESM" variant="caution" />
+<Badge text="Zero Dependencies" variant="note" />
 
 ## Installation
 
@@ -16,17 +16,24 @@ import { Badge } from "@astrojs/starlight/components";
 npm install @centralping/ergo-wire
 ```
 
-## Purpose
+## Overview
 
-`@centralping/ergo-wire` is the canonical wire contract between Ergo server packages and
-`@centralping/ergo-fetch`. It provides symmetric parse/format helpers for headers and query
-keys so clients and servers stay aligned without duplicating RFC grammars.
+`@centralping/ergo-wire` is the canonical HTTP wire contract for the Ergo stack.
+It provides shared parse/format primitives so the server (`@centralping/ergo`) and
+client (`@centralping/ergo-fetch`) stay aligned without duplicating RFC grammars.
 
-## Ergo Stack Wire Profile v1
+Wire Profile concerns (idempotency, Link, pagination, Retry-After) expose matching
+parse and format/serialize helpers. Shared scanners such as `parseQuotedString` are
+primitives without a dedicated format pair (`sanitizeQuotedString` is the related
+sanitize helper). `serializeOffsetParams` / `serializeCursorParams` and Link entries
+from `parseLinkHeader` use `Object.create(null)` + `Object.freeze()`; pagination
+parsers return plain mutable objects, and `parseLinkHeader` returns a mutable `Map`.
+
+## Wire Profile v1
 
 | Concern | Wire format | Key exports |
 | ------- | ----------- | ----------- |
-| Idempotency-Key | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
+| Idempotency-Key | [RFC 8941](https://www.rfc-editor.org/rfc/rfc8941) quoted sf-string | `formatIdempotencyKey`, `parseIdempotencyKey`, `assertSfStringInner` |
 | Link | [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) | `formatLinkHeader`, `parseLinkHeader`, `paginationLinks`, `cursorPaginationLinks` |
 | Offset pagination | `page`, `per_page` query keys | `serializeOffsetParams`, `parseOffsetParams` |
 | Cursor pagination | `cursor`, `limit` query keys | `serializeCursorParams`, `parseCursorParams` |
@@ -34,6 +41,38 @@ keys so clients and servers stay aligned without duplicating RFC grammars.
 | Body fingerprint | SHA-256 hex (Web Crypto) | `fingerprint` |
 
 Ergonomic client options may use `perPage`; serialization always emits `per_page` on the wire.
+
+## Design Principles
+
+- **Zero runtime dependencies** — Web Platform APIs only (`crypto.subtle`)
+- **Symmetric primitives** — Wire Profile concerns pair parse with format/serialize; shared scanners like `parseQuotedString` are primitives without a dedicated format helper
+- **Graceful parse degradation** — malformed *wire* input does not throw: header parsers such as `parseIdempotencyKey` / `parseRetryAfter` return `undefined`, `parseLinkHeader` returns an empty `Map` for malformed Link values (it still throws `TypeError` when an optional `requestUrl` is provided and invalid), and pagination parsers fall back to defaults; format/serialize helpers throw `TypeError` on invalid values
+- **Character-by-character parsing** for RFC grammars (no regex for Link parsing)
+- **Null-prototype policy** — `serializeOffsetParams` / `serializeCursorParams` and frozen Link entries from `parseLinkHeader` use `Object.create(null)` + `Object.freeze()`
+
+## Usage
+
+```js
+import {
+  formatIdempotencyKey,
+  parseIdempotencyKey,
+  serializeOffsetParams,
+  serializeCursorParams,
+  parseLinkHeader,
+  formatLinkHeader,
+  parseRetryAfter
+} from '@centralping/ergo-wire';
+
+formatIdempotencyKey('my-key'); // '"my-key"'
+serializeOffsetParams({page: 2, perPage: 25}); // {page:2, per_page:25}
+serializeCursorParams({limit: 10, cursor: 'tok'}); // {limit:10, cursor:'tok'}
+```
+
+Individual modules are also available via subpath imports (no `.js` suffix needed):
+
+```js
+import {sanitizeQuotedString} from '@centralping/ergo-wire/lib/quoted-string';
+```
 
 ## Consumers
 
@@ -55,3 +94,4 @@ Ergonomic client options may use `perPage`; serialization always emits `per_page
 
 - [GitHub](https://github.com/CentralPing/ergo-wire)
 - [npm](https://www.npmjs.com/package/@centralping/ergo-wire)
+- [Changelog](https://github.com/CentralPing/ergo-wire/blob/main/CHANGELOG.md)
