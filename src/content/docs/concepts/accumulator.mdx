@@ -75,7 +75,7 @@ interface UrlResult {
 | --- | --- | --- |
 | `pathname` | `string \| undefined` | URL path before the query string |
 | `search` | `string \| undefined` | Raw query string including leading `?`; `undefined` when absent |
-| `query` | `Record<string, string \| string[]>` | Parsed query parameters (null-prototype object); multi-value keys become arrays |
+| `query` | `Record<string, string \| string[]>` | Parsed query parameters (null-prototype object); multi-value keys become arrays. Bracket notation nests null-prototype objects at runtime; the published type is a flat simplification (see [url](/middleware/url/)). |
 
 [Full documentation →](/middleware/url/)
 
