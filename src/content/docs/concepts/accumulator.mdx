@@ -65,17 +65,24 @@ Stored at `acc.url` by the `url()` middleware. Parsed URL components using a fas
 
 ```ts
 interface UrlResult {
-  query: Record<string, string | string[]>;
+  query: Record<string, string | string[]>; // flat published type; nested at runtime — see tip
   pathname: string | undefined;
   search: string | undefined;
 }
 ```
 
+<Aside type="tip">
+  Bracket notation (e.g. `fields[articles]=title`) nests null-prototype objects at
+  runtime. The published `UrlResult.query` type remains a flat
+  `Record<string, string | string[]>` simplification matching ergo's type
+  declarations. See [url](/middleware/url/) for the full note.
+</Aside>
+
 | Property | Type | Description |
 | --- | --- | --- |
 | `pathname` | `string \| undefined` | URL path before the query string |
 | `search` | `string \| undefined` | Raw query string including leading `?`; `undefined` when absent |
-| `query` | `Record<string, string \| string[]>` | Parsed query parameters (null-prototype object); multi-value keys become arrays. Bracket notation nests null-prototype objects at runtime; the published type is a flat simplification (see [url](/middleware/url/)). |
+| `query` | `Record<string, string \| string[]>` | Parsed query parameters (null-prototype object); multi-value keys become arrays. Bracket notation nests null-prototype objects at runtime; the published type is a flat simplification (see tip above and [url](/middleware/url/)). |
 
 [Full documentation →](/middleware/url/)
 
