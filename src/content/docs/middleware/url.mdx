@@ -44,8 +44,19 @@ at `acc.url`:
 | `search` | `string \| undefined` | Raw query string including leading `?`; `undefined` when absent |
 | `query` | `Record<string, string \| string[]>` | Parsed query parameters; multi-value keys become arrays |
 
-- `query` uses a null-prototype object to prevent prototype pollution
-- Bounded by `maxPairs: 256` and `maxQueryLength: 8192` defaults
+- `query` uses a null-prototype object to prevent prototype pollution (including nested
+  bracket objects created during parse). Bracket notation (e.g. `fields[articles]=title`)
+  nests null-prototype objects at runtime; the published `UrlResult.query` type remains a
+  flat `Record<string, string | string[]>` simplification matching ergo's type declarations.
+- Bounded by `maxPairs: 256` and `maxLength: 8192` defaults
+- Conflicting scalar and nested keys keep the earlier value (first-wins); later conflicting
+  assignments are skipped:
+  - Scalar then nested (`a=42&a[b]=99`) and nested then scalar (`a[b]=99&a=42`)
+  - Scalar then empty-bracket (`a=42&a[]=2`)
+  - Empty-bracket then non-index nest (`a[]=2&a[b]=1`); numeric indices under arrays remain
+    allowed (`role[0]=user&role[1]=admin`)
+  - Plain-object then digit index (`a[b]=y&a[0]=x`); arrays keep index keys, objects keep
+    non-index keys
 
 ## Error Responses
 
