@@ -49,9 +49,9 @@ import {csrf} from '@centralping/ergo';
 ### Cookie Security
 
 - Token cookie: `httpOnly: false` (locked — client JS must read it), `sameSite: 'Strict'` (locked)
-- UUID cookie: `httpOnly: true` (default from cookie module), `sameSite: 'Strict'` (locked)
+- UUID cookie: `httpOnly: true` (locked — set after `cookieOptions` spread), `sameSite: 'Strict'` (locked)
 - `sameSite` cannot be overridden via `cookieOptions` on either cookie
-- Token cookie `httpOnly: false` cannot be overridden (set after `cookieOptions` spread)
+- Token cookie `httpOnly: false` and UUID cookie `httpOnly: true` cannot be overridden (set after `cookieOptions` spread)
 
 ## Return Value
 
