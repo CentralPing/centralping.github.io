@@ -48,7 +48,7 @@ at `acc.url`:
   bracket objects created during parse). Bracket notation (e.g. `fields[articles]=title`)
   nests null-prototype objects at runtime; the published `UrlResult.query` type remains a
   flat `Record<string, string | string[]>` simplification matching ergo's type declarations.
-- Bounded by `maxPairs: 256` and `maxQueryLength: 8192` defaults
+- Bounded by `maxPairs: 256` and `maxLength: 8192` defaults
 - Conflicting scalar and nested keys keep the earlier value (first-wins); later conflicting
   assignments are skipped:
   - Scalar then nested (`a=42&a[b]=99`) and nested then scalar (`a[b]=99&a=42`)
