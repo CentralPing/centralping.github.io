@@ -102,10 +102,11 @@ The `threshold` option (default: 1024 bytes) prevents compressing
 responses that are too small to benefit from compression. The threshold
 check depends on the response path:
 
-- **`res.end(chunk)` path** (single-chunk responses from `send()`):
-  the chunk size is measured before compression begins. If the chunk is
-  smaller than `threshold`, the response is sent uncompressed with the
-  original `Content-Length` intact.
+- **`res.end(chunk[, encoding][, callback])` path** (single-chunk responses from `send()`):
+  the chunk's **encoded byte length** is measured before compression begins
+  (`Buffer.byteLength` for strings, using the same `encoding` argument passed to
+  `res.end`; `.length` for Buffers). If that size is smaller than `threshold`, the
+  response is sent uncompressed with the original `Content-Length` intact.
 - **`res.write()` path** (streaming responses): the compressor is
   activated on the first `res.write()` call regardless of chunk size.
   The threshold cannot be checked because the total body size is
