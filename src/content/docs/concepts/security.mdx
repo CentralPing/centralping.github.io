@@ -112,11 +112,10 @@ attackers to assume other users' identities.
   preventing timing attacks that could reveal token values.
 - CSRF cookie attributes are locked per cookie: the token cookie is
   `httpOnly: false` (locked — client JavaScript must read it for the
-  double-submit header) with `sameSite: 'Strict'`; the UUID cookie defaults
-  to `httpOnly: true` (from the cookie module) with `sameSite: 'Strict'`.
-  `sameSite` cannot be overridden via `cookieOptions` on either cookie, and
-  the token cookie's `httpOnly: false` cannot be overridden (set after the
-  `cookieOptions` spread).
+  double-submit header) with `sameSite: 'Strict'`; the UUID cookie is
+  `httpOnly: true` (locked — set after the `cookieOptions` spread) with
+  `sameSite: 'Strict'`. `httpOnly` and `sameSite` cannot be overridden via
+  `cookieOptions` on either cookie.
 - `WWW-Authenticate` header values pass through `sanitizeQuotedString` to
   prevent header injection via challenge attributes.
 
@@ -325,9 +324,11 @@ Additional structural protections:
   `toString` cannot pollute the prototype chain.
 - **CSRF cookie attributes are locked.** `sameSite: 'Strict'` is enforced on
   both cookies and cannot be overridden via `cookieOptions`. The token
-  cookie's `httpOnly: false` is also locked (set after the `cookieOptions`
+  cookie's `httpOnly: false` is locked (set after the `cookieOptions`
   spread) because client JavaScript must read it for the double-submit
-  header.
+  header. The UUID cookie's `httpOnly: true` is likewise locked after the
+  spread — the UUID is a cryptographic nonce with no legitimate JS-read
+  use case.
 - **Cookie-octet grammar enforcement.** Cookie values and names are validated
   against [RFC 6265 §4.1.1](https://www.rfc-editor.org/rfc/rfc6265#section-4.1.1), preventing `Set-Cookie` attribute injection via
   semicolons or other special characters in values.
