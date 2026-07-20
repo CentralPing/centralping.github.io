@@ -22,7 +22,7 @@ import {compress} from '@centralping/ergo';
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `threshold` | `number` | `1024` | Minimum body size in bytes before compression kicks in. Only evaluated on the `res.end(chunk)` path for single-chunk responses — streaming via `res.write()` bypasses the threshold check entirely. |
+| `threshold` | `number` | `1024` | Minimum encoded body size in bytes before compression kicks in (`Buffer.byteLength` for strings using the `encoding` passed to `res.end`; `.length` for Buffers). Only evaluated on the `res.end(chunk[, encoding][, callback])` path for single-chunk responses — streaming via `res.write()` bypasses the threshold check entirely. |
 | `encodings` | `string[]` | `['br', 'gzip', 'deflate']` | Supported encodings in priority order. The client's `Accept-Encoding` header is negotiated against this list using quality-value weighting per [RFC 9110 §12.5.3](https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3). |
 
 ## Return Value
@@ -115,9 +115,9 @@ check depends on the response path:
 <Aside type="note" title="Streaming and threshold">
   When `res.write()` is called before `res.end()`, compression
   activates immediately — the threshold only guards the single-chunk
-  `res.end(chunk)` path. This means streaming responses are always
-  compressed (assuming the content type is compressible), even if the
-  total body is small.
+  `res.end(chunk[, encoding][, callback])` path. This means streaming
+  responses are always compressed (assuming the content type is
+  compressible), even if the total body is small.
 </Aside>
 
 ### Content-Type Filtering
