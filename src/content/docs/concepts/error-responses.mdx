@@ -59,7 +59,7 @@ before any request body parsing occurs.
 
 | Status | Source | Condition | RFC |
 | --- | --- | --- | --- |
-| **400 Bad Request** | [`authorization()`](/middleware/authorization/) | Bearer: authorizer returns `info.type: 'invalid_request'` | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) |
+| **400 Bad Request** | [`authorization()`](/middleware/authorization/) | Bearer: authorizer returns `info.error: 'invalid_request'` | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) |
 | **401 Unauthorized** | [`authorization()`](/middleware/authorization/) | Missing or invalid credentials (Bearer default; missing header with configured strategies) | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) |
 | **403 Forbidden** | [`authorization()`](/middleware/authorization/) | Basic auth failure; Bearer `insufficient_scope`; no configured strategies; custom scheme rejection | [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1) / [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) |
 | **403 Forbidden** | [`csrf()`](/middleware/csrf/) | Missing header token, missing UUID cookie, or CSRF token verification fails | [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) |

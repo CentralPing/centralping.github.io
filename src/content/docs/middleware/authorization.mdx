@@ -80,7 +80,7 @@ exactly what downstream handlers need — no more, no less.
 | ------ | --------- |
 | **401 Unauthorized** | Missing or invalid credentials (Bearer default; missing header with configured strategies) |
 | **403 Forbidden** | Default when `authorized` is `false` (Basic always; custom schemes; no configured strategies) |
-| **400 Bad Request** | Bearer only — authorizer returns `info.type: 'invalid_request'` |
+| **400 Bad Request** | Bearer only — authorizer returns `info.error: 'invalid_request'` |
 
 The exact status code depends on the scheme. See
 [Per-Scheme Rejection Behavior](#per-scheme-rejection-behavior) below for
@@ -97,17 +97,17 @@ vary by scheme:
 #### Bearer ([RFC 6750](https://www.rfc-editor.org/rfc/rfc6750))
 
 When the authorizer returns `{authorized: false, info}`, ergo maps the
-`info.type` field to an HTTP status code per [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1):
+`info.error` field to an HTTP status code per [RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1):
 
-| `info.type` | Status | Description |
+| `info.error` | Status | Description |
 | ----------- | ------ | ----------- |
 | `'invalid_request'` | **400 Bad Request** | Malformed request (e.g. missing required parameter) |
 | `'insufficient_scope'` | **403 Forbidden** | Valid token but insufficient privileges |
 | _(default)_ | **401 Unauthorized** | Invalid or expired token (`'invalid_token'` or unset) |
 
-The response includes a `WWW-Authenticate: Bearer` header with `error`,
-`error_description`, and `error_uri` attributes derived from `info.type`,
-`info.desc`, and `info.uri` respectively.
+The response includes a `WWW-Authenticate: Bearer` header and, when
+present on `info`, emits `error`, `error_description`, and `error_uri`
+challenge attributes from the same-named fields (omitted when unset).
 
 #### Basic
 
