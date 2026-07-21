@@ -10,8 +10,11 @@ On allowed requests, injects `X-RateLimit-*` response headers. On limited
 requests, returns `429 Too Many Requests` with a `Retry-After` value.
 
 The store is pluggable — any object implementing
-`hit(key, windowMs) → {count, resetMs}` can replace the built-in
-`MemoryStore` for Redis-backed or distributed rate limiting.
+`hit(key, windowMs) → {count, resetMs, resetAt}` can replace the built-in
+`MemoryStore` for Redis-backed or distributed rate limiting. `resetAt` is the
+absolute window-reset time in milliseconds in the store's own clock domain
+(so injectable clocks on `MemoryStore` produce correct `X-RateLimit-Reset`
+headers).
 
 **Pipeline stage:** Negotiation
 
@@ -121,12 +124,13 @@ The `store` option accepts any object that implements a single method:
 
 | Method | Signature | Returns |
 | ------ | --------- | ------- |
-| `hit` | `(key: string, windowMs: number) => object` | `{count: number, resetMs: number}` |
+| `hit` | `(key: string, windowMs: number) => object` | `{count: number, resetMs: number, resetAt: number}` |
 
 | Return Field | Type | Meaning |
 | ------------ | ---- | ------- |
 | `count` | `number` | Total hits recorded for `key` within the current window |
 | `resetMs` | `number` | Milliseconds until the oldest entry in the window expires |
+| `resetAt` | `number` | Absolute reset time in milliseconds in the store's clock domain |
 
 The middleware calls `store.hit(key, windowMs)` once per request. The
 store is responsible for recording the hit, pruning expired entries,
@@ -151,7 +155,7 @@ const store = new MemoryStore({maxKeys: 50_000});
 
 | Method | Returns | Description |
 | ------ | ------- | ----------- |
-| `hit(key, windowMs)` | `{count, resetMs}` | Record a hit and return current window state |
+| `hit(key, windowMs)` | `{count, resetMs, resetAt}` | Record a hit and return current window state |
 | `reset()` | `void` | Clear all tracked keys, restoring the store to its initial state |
 
 `reset()` is useful for integration tests that share a single store
@@ -210,10 +214,11 @@ class RedisStore {
     const resetMs = entries.length > 0
       ? Math.max(0, entries[0] + windowMs - now)
       : windowMs;
+    const resetAt = now + resetMs;
 
     this.#sync(windowKey, now, cutoff, windowMs);
 
-    return {count, resetMs};
+    return {count, resetMs, resetAt};
   }
 
   #sync(windowKey, now, cutoff, windowMs) {
