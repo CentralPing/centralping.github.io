@@ -49,29 +49,43 @@ entry point:
     const redis = new Redis(REDIS_URL);
 
     class RedisStore {
-      constructor(client) {
-        this.redis = client;
+      #local = new Map();
+
+      constructor(redis) {
+        this.redis = redis;
       }
 
-      async hit(key, windowMs) {
+      hit(key, windowMs) {
         const now = Date.now();
-        const windowKey = `rl:${key}`;
         const cutoff = now - windowMs;
+        const windowKey = `rl:${key}`;
 
+        let entries = this.#local.get(windowKey);
+        if (!entries) {
+          entries = [];
+          this.#local.set(windowKey, entries);
+        }
+
+        while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
+        entries.push(now);
+
+        const count = entries.length;
+        const resetMs = entries.length > 0
+          ? Math.max(0, entries[0] + windowMs - now)
+          : windowMs;
+        const resetAt = now + resetMs;
+
+        this.#sync(windowKey, now, cutoff, windowMs);
+
+        return {count, resetMs, resetAt};
+      }
+
+      #sync(windowKey, now, cutoff, windowMs) {
         const pipeline = this.redis.pipeline();
         pipeline.zremrangebyscore(windowKey, 0, cutoff);
         pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
-        pipeline.zcard(windowKey);
-        pipeline.zrange(windowKey, 0, 0, 'WITHSCORES');
         pipeline.pexpire(windowKey, windowMs);
-
-        const results = await pipeline.exec();
-        const count = results[2][1];
-        const oldest = results[3][1];
-        const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
-        const resetMs = Math.max(0, oldestScore + windowMs - now);
-
-        return {count, resetMs};
+        pipeline.exec().catch(() => {});
       }
     }
 
@@ -149,29 +163,43 @@ entry point:
     const redis = new Redis(REDIS_URL);
 
     class RedisStore {
-      constructor(client) {
-        this.redis = client;
+      #local = new Map();
+
+      constructor(redis) {
+        this.redis = redis;
       }
 
-      async hit(key, windowMs) {
+      hit(key, windowMs) {
         const now = Date.now();
-        const windowKey = `rl:${key}`;
         const cutoff = now - windowMs;
+        const windowKey = `rl:${key}`;
 
+        let entries = this.#local.get(windowKey);
+        if (!entries) {
+          entries = [];
+          this.#local.set(windowKey, entries);
+        }
+
+        while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
+        entries.push(now);
+
+        const count = entries.length;
+        const resetMs = entries.length > 0
+          ? Math.max(0, entries[0] + windowMs - now)
+          : windowMs;
+        const resetAt = now + resetMs;
+
+        this.#sync(windowKey, now, cutoff, windowMs);
+
+        return {count, resetMs, resetAt};
+      }
+
+      #sync(windowKey, now, cutoff, windowMs) {
         const pipeline = this.redis.pipeline();
         pipeline.zremrangebyscore(windowKey, 0, cutoff);
         pipeline.zadd(windowKey, now, `${now}:${Math.random()}`);
-        pipeline.zcard(windowKey);
-        pipeline.zrange(windowKey, 0, 0, 'WITHSCORES');
         pipeline.pexpire(windowKey, windowMs);
-
-        const results = await pipeline.exec();
-        const count = results[2][1];
-        const oldest = results[3][1];
-        const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
-        const resetMs = Math.max(0, oldestScore + windowMs - now);
-
-        return {count, resetMs};
+        pipeline.exec().catch(() => {});
       }
     }
 
