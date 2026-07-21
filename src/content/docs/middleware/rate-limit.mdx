@@ -181,7 +181,9 @@ For multi-instance deployments, implement the `hit()` contract with a
 shared data store. Because `store.hit()` must return synchronously, a
 Redis-backed store uses a local sliding-window counter for the
 synchronous return value and syncs counts to Redis in the background
-for cross-instance visibility.
+for cross-instance visibility. Bound the local map with `maxKeys` FIFO
+eviction (same default as `MemoryStore`) so high-cardinality keys cannot
+grow the process heap unboundedly.
 
 This example uses [ioredis](https://www.npmjs.com/package/ioredis)
 with sorted sets:
@@ -191,9 +193,11 @@ import Redis from 'ioredis';
 
 class RedisStore {
   #local = new Map();
+  #maxKeys;
 
-  constructor(redis) {
+  constructor(redis, {maxKeys = 10_000} = {}) {
     this.redis = redis;
+    this.#maxKeys = maxKeys;
   }
 
   hit(key, windowMs) {
@@ -209,6 +213,12 @@ class RedisStore {
 
     while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
     entries.push(now);
+
+    // FIFO eviction — Map insertion order; silent like MemoryStore
+    if (this.#local.size > this.#maxKeys) {
+      const oldest = this.#local.keys().next().value;
+      this.#local.delete(oldest);
+    }
 
     const count = entries.length;
     const resetMs = entries.length > 0

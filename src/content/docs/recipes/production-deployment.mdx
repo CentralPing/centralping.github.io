@@ -50,9 +50,11 @@ entry point:
 
     class RedisStore {
       #local = new Map();
+      #maxKeys;
 
-      constructor(redis) {
+      constructor(redis, {maxKeys = 10_000} = {}) {
         this.redis = redis;
+        this.#maxKeys = maxKeys;
       }
 
       hit(key, windowMs) {
@@ -68,6 +70,12 @@ entry point:
 
         while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
         entries.push(now);
+
+        // FIFO eviction — Map insertion order; silent like MemoryStore
+        if (this.#local.size > this.#maxKeys) {
+          const oldest = this.#local.keys().next().value;
+          this.#local.delete(oldest);
+        }
 
         const count = entries.length;
         const resetMs = entries.length > 0
@@ -164,9 +172,11 @@ entry point:
 
     class RedisStore {
       #local = new Map();
+      #maxKeys;
 
-      constructor(redis) {
+      constructor(redis, {maxKeys = 10_000} = {}) {
         this.redis = redis;
+        this.#maxKeys = maxKeys;
       }
 
       hit(key, windowMs) {
@@ -182,6 +192,12 @@ entry point:
 
         while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
         entries.push(now);
+
+        // FIFO eviction — Map insertion order; silent like MemoryStore
+        if (this.#local.size > this.#maxKeys) {
+          const oldest = this.#local.keys().next().value;
+          this.#local.delete(oldest);
+        }
 
         const count = entries.length;
         const resetMs = entries.length > 0
