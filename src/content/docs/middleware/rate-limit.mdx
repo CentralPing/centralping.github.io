@@ -6,8 +6,8 @@ description: Rate limiting middleware — sliding-window counter with pluggable 
 import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
 
 Enforces per-client request rate limits using a sliding-window counter.
-On allowed requests, injects `X-RateLimit-*` response headers. On limited
-requests, returns `429 Too Many Requests` with a `Retry-After` value.
+Injects `X-RateLimit-*` response headers on every request. On limited
+requests, also returns `429 Too Many Requests` with a `Retry-After` value.
 
 The store is pluggable — any object implementing
 `hit(key, windowMs) → {count, resetMs, resetAt}` can replace the built-in
@@ -55,7 +55,12 @@ import {rateLimit} from '@centralping/ergo';
 {
   response: {
     statusCode: 429,
-    retryAfter: 30
+    retryAfter: 30,
+    headers: [
+      ['X-RateLimit-Limit', '100'],
+      ['X-RateLimit-Remaining', '0'],
+      ['X-RateLimit-Reset', '1717041600']
+    ]
   }
 }
 ```
