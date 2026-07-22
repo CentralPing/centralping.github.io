@@ -28,7 +28,8 @@ import {idempotency} from '@centralping/ergo';
 | `store` | `object` | In-memory store | Pluggable store — `get(key) → object\|undefined`, `set(key, fingerprint) → string`, `complete(key, response, generation) → boolean`, `delete(key) → void` |
 | `ttlMs` | `number` | `86400000` (24h) | TTL for default in-memory store |
 | `required` | `boolean` | `false` | Return `400` if header is missing on applicable methods |
-| `methods` | `Set<string> \| string[]` | `POST`, `PATCH` | HTTP methods to enforce |
+| `methods` | `Set<string> \| string[]` | `POST`, `PATCH` | HTTP methods to enforce. Must be a non-empty Set or Array of non-empty strings when provided |
+| `keyGenerator` | `function` | identity | `(parsedKey, req, domainAcc) => string` — scopes the store key (e.g. bind to auth principal). Must be a function when provided |
 
 ## Return Value
 
@@ -36,7 +37,7 @@ Depends on the request state:
 
 | State | Return |
 | ----- | ------ |
-| Method not applicable or key absent (not required) | `{}` |
+| Method not applicable or key absent (not required) | `undefined` (compose-with leaves `acc.idempotency` unset) |
 | New request | `{value: {key, fingerprint, complete(response) → boolean, discard()}}` |
 | Replay (stored response exists) | `{value: {replayed: true}, response: storedResponse}` |
 
