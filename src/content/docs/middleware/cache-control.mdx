@@ -35,10 +35,10 @@ Pass `directives` as a raw string to bypass structured options and their validat
 | `mustRevalidate` | `boolean` | `false` | Add `must-revalidate` |
 | `proxyRevalidate` | `boolean` | `false` | Add `proxy-revalidate` |
 | `immutable` | `boolean` | `false` | Add `immutable` |
-| `maxAge` | `number` | — | `max-age` in seconds (non-negative integer) |
-| `sMaxAge` | `number` | — | `s-maxage` in seconds (non-negative integer) |
-| `staleWhileRevalidate` | `number` | — | `stale-while-revalidate` in seconds (non-negative integer) |
-| `staleIfError` | `number` | — | `stale-if-error` in seconds (non-negative integer) |
+| `maxAge` | `number` | — | `max-age` in seconds (non-negative integer; [RFC 9111 §1.2.2](https://www.rfc-editor.org/rfc/rfc9111#section-1.2.2)) |
+| `sMaxAge` | `number` | — | `s-maxage` in seconds (non-negative integer; [RFC 9111 §1.2.2](https://www.rfc-editor.org/rfc/rfc9111#section-1.2.2)) |
+| `staleWhileRevalidate` | `number` | — | `stale-while-revalidate` in seconds (non-negative integer; [RFC 9111 §1.2.2](https://www.rfc-editor.org/rfc/rfc9111#section-1.2.2)) |
+| `staleIfError` | `number` | — | `stale-if-error` in seconds (non-negative integer; [RFC 9111 §1.2.2](https://www.rfc-editor.org/rfc/rfc9111#section-1.2.2)) |
 
 ## Return Value
 
@@ -53,16 +53,16 @@ Always returns response headers. With no structured options, the value is
 
 None. This middleware always injects headers (it does not return HTTP error statuses).
 
-## Construction-time errors
+### Construction-time errors
 
 The factory throws `TypeError` when structured options are invalid (raw `directives`
 bypass these checks):
 
 | Condition | Error |
 | --------- | ----- |
-| `maxAge` / `sMaxAge` / `staleWhileRevalidate` / `staleIfError` provided but not a non-negative integer | `TypeError` |
-| `public` and `private` both truthy | `TypeError` |
-| `noStore` combined with any freshness option above | `TypeError` |
+| `maxAge` / `sMaxAge` / `staleWhileRevalidate` / `staleIfError` provided but not a non-negative integer | `TypeError`: `cacheControl(): "{name}" option must be a non-negative integer` |
+| `public` and `private` both truthy | `TypeError`: `cacheControl(): "public" and "private" are mutually exclusive` |
+| `noStore` combined with any freshness option above | `TypeError`: `cacheControl(): "noStore" cannot be combined with freshness directives` |
 
 ## Usage
 
@@ -101,6 +101,7 @@ bypass these checks):
 ## RFC References
 
 - [RFC 9111 — HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111)
+- [RFC 9111 §1.2.2 — Delta Seconds](https://www.rfc-editor.org/rfc/rfc9111#section-1.2.2)
 
 ## API Reference
 
