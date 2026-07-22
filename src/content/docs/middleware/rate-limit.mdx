@@ -196,6 +196,9 @@ class RedisStore {
   #maxKeys;
 
   constructor(redis, {maxKeys = 10_000} = {}) {
+    if (!Number.isInteger(maxKeys) || maxKeys < 1) {
+      throw new TypeError('maxKeys must be a positive integer');
+    }
     this.redis = redis;
     this.#maxKeys = maxKeys;
   }
@@ -212,7 +215,15 @@ class RedisStore {
     }
 
     while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
-    entries.push(now);
+
+    // Delete-then-set refreshes Map insertion order for FIFO eviction
+    if (entries.length === 0) {
+      this.#local.delete(windowKey);
+      entries = [now];
+      this.#local.set(windowKey, entries);
+    } else {
+      entries.push(now);
+    }
 
     // FIFO eviction — Map insertion order; silent like MemoryStore
     if (this.#local.size > this.#maxKeys) {

@@ -53,6 +53,9 @@ entry point:
       #maxKeys;
 
       constructor(redis, {maxKeys = 10_000} = {}) {
+        if (!Number.isInteger(maxKeys) || maxKeys < 1) {
+          throw new TypeError('maxKeys must be a positive integer');
+        }
         this.redis = redis;
         this.#maxKeys = maxKeys;
       }
@@ -69,7 +72,15 @@ entry point:
         }
 
         while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
-        entries.push(now);
+
+        // Delete-then-set refreshes Map insertion order for FIFO eviction
+        if (entries.length === 0) {
+          this.#local.delete(windowKey);
+          entries = [now];
+          this.#local.set(windowKey, entries);
+        } else {
+          entries.push(now);
+        }
 
         // FIFO eviction — Map insertion order; silent like MemoryStore
         if (this.#local.size > this.#maxKeys) {
@@ -175,6 +186,9 @@ entry point:
       #maxKeys;
 
       constructor(redis, {maxKeys = 10_000} = {}) {
+        if (!Number.isInteger(maxKeys) || maxKeys < 1) {
+          throw new TypeError('maxKeys must be a positive integer');
+        }
         this.redis = redis;
         this.#maxKeys = maxKeys;
       }
@@ -191,7 +205,15 @@ entry point:
         }
 
         while (entries.length > 0 && entries[0] <= cutoff) entries.shift();
-        entries.push(now);
+
+        // Delete-then-set refreshes Map insertion order for FIFO eviction
+        if (entries.length === 0) {
+          this.#local.delete(windowKey);
+          entries = [now];
+          this.#local.set(windowKey, entries);
+        } else {
+          entries.push(now);
+        }
 
         // FIFO eviction — Map insertion order; silent like MemoryStore
         if (this.#local.size > this.#maxKeys) {
@@ -294,11 +316,15 @@ entry point:
   </TabItem>
 </Tabs>
 
-<Aside type="tip">
-  The `RedisStore` implementation above uses the same ioredis sorted-set
-  pattern documented in the
-  [rate-limit middleware guide](/middleware/rate-limit/#redis-store-example).
-  See that page for the full store contract and when to use a shared store.
+<Aside type="caution" title="Per-process limiting — Redis is visibility, not the decision path">
+  `hit()` must return synchronously, so this recipe derives `count` /
+  `resetMs` / `resetAt` from the in-process `#local` map and only writes
+  Redis in the background. Each instance therefore enforces its **own**
+  limit; Redis does not feed the returned state. For a single shared
+  counter across instances, use transport-level
+  [`transport.rateLimit`](/packages/ergo-router/) or a custom middleware
+  that awaits the store — see the
+  [rate-limit Redis store example](/middleware/rate-limit/#redis-store-example).
 </Aside>
 
 <Aside type="caution" title="trustProxy requires a trusted reverse proxy">
