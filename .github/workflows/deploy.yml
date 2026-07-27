@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Docs-update dispatch contract (repository_dispatch event-type: docs-update):
       # - Payload: {package, version}. package may be scoped (@centralping/…) or short.
@@ -78,14 +78,14 @@ jobs:
           echo "router=$router_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout ergo source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: CentralPing/ergo
           path: .ergo-source
           ref: ${{ steps.source_refs.outputs.ergo }}
 
       - name: Checkout ergo-router source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: CentralPing/ergo-router
           path: .ergo-router-source
