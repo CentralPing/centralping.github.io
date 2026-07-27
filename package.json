@@ -19,7 +19,7 @@
     "@astrojs/starlight": "^0.41.1",
     "@observablehq/plot": "^0.6.17",
     "astro": "^7.1.1",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.0",
     "sharp": "^0.35.2",
     "starlight-changelogs": "^0.5.1",
     "starlight-typedoc": "^0.23.0",
