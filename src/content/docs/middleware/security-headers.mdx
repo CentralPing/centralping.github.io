@@ -118,7 +118,7 @@ emitting headers browsers ignore:
 | `xFrameOptions` not `'DENY'`, `'SAMEORIGIN'`, or `false` | `TypeError`: `buildSecurityHeaderTuples(): "xFrameOptions" option must be "DENY", "SAMEORIGIN", or false` |
 | `referrerPolicy` not a W3C token or `false` | `TypeError`: `buildSecurityHeaderTuples(): "referrerPolicy" option must be a W3C referrer policy token or false` |
 | `xXssProtection` not `'0'`, `'1'`, `'1; mode=block'`, or `false` | `TypeError`: `buildSecurityHeaderTuples(): "xXssProtection" option must be "0", "1", "1; mode=block", or false` |
-| `strictTransportSecurity` not a string, plain object, or `false` | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity" option must be a string, plain object, or false` |
+| `strictTransportSecurity` not a string, object, or `false` (arrays/`null` rejected) | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity" option must be a string, plain object, or false` |
 | HSTS object `maxAge` missing, non-integer, or negative | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity.maxAge" option must be a non-negative integer` |
 | HSTS `includeSubDomains` / `preload` provided but not boolean | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity.{name}" option must be a boolean` |
 
