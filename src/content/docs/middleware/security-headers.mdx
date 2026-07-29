@@ -21,13 +21,13 @@ import {securityHeaders} from '@centralping/ergo';
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `contentSecurityPolicy` | `string \| false` | `"default-src 'none'"` | Content-Security-Policy |
+| `contentSecurityPolicy` | `string \| false` | `"default-src 'none'"` | Content-Security-Policy (non-empty, no CTL) |
 | `strictTransportSecurity` | `string \| object \| false` | `false` | HSTS — off by default (see note) |
-| `xContentTypeOptions` | `string \| boolean` | `'nosniff'` | X-Content-Type-Options (`true` → `'nosniff'`, `false` disables) |
-| `xFrameOptions` | `string \| false` | `'DENY'` | X-Frame-Options |
-| `referrerPolicy` | `string \| false` | `'no-referrer'` | Referrer-Policy |
-| `xXssProtection` | `string \| false` | `'0'` | X-XSS-Protection (0 disables legacy browser filter) |
-| `permissionsPolicy` | `string` | — | Permissions-Policy (omitted by default) |
+| `xContentTypeOptions` | `'nosniff' \| true \| false` | `'nosniff'` | X-Content-Type-Options (`true` → `'nosniff'`) |
+| `xFrameOptions` | `'DENY' \| 'SAMEORIGIN' \| false` | `'DENY'` | X-Frame-Options (`ALLOW-FROM` rejected) |
+| `referrerPolicy` | W3C token \| `false` | `'no-referrer'` | Referrer-Policy (exact token; empty string rejected) |
+| `xXssProtection` | `'0' \| '1' \| '1; mode=block' \| false` | `'0'` | X-XSS-Protection |
+| `permissionsPolicy` | `string \| false` | — | Permissions-Policy (omitted by default) |
 
 ### Default Headers
 
@@ -66,9 +66,22 @@ enables HSTS appropriately.
 
 ### Structured HSTS
 
-When using a string: `'max-age=31536000; includeSubDomains; preload'`
+Import the named constant when constructing object-form HSTS:
 
-When using an object: `{maxAge: 31536000, includeSubDomains: true, preload: true}`
+```js
+import {securityHeaders} from '@centralping/ergo';
+import {DEFAULT_HSTS_MAX_AGE_SECONDS} from '@centralping/ergo/lib/security-headers';
+
+securityHeaders({
+  strictTransportSecurity: {
+    maxAge: DEFAULT_HSTS_MAX_AGE_SECONDS, // 31_536_000 (one year)
+    includeSubDomains: true,
+    preload: true
+  }
+});
+```
+
+String form: `'max-age=31536000; includeSubDomains; preload'`
 
 ## Return Value
 
@@ -90,7 +103,24 @@ Always returns response headers:
 
 ## Error Responses
 
-None.
+None at request time — this middleware only returns pre-computed headers.
+
+### Construction-time errors
+
+`securityHeaders()` / `buildSecurityHeaderTuples()` throw `TypeError` when an
+option value is invalid. Invalid configs fail at startup rather than silently
+emitting headers browsers ignore:
+
+| Condition | Error |
+| --------- | ----- |
+| Enabled `contentSecurityPolicy` / `permissionsPolicy` / string-form HSTS is empty, non-string, or contains CTLs (`false` / omitted are valid) | `TypeError`: `buildSecurityHeaderTuples(): "<option>" option must be a non-empty string without control characters` |
+| `xContentTypeOptions` not `true`, `'nosniff'`, or `false` | `TypeError`: `buildSecurityHeaderTuples(): "xContentTypeOptions" option must be true, "nosniff", or false` |
+| `xFrameOptions` not `'DENY'`, `'SAMEORIGIN'`, or `false` | `TypeError`: `buildSecurityHeaderTuples(): "xFrameOptions" option must be "DENY", "SAMEORIGIN", or false` |
+| `referrerPolicy` not a W3C token or `false` | `TypeError`: `buildSecurityHeaderTuples(): "referrerPolicy" option must be a W3C referrer policy token or false` |
+| `xXssProtection` not `'0'`, `'1'`, `'1; mode=block'`, or `false` | `TypeError`: `buildSecurityHeaderTuples(): "xXssProtection" option must be "0", "1", "1; mode=block", or false` |
+| `strictTransportSecurity` not a string, object, or `false` (arrays/`null` rejected) | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity" option must be a string, plain object, or false` |
+| HSTS object `maxAge` missing, non-integer, or negative | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity.maxAge" option must be a non-negative integer` |
+| HSTS `includeSubDomains` / `preload` provided but not boolean | `TypeError`: `buildSecurityHeaderTuples(): "strictTransportSecurity.<field>" option must be a boolean` |
 
 ## Usage
 
