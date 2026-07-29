@@ -21,7 +21,7 @@ import {timeout} from '@centralping/ergo';
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `ms` | `number` | `30_000` (30s) | Timeout duration in milliseconds — must be a positive finite number |
+| `ms` | `number` | `30_000` (30s) | Timeout duration in milliseconds — must be a positive finite number at most `2_147_483_647` (Node `setTimeout` max) |
 | `statusCode` | `408 \| 504` | `408` | HTTP status on timeout — must be `408` or `504` |
 
 Construction throws `TypeError` when `ms` or `statusCode` fail these checks.
